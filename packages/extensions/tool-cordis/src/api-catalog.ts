@@ -1109,6 +1109,47 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
     ],
   },
   {
+    key: 'guiTerminalController',
+    summary: 'Host service backing the generated `ctx.remote.guiTerminal` namespace.',
+    description: 'Host service backing the generated `ctx.remote.guiTerminal` namespace.',
+    methods: [
+      {
+        signature: '@Remote(\'open\') async open(request: GuiTerminalOpenRequest): Promise<GuiTerminalOpenValue>',
+        description: 'Spawn one interactive shell PTY for the calling browser.',
+        parameters: [{ name: 'request', description: 'optional cwd and initial geometry.' }],
+        returns: 'session identity plus the output retained so far.',
+      },
+      {
+        signature: '@Remote(\'write\') async write(request: GuiTerminalWriteRequest): Promise<void>',
+        description: 'Write raw input bytes to one live session\'s PTY.',
+        parameters: [{ name: 'request', description: 'session id plus input bytes.' }],
+      },
+      {
+        signature: '@Remote(\'close\') async close(request: GuiTerminalCloseRequest): Promise<void>',
+        description: 'Terminate one session\'s PTY process tree.',
+        parameters: [{ name: 'request', description: 'session id to close.' }],
+      },
+      {
+        signature: '@Remote(\'list\') list(): GuiTerminalSessionSummary[]',
+        description: 'List live sessions for the calling browser.',
+        parameters: [],
+        returns: 'liveness summaries in open order.',
+      },
+      {
+        signature: '@Remote(\'read\') read(request: GuiTerminalOutputRequest): GuiTerminalReadValue',
+        description: 'Read one session\'s retained output from a cursor without parking.',
+        parameters: [{ name: 'request', description: 'session id plus the first needed frame sequence.' }],
+        returns: 'frames at or after the cursor, the resume cursor, and liveness.',
+      },
+      {
+        signature: '@Remote({ mode: \'stream\' }) async * output(request: GuiTerminalOutputRequest, signal: AbortSignal): AsyncIterable<GuiTerminalOutputFrame>',
+        description: 'Stream one session\'s output from a cursor: retained frames first, then live frames until the PTY exits or the generation cancels.',
+        parameters: [{ name: 'request', description: 'session id plus the first needed frame sequence.' }, { name: 'signal', description: 'generation cancellation.' }],
+        returns: 'ordered output frames.',
+      },
+    ],
+  },
+  {
     key: 'inspector',
     summary: 'Shared Host/Client service façade over the realm\'s source publisher.',
     description: 'Shared Host/Client service façade over the realm\'s source publisher.',
@@ -4345,6 +4386,38 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'GrantRecord',
     declaration: 'export interface GrantRecord {\n    readonly kind: \'grant\';\n    readonly payload: unknown;\n}',
+  },
+  {
+    name: 'GuiTerminalCloseRequest',
+    declaration: 'export interface GuiTerminalCloseRequest {\n    id: string;\n}',
+  },
+  {
+    name: 'GuiTerminalOpenRequest',
+    declaration: 'export interface GuiTerminalOpenRequest {\n    cwd?: string;\n    cols?: number;\n    rows?: number;\n}',
+  },
+  {
+    name: 'GuiTerminalOpenValue',
+    declaration: 'export interface GuiTerminalOpenValue {\n    id: string;\n    scrollback: GuiTerminalOutputFrame[];\n    cursor: number;\n}',
+  },
+  {
+    name: 'GuiTerminalOutputFrame',
+    declaration: 'export interface GuiTerminalOutputFrame {\n    seq: number;\n    data: string;\n}',
+  },
+  {
+    name: 'GuiTerminalOutputRequest',
+    declaration: 'export interface GuiTerminalOutputRequest {\n    id: string;\n    cursor: number;\n}',
+  },
+  {
+    name: 'GuiTerminalReadValue',
+    declaration: 'export interface GuiTerminalReadValue {\n    frames: GuiTerminalOutputFrame[];\n    cursor: number;\n    alive: boolean;\n}',
+  },
+  {
+    name: 'GuiTerminalSessionSummary',
+    declaration: 'export interface GuiTerminalSessionSummary {\n    id: string;\n    alive: boolean;\n}',
+  },
+  {
+    name: 'GuiTerminalWriteRequest',
+    declaration: 'export interface GuiTerminalWriteRequest {\n    id: string;\n    data: string;\n}',
   },
   {
     name: 'ImageAttachmentLimits',

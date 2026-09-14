@@ -75,6 +75,9 @@
       "path": "../settings-controller"
     },
     {
+      "path": "../gui-terminal"
+    },
+    {
       "path": "../workspace-controller/tsconfig.client.json"
     },
     {

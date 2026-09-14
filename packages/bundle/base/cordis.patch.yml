@@ -64,6 +64,14 @@
     - id: user-questions
       name: '@deepseek-ai/dsh-user-questions'
 
+    # Fork: always-on Oristrat MSCE development norms section.
+    - id: oristrat-msce-norms
+      name: '@deepseek-ai/dsh-context-oristrat-msce-norms'
+
+    # Fork: hard MSCE gates on the tool-execution waterfall.
+    - id: msce-gate
+      name: '@deepseek-ai/dsh-guard-msce-gate'
+
     - id: agent
       name: '@deepseek-ai/dsh-agent'
 

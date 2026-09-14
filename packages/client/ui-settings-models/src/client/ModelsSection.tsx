@@ -14,7 +14,7 @@
 
 import { useState } from 'react'
 import type { ReactNode } from 'react'
-import { Button, IconPlusOutline16, Modal } from '@deepseek-ai/dsh-client-ui-primitives'
+import { Button, Modal } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { InjectFace, PropsRenderSlots } from '@deepseek-ai/dsh-client-ui-slots'
 // Type-only: pulls this package's SlotMap merge (the two Models child slots).
 import type {} from './slot-contract.ts'
@@ -212,7 +212,6 @@ function Loaded({ injected, renderSlot }: { injected: ModelsSectionFace; renderS
   const [savedTarget, setSavedTarget] = useState<ProviderIdentity | undefined>(undefined)
   const [declaring, setDeclaring] = useState(false)
   const [dismissedSetup, setDismissedSetup] = useState<ReadonlySet<string>>(() => new Set())
-
   const announceSaved = (target: ProviderIdentity): void => {
     // Announced only once the refreshed directory is in the snapshot the
     // notice reads its name from: an apply can rename the route, and the
@@ -504,49 +503,7 @@ function Loaded({ injected, renderSlot }: { injected: ModelsSectionFace; renderS
                 />
               </div>
             )
-            : (
-              // One row for the two ways to gain a provider: adopt one the
-              // adapter already knows, or declare one it does not. Side by side
-              // and equal-width so they read as siblings and line up with the
-              // rows above, rather than two pills of different lengths.
-              <div className={styles['addActions']}>
-                {configurable.length > 0 && (
-                  <button
-                    type="button"
-                    className={styles['addButton']}
-                    disabled={addable.length === 0 || !state.writable}
-                    onClick={() => {
-                      const first = addable[0]
-                      /* v8 ignore next -- the button is disabled while nothing is addable */
-                      if (first === undefined) return
-                      setSavedTarget(undefined)
-                      setDeclaring(false)
-                      setAdding(true)
-                      setEditing(targetOf(first))
-                    }}
-                  >
-                    <IconPlusOutline16 size={14} />
-                    {t('add')}
-                  </button>
-                )}
-                {state.namespaces.has('llm-pi-ai') && (
-                  <button
-                    type="button"
-                    className={styles['addButton']}
-                    disabled={protocols.length === 0 || !state.writable}
-                    onClick={() => {
-                      setSavedTarget(undefined)
-                      setAdding(false)
-                      setEditing(undefined)
-                      setDeclaring(true)
-                    }}
-                  >
-                    <IconPlusOutline16 size={14} />
-                    {t('customAdd')}
-                  </button>
-                )}
-              </div>
-            )}
+            : null}
       </div>
       {renderSlot('settings.models.footer', {})}
       <Modal

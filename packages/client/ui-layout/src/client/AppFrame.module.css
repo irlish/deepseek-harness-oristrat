@@ -97,3 +97,14 @@
 .overlayLayer > * {
   pointer-events: auto;
 }
+
+/* Fork: desktop-only top inset under the hidden title bar: the sidebar clears
+   the traffic lights like the reference client, the centre breathes a little. */
+.frame[data-desktop-frame] > .sidebarCol {
+  padding-top: 20px;
+}
+
+.frame[data-desktop-frame] > .centerCol,
+.frame[data-desktop-frame] > .rightbarCol {
+  padding-top: 8px;
+}

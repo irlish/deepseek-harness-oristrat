@@ -98,6 +98,57 @@ interface TerminalSendResult {
 
 Generated from source by `scripts/gen-cordis-catalog.ts` (verified fresh by `pnpm run verify-cordis-catalog` in doc-sync; regenerate with `pnpm run gen-cordis-catalog`) — the language sides differ only in locale-specific paired document paths. Signature blocks use a `ts cordis-catalog` fence and keep the original source JSDoc; dispatch modes are defined in the [primer](../cordis-primer.zh.md#dispatch-modes), and the framework-inherited `ctx` API lives in [cordis-api/inherited.md](../cordis-api/inherited.md).
 
+<a id="ctxguiterminalcontroller--guiterminalcontroller"></a>
+
+### `ctx.guiTerminalController` — `GuiTerminalController`
+
+Host service backing the generated `ctx.remote.guiTerminal` namespace.
+
+```ts cordis-catalog
+/**
+ * Spawn one interactive shell PTY for the calling browser.
+ * @param request - optional cwd and initial geometry.
+ * @returns session identity plus the output retained so far.
+ */
+@Remote('open') async open(request: GuiTerminalOpenRequest): Promise<GuiTerminalOpenValue>
+
+/**
+ * Write raw input bytes to one live session's PTY.
+ * @param request - session id plus input bytes.
+ */
+@Remote('write') async write(request: GuiTerminalWriteRequest): Promise<void>
+
+/**
+ * Terminate one session's PTY process tree.
+ * @param request - session id to close.
+ */
+@Remote('close') async close(request: GuiTerminalCloseRequest): Promise<void>
+
+/**
+ * List live sessions for the calling browser.
+ * @returns liveness summaries in open order.
+ */
+@Remote('list') list(): GuiTerminalSessionSummary[]
+
+/**
+ * Read one session's retained output from a cursor without parking.
+ * @param request - session id plus the first needed frame sequence.
+ * @returns frames at or after the cursor, the resume cursor, and liveness.
+ */
+@Remote('read') read(request: GuiTerminalOutputRequest): GuiTerminalReadValue
+
+/**
+ * Stream one session's output from a cursor: retained frames first, then
+ * live frames until the PTY exits or the generation cancels.
+ * @param request - session id plus the first needed frame sequence.
+ * @param signal - generation cancellation.
+ * @returns ordered output frames.
+ */
+@Remote({ mode: 'stream' }) async * output(request: GuiTerminalOutputRequest, signal: AbortSignal): AsyncIterable<GuiTerminalOutputFrame>
+```
+
+Source: [`packages/api/gui-terminal/src/index.ts`](../../packages/api/gui-terminal/src/index.ts)
+
 <a id="ctxterminals--terminalsessionservice"></a>
 
 ### `ctx.terminals` — `TerminalSessionService`

@@ -72,6 +72,13 @@
     - id: ui-open-in-app
       name: '@deepseek-ai/dsh-client-ui-open-in-app'
 
+    - id: ui-terminal-panel
+      name: '@deepseek-ai/dsh-client-ui-terminal-panel'
+
+    # Browser-interactive terminal: PTY sessions over the subprocess layer.
+    - id: gui-terminal
+      name: '@deepseek-ai/dsh-api-gui-terminal'
+
     - id: workspace
       name: '@deepseek-ai/dsh-workspace'
 
@@ -482,3 +489,19 @@
       name: '@deepseek-ai/dsh-agent-presets'
       config:
         default: standard
+
+# Fork: the official provider seat is the declared pi-ai route; the native
+# DeepSeek adapter would otherwise populate the model picker with its catalog.
+# Fork: the official DeepSeek brand occupants yield to the Oristrat fallbacks.
+- id: ui-brand-official
+  disabled: true
+
+- id: llm-deepseek
+  disabled: true
+
+# Fork: default Agents start on the declared Oristrat route, not the disabled
+# native DeepSeek adapter's catalog model.
+- id: agent-default-model
+  config:
+    provider: oristrat-official
+    model: glm-4.5

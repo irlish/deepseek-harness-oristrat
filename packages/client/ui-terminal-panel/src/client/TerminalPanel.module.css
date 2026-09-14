@@ -1,0 +1,32 @@
+/* Terminal tab: pane-filling xterm screen. Geometry is literal, ink and fills
+   are tokens; the screen paints on the surface background with primary ink,
+   matching the product's light chrome instead of a black shell sheet. */
+
+.pane {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  --term-bg: var(--dsw-alias-bg-primary);
+  --term-fg: var(--dsw-alias-label-primary);
+}
+
+.titleIcon {
+  flex: none;
+  color: var(--dsw-alias-label-secondary);
+}
+
+.termHost {
+  flex: 1;
+  min-height: 0;
+  padding: 4px 6px;
+  background: var(--term-bg);
+}
+
+.stateNote {
+  flex: none;
+  padding: 4px 10px 8px;
+  font-size: 12px;
+  color: var(--dsw-alias-label-secondary);
+  background: var(--term-bg);
+}

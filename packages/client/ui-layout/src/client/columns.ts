@@ -20,13 +20,17 @@ export const SIDEBAR_COLLAPSED = 56
 /** Viewport width below which the sidebar auto-collapses to the rail (deepsuite
  * LG breakpoint); a manual toggle below it re-expands over the squeezed center
  * (stores.ts narrowExpanded). */
-export const SIDEBAR_AUTO_COLLAPSE = 1024
+// Fork: Oristrat Stem keeps the session sidebar open down to much narrower
+// windows than the upstream breakpoint.
+export const SIDEBAR_AUTO_COLLAPSE = 760
 /** Right column drag clamp floor. */
-export const RIGHTBAR_MIN = 300
+// Fork: a slimmer floor lets the file/terminal column survive narrow frames.
+export const RIGHTBAR_MIN = 240
 /** Maximum normal right panel width as a fraction of the frame. */
 export const RIGHTBAR_MAX_RATIO = 0.7
 /** First-open right panel preference as a fraction of the frame. */
-export const RIGHTBAR_DEFAULT_RATIO = 0.45
+// Fork: first-open right panel leaves the conversation its room.
+export const RIGHTBAR_DEFAULT_RATIO = 0.34
 
 /**
  * Clamp a panel width into its contract range.

@@ -1,7 +1,25 @@
 const api = window.dshDesktop
 
+// Plain-browser preview (no preload): static fallback copy so the loading
+// animation renders outside Electron for visual review and screenshots.
+const preview = navigator.language.startsWith('zh')
+const FALLBACK = {
+  id: preview ? 'zh' : 'en',
+  messages: {
+    startupLoading: preview ? '加载中...' : 'Loading…',
+    startupLoadingDescription: '',
+    startupFailed: preview ? '启动失败' : 'Startup failed',
+    startupErrorDescription: preview ? '启动过程中出现错误。' : 'Something went wrong while starting.',
+    startupConfigurationAdvice: '',
+    startupReinstallAdvice: '',
+    restartApplication: preview ? '重启' : 'Restart',
+    disableThirdPartyPlugins: preview ? '禁用第三方插件' : 'Disable third-party plugins',
+    resetConfiguration: preview ? '重置配置' : 'Reset configuration',
+  },
+}
+
 async function main() {
-  const { id, messages } = await api.locale()
+  const { id, messages } = api === undefined ? FALLBACK : await api.locale()
   document.documentElement.lang = id
   document.querySelector('#page-title').textContent = messages.startupLoading
   document.querySelector('#restart').textContent = messages.restartApplication
@@ -12,7 +30,8 @@ async function main() {
   function render(state) {
     const failed = state.phase === 'error'
     document.querySelector('main').setAttribute('aria-busy', String(!failed))
-    document.querySelector('#spinner').hidden = failed
+    document.querySelector('#logo').hidden = failed
+    document.querySelector('#wordmark').hidden = failed
     document.querySelector('#title').textContent = failed ? messages.startupFailed : messages.startupLoading
     document.querySelector('#description').textContent = failed ? messages.startupErrorDescription : messages.startupLoadingDescription
     document.querySelector('#error').hidden = !failed
@@ -23,6 +42,10 @@ async function main() {
       document.querySelector(selector).hidden = !failed || !state.profileRecovery
     }
     document.querySelector('#reinstall-advice').hidden = !failed
+  }
+  if (api === undefined) {
+    render({ phase: 'starting' })
+    return
   }
   let changed = false
   const unsubscribe = api.backend.subscribe(state => { changed = true; render(state) })

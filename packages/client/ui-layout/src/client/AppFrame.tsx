@@ -15,7 +15,7 @@
  * shares — zero cordis or framework imports, zero self-made hooks.
  */
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import type { ReactNode } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 import type {
   PropsLocale, PropsRenderSlots, PropsRuntime, PropsStore,
 } from '@deepseek-ai/dsh-client-ui-slots'
@@ -199,14 +199,23 @@ export function AppFrame({
   ), [usePanelInfo, renderSlot])
   const overlays = useMemo(() => renderSlot('shell.overlay', {}), [renderSlot])
 
+  // Fork: packaged Desktop hides the native title bar; the columns keep a
+  // small top inset so content clears the floating traffic lights.
+  const desktopFrame = typeof window !== 'undefined'
+    && (window as { dshDesktop?: unknown }).dshDesktop !== undefined
   return (
     <div
       ref={frameRef}
       className={css.frame}
+      data-desktop-frame={desktopFrame || undefined}
       style={{
         gridTemplateColumns:
           `${cols.sidebar}px minmax(0, 1fr) ${cols.rightbar}px`,
-      }}
+        // Frame geometry as tokens so frame-wide overlay entries (the
+        // terminal drawer) can confine themselves to the centre column.
+        '--dsh-frame-sidebar': `${cols.sidebar}px`,
+        '--dsh-frame-rightbar': `${cols.rightbar}px`,
+      } as CSSProperties}
       data-sidebar-collapsed={sidebarCollapsed || undefined}
       data-rightbar-collapsed={cols.rightbar === 0 || undefined}
       data-rightbar-fullscreen={layoutInfo.rightbarFullscreen || undefined}

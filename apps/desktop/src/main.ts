@@ -1,6 +1,7 @@
 /** Electron shell: desktop project ownership, custom protocol, windows, and lifecycle. */
 
-import { readFile, writeFile } from 'node:fs/promises'
+import { existsSync } from 'node:fs'
+import { copyFile, mkdir, readFile, writeFile } from 'node:fs/promises'
 import { extname, join, normalize, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
@@ -24,6 +25,10 @@ import { desktopErrorState } from './startup-error.ts'
 import { startupFailureDocument } from './startup-document.ts'
 
 const SCHEME = 'dsh-app'
+
+// Fork: name the shell before anything resolves userData so this build keeps
+// its own Electron browser data instead of sharing @deepseek-ai/dsh-desktop.
+app.setName('Oristrat AI Stem')
 let focusPrimaryWindow = (): void => {}
 type RecoveryAction = 'restart' | 'plugins' | 'reset'
 let profileRecoveryAvailable = (): boolean => false
@@ -87,8 +92,42 @@ function developmentHostInspectPort(enabled: boolean): number | undefined {
   return port
 }
 
+/**
+ * Fork: guarantee clipboard shortcuts reach text fields even when the native
+ * menu accelerator path does not consume them (synthetic keys, odd focus).
+ * The Edit menu roles stay the primary path; this only fires for key events
+ * the renderer actually receives, so a menu-consumed shortcut never doubles.
+ * @param contents - web contents to watch.
+ */
+function installClipboardFallback(contents: BrowserWindow['webContents']): void {
+  contents.on('before-input-event', (event, input) => {
+    if (input.type !== 'keyDown' || !(input.meta || input.control) || input.isAutoRepeat) return
+    const commands: Record<string, 'paste' | 'copy' | 'cut' | 'selectAll'> = {
+      v: 'paste', c: 'copy', x: 'cut', a: 'selectAll',
+    }
+    const command = commands[input.key.toLowerCase()]
+    if (command === undefined) return
+    event.preventDefault()
+    if (command === 'paste') contents.paste()
+    else if (command === 'copy') contents.copy()
+    else if (command === 'cut') contents.cut()
+    else contents.selectAll()
+  })
+  contents.on('context-menu', () => {
+    Menu.buildFromTemplate([
+      { role: 'copy' }, { role: 'paste' }, { role: 'cut' }, { type: 'separator' }, { role: 'selectAll' },
+    ]).popup()
+  })
+}
+
 function createWindow(preload: string, show = false): BrowserWindow {
   const window = new BrowserWindow({
+    // Fork: the reference client keeps the macOS title bar blank; session
+    // titles live in the sidebar, not the window chrome.
+    title: '',
+    // Fork: the reference client hides the native title bar (no hairline,
+    // content rides at the window top) and re-shows the traffic lights.
+    ...(process.platform === 'darwin' ? { titleBarStyle: 'hidden' as const } : {}),
     width: 1280,
     height: 840,
     minWidth: 880,
@@ -103,6 +142,7 @@ function createWindow(preload: string, show = false): BrowserWindow {
     },
   })
   window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
+  installClipboardFallback(window.webContents)
   window.webContents.on('will-navigate', (event, url) => {
     if (new URL(url).protocol !== `${SCHEME}:`) event.preventDefault()
     const page = emergencyPages.get(window)
@@ -147,9 +187,26 @@ async function serveShellAsset(request: Request): Promise<Response> {
   }
 }
 
+/**
+ * Fork: copy the bundled first-run user settings into an empty Desktop home so
+ * a fresh install opens on the Oristrat provider roster instead of the catalog
+ * fallback. Existing settings are never touched.
+ * @param home - Resolved Desktop DSH home directory.
+ */
+async function seedFirstRunSettings(home: string): Promise<void> {
+  if (!app.isPackaged) return
+  const target = join(home, 'settings.yaml')
+  if (existsSync(target)) return
+  const seed = join(process.resourcesPath, 'seed', 'settings.yaml')
+  if (!existsSync(seed)) return
+  await mkdir(home, { recursive: true })
+  await copyFile(seed, target)
+}
+
 async function main(): Promise<void> {
   const resources = runtimeResources()
   const paths = resolveDesktopPaths()
+  await seedFirstRunSettings(paths.home)
   const development = app.isPackaged ? undefined : join(app.getAppPath(), '.desktop-build', 'development', 'project')
   const activeProject = development ?? paths.profile
   const manager = new DesktopProjectManager(paths, resources)
@@ -203,8 +260,11 @@ async function main(): Promise<void> {
   const backend = new DesktopBackendController((onFailure) => {
     if (development === undefined) manager.assertProfileRuntime(activeProject)
     const hostInspectPort = developmentHostInspectPort(development !== undefined)
+    // Fork: pin the product home (sessions, settings, workspaces) to the
+    // isolated Desktop home; an inherited DSH_HOME would leak another install.
+    const hostEnv = development === undefined ? { ...process.env, DSH_HOME: paths.home } : process.env
     const host = new DesktopHostProcess(resources.node, development ?? resources.dsh, activeProject,
-      hostInspectPort, process.env, onFailure)
+      hostInspectPort, hostEnv, onFailure)
     return {
       start: () => host.start(),
       stop: () => host.stop(),
@@ -447,10 +507,59 @@ async function main(): Promise<void> {
       { type: 'separator' },
       { role: 'quit' },
     ],
-  }]))
+    // Fork: macOS binds ⌘C/⌘V/X/A in webviews to the Edit menu roles; without
+    // them every text field (API key drafts included) silently ignores paste.
+  }, { role: 'editMenu' }, { role: 'viewMenu' }, { role: 'windowMenu' }]))
+
+  // Fork: macOS drag strip mirroring the reference client: a 24px fixed band
+  // between the traffic-light zone and the header actions, injected once per
+  // load so the frameless window stays movable.
+  const installMacDragRegion = (window: BrowserWindow): void => {
+    if (process.platform !== 'darwin') return
+    const inject = (): void => {
+      if (window.isDestroyed()) return
+      void window.webContents.executeJavaScript(`(() => {
+        if (document.getElementById('dsh-desktop-drag-region')) return
+        const dragRegion = document.createElement('div')
+        dragRegion.id = 'dsh-desktop-drag-region'
+        dragRegion.setAttribute('aria-hidden', 'true')
+        Object.assign(dragRegion.style, {
+          position: 'fixed',
+          zIndex: '18',
+          top: '0',
+          left: '80px',
+          right: '220px',
+          height: '24px',
+          background: 'transparent',
+          pointerEvents: 'auto',
+          userSelect: 'none'
+        })
+        dragRegion.style.setProperty('-webkit-app-region', 'drag')
+        document.body.appendChild(dragRegion)
+      })()`).catch(() => {})
+    }
+    inject()
+    window.webContents.on('did-finish-load', inject)
+  }
+
+  const alignWindowButtons = (window: BrowserWindow): void => {
+    if (window.isDestroyed()) return
+    window.setWindowButtonPosition({
+      x: Math.round(16 * window.webContents.getZoomFactor()) - 2,
+      y: 9,
+    })
+  }
 
   const createMainWindow = (): BrowserWindow => {
     const window = createWindow(appPreload, true)
+    window.on('page-title-updated', (event) => { event.preventDefault() })
+    if (process.platform === 'darwin') {
+      window.setWindowButtonVisibility(true)
+      alignWindowButtons(window)
+      window.webContents.on('did-finish-load', () => alignWindowButtons(window))
+      window.webContents.on('zoom-changed', () => setImmediate(() => alignWindowButtons(window)))
+      installMacDragRegion(window)
+    }
     mainWindow = window
     window.on('closed', () => { if (mainWindow === window) mainWindow = undefined })
     window.webContents.on('preload-error', (_event, _path, error) => {

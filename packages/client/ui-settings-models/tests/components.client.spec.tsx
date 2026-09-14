@@ -829,11 +829,6 @@ describe('ModelsSection', () => {
     expect(screen.getAllByLabelText(new RegExp(en.modelId)).map(input => (input as HTMLInputElement).value))
       .toEqual(['user-only-model'])
 
-    fireEvent.click(screen.getByText(en.resetModels))
-
-    expect(screen.getByText(en.modelsInherited)).toBeTruthy()
-    expect(screen.getAllByLabelText(new RegExp(en.modelId)).map(input => (input as HTMLInputElement).value))
-      .toEqual(base === undefined ? ['deepseek-v4-flash', 'deepseek-v4-pro'] : ['pinned-by-deployment'])
   })
 
   it('keeps every row\'s unreadable text, not just the last one edited', async () => {
@@ -884,31 +879,6 @@ describe('ModelsSection', () => {
     expect((windows()[0] as HTMLInputElement).value).toBe('bottom text')
   })
 
-  it('drops the typed text when reset replaces the rows it annotated', async () => {
-    // The regression: reset removed the override but left the buffer, so an
-    // inherited row displayed text no settings layer stores — and because an
-    // unreadable buffer never settles, it stayed there indefinitely.
-    const { mutate } = await mountDeepSeekCard({
-      mutate: vi.fn(() => Promise.resolve(remoteOk(wireNamespaces()[0]))),
-    })
-    fireEvent.click(screen.getByText(en.customized))
-    expandRow(1)
-    const windows = capacityInputs(en.contextWindow)
-    fireEvent.change(windows[0] as HTMLInputElement, { target: { value: 'garbage' } })
-    fireEvent.blur(windows[0] as HTMLInputElement)
-    fireEvent.click(screen.getByText(en.resetModels))
-
-    // Reset collapses every row, so the restored capacity needs opening again.
-    expandRow(1)
-    const restored = capacityInputs(en.contextWindow)
-    expect((restored[0] as HTMLInputElement).value).toBe('1M')
-
-    // Reset put the draft back where it started, so Apply writes nothing at
-    // all rather than persisting whatever the stale text had parsed to.
-    fireEvent.click(screen.getByText(en.apply))
-    await waitFor(() => { expect(screen.queryByText(en.apply)).toBeNull() })
-    expect(mutate).not.toHaveBeenCalled()
-  })
 
   it('edits an output cap per model and carries its text across a removal', async () => {
     const { mutate } = await mountDeepSeekCard({
@@ -971,7 +941,8 @@ describe('ModelsSection', () => {
       t={t}
       disabled={true}
       onChange={vi.fn()}
-      onReset={vi.fn()}
+      operations={{} as ModelsOperations}
+      probe={{ settingsNs: 'llm-deepseek' }}
     />)
     expect(screen.getByLabelText<HTMLInputElement>(`${en.modelId} 1`).value).toBe('')
     expandRow(1)
@@ -981,38 +952,6 @@ describe('ModelsSection', () => {
       .toBe(en.maxTokensPlaceholder)
   })
 
-  it('can empty and reset the model override, then clear optional fields without dropping hidden data', async () => {
-    const { mutate } = await mountDeepSeekCard({
-      mutate: vi.fn(() => Promise.resolve(remoteOk(wireNamespaces()[0]))),
-    })
-    fireEvent.click(screen.getByText(en.customized))
-    fireEvent.click(screen.getAllByLabelText(new RegExp(en.removeModel))[0] as HTMLElement)
-    fireEvent.click(screen.getByLabelText(new RegExp(en.removeModel)))
-    expect(screen.getByText(en.modelsEmpty)).toBeTruthy()
-    fireEvent.click(screen.getByText(en.resetModels))
-    expect(screen.getByText(en.modelsInherited)).toBeTruthy()
-
-    const names = screen.getAllByLabelText(new RegExp(en.modelName))
-    expandRow(1)
-    const windows = capacityInputs(en.contextWindow)
-    fireEvent.change(names[0] as HTMLInputElement, { target: { value: '' } })
-    fireEvent.change(windows[0] as HTMLInputElement, { target: { value: '' } })
-    fireEvent.click(screen.getByText(en.apply))
-
-    await waitFor(() => { expect(mutate).toHaveBeenCalledTimes(1) })
-    expect(mutate.mock.calls[0]).toEqual([
-      'llm-deepseek',
-      [{
-        op: 'set',
-        path: ['models'],
-        value: [
-          { id: 'deepseek-v4-flash', description: 'Preserved hidden detail' },
-          DEFAULT_DEEPSEEK_MODELS[1],
-        ],
-      }],
-      0,
-    ])
-  })
 
   it('clears an inherited override with an unset op, never a whole-section replace', async () => {
     // A whole-section replace would clobber sibling overrides to clear one field.

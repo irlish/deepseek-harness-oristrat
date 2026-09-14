@@ -6,6 +6,8 @@
  */
 
 import { useState } from 'react'
+import type { ModelsOperations } from './operations.ts'
+import type { ProbeTarget } from './ModelListEditor.tsx'
 import type { ReactNode } from 'react'
 import {
   IconChevronDownOutline14, IconChevronRightOutline14, IconPlusOutline16, IconTrashOutline16,
@@ -138,8 +140,12 @@ export interface DeepSeekModelsEditorProps {
   disabled: boolean
   /** Replace the user-owned array after one visible edit. */
   onChange: (models: DeepSeekModelDraft[]) => void
-  /** Remove the user-owned array and return to inheritance. */
-  onReset: () => void
+  /** Wire face for upstream model discovery. */
+  operations: ModelsOperations
+  /** Endpoint and one-shot credential the fetch interrogates. */
+  probe: ProbeTarget
+  /** Locale key naming why the fetch is unavailable, when it is. */
+  probeBlocked?: keyof typeof en | undefined
 }
 
 /**
@@ -196,11 +202,6 @@ export function DeepSeekModelsEditor(props: DeepSeekModelsEditorProps): ReactNod
     props.onChange(props.models.filter((_model, at) => at !== index).map(model => ({ ...model })))
   }
 
-  const reset = (): void => {
-    setEditing(new Map())
-    setExpanded(new Set())
-    props.onReset()
-  }
 
   const toggle = (index: number): void => {
     setExpanded((current) => {
@@ -262,6 +263,44 @@ export function DeepSeekModelsEditor(props: DeepSeekModelsEditorProps): ReactNod
     </label>
   )
 
+  const [busy, setBusy] = useState(false)
+  const [note, setNote] = useState<string | undefined>(undefined)
+
+  /** Pull the upstream catalog and merge ids this draft does not list yet. */
+  const fetchUpstream = async (): Promise<void> => {
+    setBusy(true)
+    setNote(undefined)
+    try {
+      const answer = await props.operations.discoverModels(props.probe.settingsNs, {
+        ...props.probe.provider === undefined ? {} : { provider: props.probe.provider },
+        ...props.probe.baseURL === undefined || props.probe.baseURL.length === 0 ? {} : { baseURL: props.probe.baseURL },
+        ...props.probe.api === undefined ? {} : { api: props.probe.api },
+        ...props.probe.apiKey === undefined ? {} : { apiKey: props.probe.apiKey },
+      })
+      if (answer.kind === 'refused') {
+        setNote(answer.message)
+        return
+      }
+      if (answer.models.length === 0) {
+        setNote(props.t('fetchEmpty'))
+        return
+      }
+      const known = new Set(props.models.map(model => (typeof model['id'] === 'string' ? model['id'] : '')))
+      const added = answer.models.filter(model => !known.has(model.id))
+      if (added.length > 0) {
+        props.onChange([...props.models, ...added.map(model => ({
+          id: model.id,
+          ...model.name === undefined ? {} : { name: model.name },
+        }))])
+      }
+      setNote(props.t('fetchResult'))
+    } catch (error: unknown) {
+      setNote(error instanceof Error ? error.message : String(error))
+    } finally {
+      setBusy(false)
+    }
+  }
+
   return (
     <section className={styles['modelCatalog']} aria-label={props.t('models')}>
       <div className={styles['modelListHead']}>
@@ -271,19 +310,17 @@ export function DeepSeekModelsEditor(props: DeepSeekModelsEditorProps): ReactNod
             {props.overridden ? props.t('modelsCustomized') : props.t('modelsInherited')}
           </span>
         </div>
-        {props.overridden
-          ? (
-            <button
-              type="button"
-              className={styles['linkButton']}
-              disabled={props.disabled}
-              onClick={reset}
-            >
-              {props.t('resetModels')}
-            </button>
-          )
-          : null}
+        <button
+          type="button"
+          className={styles['linkButton']}
+          disabled={props.disabled || busy || props.probeBlocked !== undefined}
+          title={props.probeBlocked !== undefined ? props.t(props.probeBlocked) : undefined}
+          onClick={() => { void fetchUpstream() }}
+        >
+          {busy ? props.t('fetching') : props.t('fetchUpstream')}
+        </button>
       </div>
+      {note === undefined ? null : <p className={styles['modelEmpty']}>{note}</p>}
       {props.models.length === 0
         ? <p className={styles['modelEmpty']}>{props.t('modelsEmpty')}</p>
         : (

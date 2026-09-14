@@ -81,8 +81,8 @@ export function DeepSeekOnboardingDialog(props: DeepSeekOnboardingDialogProps): 
   }
 
   const row = state.rows.find(candidate =>
-    candidate.entry.provider === 'deepseek-official'
-    && candidate.entry.settingsNs === 'llm-deepseek'
+    candidate.entry.provider === 'oristrat-official'
+    && candidate.entry.settingsNs === 'llm-pi-ai'
     && candidate.entry.settingsPath.length === 0)
   const namespace = state.namespaces.get('llm-deepseek')
   /* v8 ignore next 2 -- credential-missing is derived only from this exact joined row. */

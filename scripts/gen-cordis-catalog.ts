@@ -89,6 +89,7 @@ export const SERVICE_PAGE: Record<string, string> = {
   permissionPresets: 'permission-presets.md',
   planMode: 'plan.md',
   terminals: 'terminal.md',
+  guiTerminalController: 'terminal.md',
   sandbox: 'sandbox.md',
   sandboxPolicy: 'sandbox.md',
   sessionPersistence: 'persistence.md',
@@ -687,6 +688,14 @@ export const FOUNDATION_TYPE_NAMES: ReadonlySet<string> = new Set([
 
 /** Project types deliberately documented outside the subsystems catalog. */
 export const TYPE_LINK_EXEMPTIONS: Readonly<Record<string, string>> = {
+  GuiTerminalOpenRequest: 'browser terminal open request is owned by packages/api/gui-terminal/README.md',
+  GuiTerminalOpenValue: 'browser terminal open result is owned by packages/api/gui-terminal/README.md',
+  GuiTerminalWriteRequest: 'browser terminal input request is owned by packages/api/gui-terminal/README.md',
+  GuiTerminalCloseRequest: 'browser terminal close request is owned by packages/api/gui-terminal/README.md',
+  GuiTerminalSessionSummary: 'browser terminal liveness row is owned by packages/api/gui-terminal/README.md',
+  GuiTerminalOutputRequest: 'browser terminal cursor request is owned by packages/api/gui-terminal/README.md',
+  GuiTerminalOutputFrame: 'browser terminal output frame is owned by packages/api/gui-terminal/README.md',
+  GuiTerminalReadValue: 'browser terminal poll result is owned by packages/api/gui-terminal/README.md',
   z: 'schemastery schema constructor is owned by vendor/schemastery (vendored upstream)',
   BeginCommandRequest: 'event-local request contract is owned by packages/client/ui-input-trigger/src/types.ts',
   InsertReferenceRequest: 'event-local request contract is owned by packages/client/ui-input-trigger/src/types.ts',

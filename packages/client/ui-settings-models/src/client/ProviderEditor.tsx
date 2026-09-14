@@ -33,7 +33,7 @@ import {
 import { apiKeyFailure } from './apiKey.ts'
 import { EditorFooter } from './EditorFooter.tsx'
 import { ModelListEditor } from './ModelListEditor.tsx'
-import { deriveKeyRef, protocolChoices } from './store.ts'
+import { deriveKeyRef, OFFICIAL_PROVIDER_IDS, protocolChoices } from './store.ts'
 import type { ModelsOperations } from './operations.ts'
 import type { SettingsSchemaOperations } from './schema-operations.ts'
 import type { en } from './locales.ts'
@@ -459,6 +459,9 @@ export function ProviderEditor(props: ProviderEditorProps): ReactNode {
                     ? defaultContextWindow
                     : undefined}
                   defaultMaxTokens={typeof defaultMaxTokens === 'number' ? defaultMaxTokens : undefined}
+                  probe={probe}
+                  probeBlocked={keyFailure}
+                  operations={operations}
                 />
               )
               : (
@@ -482,7 +485,7 @@ export function ProviderEditor(props: ProviderEditorProps): ReactNode {
         : (
           <div className={styles['editorHeader']}>
             <span className={styles['editorTitle']}>{props.displayName}</span>
-            {props.provider !== props.displayName
+            {props.provider !== props.displayName && !OFFICIAL_PROVIDER_IDS.includes(props.provider)
               ? <span className={styles['editorRoute']}>{props.provider}</span>
               : null}
           </div>
