@@ -6,7 +6,7 @@
 
 /** Simplified Chinese dictionary (the key-set source of truth). */
 export const zh = {
-  'group.ungrouped': '未分组',
+  'group.ungrouped': '最近会话',
   'session.new': '新会话',
   'section.workspaces': '工作区',
   'section.sessions': '会话',
@@ -20,6 +20,7 @@ export const zh = {
   'sessions.expand': '展开其余 {n} 个会话',
   'sessions.collapse': '收起',
   'empty.none': '暂无会话',
+  'empty.unassigned': '未关联工作区的会话会显示在这里',
   'empty.noMatches': '无匹配结果',
   'workspace.add': '添加工作区',
   'search.sessions.aria': '搜索会话',
@@ -41,7 +42,7 @@ export const zh = {
   'field.workspaceName': '工作区名称',
   'field.sessionName': '会话名称',
   'delete.workspace': '删除工作区',
-  'delete.desc': '将把“{name}”从工作区列表中移除。文件夹与会话记录会保留，其会话将显示在“未分组”下。',
+  'delete.desc': '将把“{name}”从工作区列表中移除。文件夹与会话记录会保留，其会话将显示在“最近会话”下。',
   'delete.pending': '正在删除工作区…',
   'menu.fork': '分叉会话',
   'menu.archiveSession': '归档会话',
@@ -76,7 +77,7 @@ export type WorkspaceKey = keyof typeof zh
 
 /** English dictionary, checked complete against the zh key set. */
 export const en = {
-  'group.ungrouped': 'Ungrouped',
+  'group.ungrouped': 'Recent Sessions',
   'session.new': 'New Session',
   'section.workspaces': 'Workspaces',
   'section.sessions': 'Sessions',
@@ -90,6 +91,7 @@ export const en = {
   'sessions.expand': 'Show {n} more sessions',
   'sessions.collapse': 'Show less',
   'empty.none': 'No sessions yet',
+  'empty.unassigned': 'Sessions without a workspace appear here',
   'empty.noMatches': 'No matches',
   'workspace.add': 'Add workspace',
   'search.sessions.aria': 'Search sessions',
@@ -111,7 +113,7 @@ export const en = {
   'field.workspaceName': 'Workspace name',
   'field.sessionName': 'Session name',
   'delete.workspace': 'Delete workspace',
-  'delete.desc': 'This removes “{name}” from the workspace list. The folder and session logs will be kept. Its sessions will appear under Ungrouped.',
+  'delete.desc': 'This removes “{name}” from the workspace list. The folder and session logs will be kept. Its sessions will appear under Recent Sessions.',
   'delete.pending': 'Deleting workspace…',
   'menu.fork': 'Fork session',
   'menu.archiveSession': 'Archive session',

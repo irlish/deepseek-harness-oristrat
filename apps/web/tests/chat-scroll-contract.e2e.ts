@@ -176,9 +176,9 @@ async function launchScrollWorld(options: ScrollWorldOptions): Promise<ScrollWor
     await page.waitForSelector('[class*="frame"]', { timeout: 30_000 })
     // Session-list bootstrap can replace the controlled search state. Wait
     // for the seeded baseline before openSeed starts the lazy content query
-    // (the compact layout dropped group session counts; the Ungrouped bucket
-    // row is the barrier).
-    await page.getByText('Ungrouped', { exact: true }).waitFor({ timeout: 30_000 })
+    // (the compact layout dropped group session counts; the first seeded
+    // Recent Sessions row beside the always-present header is the barrier).
+    await page.getByRole('tree', { name: 'Sessions' }).getByRole('treeitem').nth(1).waitFor({ timeout: 30_000 })
     return {
       assistantFrames,
       events,

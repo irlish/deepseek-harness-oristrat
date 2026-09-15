@@ -408,15 +408,76 @@ describe('UiWorkspaceService', () => {
       expect(b.sessions.open).toHaveBeenLastCalledWith(sid('opened-recent-home'))
     })
 
+    // With no Workspace at all, New Session falls into the unassigned bucket.
     const empty = bench()
     empty.uiWorkspace.startSession()
-    expect(empty.sessions.clear).toHaveBeenCalledOnce()
+    await vi.waitFor(() => {
+      expect(empty.sessions.create).toHaveBeenCalledWith()
+      expect(empty.sessions.open).toHaveBeenCalledWith(sid('created-none'))
+    })
+    expect(empty.sessions.clear).not.toHaveBeenCalled()
 
     const warning = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
     b.sessions.create.mockRejectedValueOnce(new Error('create failed'))
     b.uiWorkspace.startSession(wid('recent-home'))
     await vi.waitFor(() => {
       expect(warning).toHaveBeenCalledWith('new session failed:', expect.any(Error))
+    })
+
+    empty.sessions.create.mockRejectedValueOnce(new Error('unassigned failed'))
+    empty.uiWorkspace.startSession()
+    await vi.waitFor(() => {
+      expect(warning).toHaveBeenCalledWith('new session failed:', expect.any(Error))
+    })
+  })
+
+  it('leaves the session-less view in place on cold start when no Workspace exists', async () => {
+    const b = bench()
+    b.workspaces.list.set(workspaceState([]))
+    b.sessions.list.set(sessionState())
+    await flush()
+    expect(b.sessions.create).not.toHaveBeenCalled()
+    expect(b.sessions.open).not.toHaveBeenCalled()
+  })
+
+  it('reuses an unarchived unassigned blank and coalesces concurrent unassigned creation', async () => {
+    const b = bench({
+      sessions: sessionState([
+        summary('archived-blank', { blank: true }),
+        summary('loose-blank', { blank: true }),
+      ]),
+      workspaces: workspaceState([], [sid('archived-blank')]),
+    })
+    b.uiWorkspace.startSession()
+    await vi.waitFor(() => {
+      expect(b.sessions.open).toHaveBeenCalledWith(sid('loose-blank'))
+    })
+    expect(b.sessions.create).not.toHaveBeenCalled()
+
+    const c = bench({ workspaces: workspaceState([]) })
+    const creation = Promise.withResolvers<SessionId>()
+    c.sessions.create.mockImplementation(() => creation.promise)
+    c.uiWorkspace.startSession()
+    c.uiWorkspace.startSession()
+    await flush()
+    expect(c.sessions.create).toHaveBeenCalledTimes(1)
+    creation.resolve(sid('fresh-unassigned'))
+    await vi.waitFor(() => {
+      expect(c.sessions.open).toHaveBeenCalledExactlyOnceWith(sid('fresh-unassigned'))
+    })
+  })
+
+  it('skips Workspace-member blanks while the Workspace baseline is reconnecting', async () => {
+    // A pending baseline still carries the previous generation's membership:
+    // an unassigned start must not recycle a blank that a Workspace owns.
+    const b = bench({
+      sessions: sessionState([summary('member-blank', { blank: true })]),
+      workspaces: workspaceState([workspace('alpha', [sid('member-blank')])], [], 'pending'),
+    })
+    b.uiWorkspace.startSession()
+    await vi.waitFor(() => {
+      expect(b.sessions.create).toHaveBeenCalledWith()
+      expect(b.sessions.open).toHaveBeenCalledWith(sid('created-none'))
     })
   })
 

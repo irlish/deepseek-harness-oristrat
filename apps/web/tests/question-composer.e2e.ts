@@ -373,7 +373,7 @@ describe.skipIf(MODE === 'record')('web e2e: cancelled question transcript', () 
 
     const groupRow = cancelledPage.locator('[role="treeitem"]').first()
     await groupRow.waitFor({ timeout: 15_000 })
-    await groupRow.click()
+    if (await groupRow.getAttribute('aria-expanded') !== 'true') await groupRow.click()
     const sessionRow = cancelledPage.locator('[role="treeitem"]').nth(1)
     await sessionRow.waitFor({ timeout: 10_000 })
     await sessionRow.click()

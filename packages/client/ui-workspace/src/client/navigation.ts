@@ -40,7 +40,8 @@ export interface UiWorkspace {
   connectWorkspace(workspaceId: WorkspaceId): Promise<SessionId>
   /**
    * Start a New Session flow and navigate to its Session.
-   * @param workspaceId - explicit target; absent inherits the current or most recent Workspace.
+   * @param workspaceId - explicit target; absent inherits the current or most
+   * recent Workspace, or lands in the unassigned bucket when none exists.
    */
   startSession(workspaceId?: WorkspaceId): void
   /**
@@ -89,6 +90,7 @@ export class DirectoryBrowseError extends Error {
 /** Implements Workspace archive and directory UI operations. */
 class UiWorkspaceService extends Service implements UiWorkspace {
   private readonly connecting = new Map<WorkspaceId, Promise<SessionId>>()
+  private connectingUnassigned: Promise<SessionId> | undefined
   private readonly lifetime = new AbortController()
 
   /**
@@ -131,6 +133,35 @@ class UiWorkspaceService extends Service implements UiWorkspace {
     return attempt
   }
 
+  /**
+   * Resolve the reusable or newly created blank Session outside every
+   * Workspace. Host `session.create` without a target directory lands the
+   * Session on its defaultCwd; the browser shows it in the unassigned bucket.
+   * @returns a Session already addressable through the Session Controller.
+   */
+  private connectUnassigned(): Promise<SessionId> {
+    if (this.connectingUnassigned !== undefined) return this.connectingUnassigned
+    const workspace = this.workspaces.list.getSnapshot()
+    const sessions = this.sessions.list.getSnapshot()
+    const assigned = new Set(workspace.items.flatMap(item => [...item.sessionIds]))
+    for (const id of sessions.ids) {
+      const summary = sessions.byId[id]
+      if (summary !== undefined && summary.blank && !assigned.has(summary.id)
+        && !workspace.archivedSessionIds.includes(summary.id)) return Promise.resolve(summary.id)
+    }
+    const attempt = this.sessions.create()
+      .finally(() => { this.connectingUnassigned = undefined })
+    this.connectingUnassigned = attempt
+    return attempt
+  }
+
+  /** Connect the unassigned bucket and open its Session unless a later navigation supersedes it. */
+  private async openUnassigned(): Promise<void> {
+    const navigation = AbortSignal.any([this.ctx.layout.beginNavigation(), this.lifetime.signal])
+    const sessionId = await this.connectUnassigned()
+    if (!navigation.aborted) this.openSession(sessionId)
+  }
+
   openSession(sessionId: SessionId): void {
     this.sessions.open(sessionId)
     this.ctx.layout.selectPanel(null)
@@ -163,8 +194,11 @@ class UiWorkspaceService extends Service implements UiWorkspace {
       : undefined
     const target = workspaceId ?? currentWorkspaceId ?? recent
     if (target === undefined) {
-      this.sessions.clear()
-      this.ctx.layout.selectPanel(null)
+      // No Workspace exists at all: New Session falls into the unassigned
+      // bucket instead of dead-ending on the no-session view.
+      void this.openUnassigned().catch(
+        (reason: unknown) => { console.warn('new session failed:', reason) },
+      )
       return
     }
     void this.openWorkspace(target).catch(
@@ -209,11 +243,15 @@ class UiWorkspaceService extends Service implements UiWorkspace {
       }
       const target = recentWorkspace(workspace.items, sessions.byId)
       if (target === undefined) {
+        // No Workspace to auto-connect. Leave the session-less hero (whose
+        // composer is live) in place; the Recent Sessions bucket's ＋ and the
+        // New Session action create an unassigned Session on explicit intent.
         initial = 'done'
         return
       }
       initial = 'connecting'
-      void this.connectWorkspace(target).then(
+      const connection = this.connectWorkspace(target)
+      void connection.then(
         (sessionId) => {
           if (this.lifetime.signal.aborted) return
           if (this.sessions.list.getSnapshot().current === undefined) {

@@ -53,16 +53,23 @@ async function bench() {
 
 /** Open the Workspace row's hover card, which is where the home abbreviation shows. */
 function openHoverCard(): void {
-  const row = screen.getByRole('treeitem').parentElement as HTMLElement
+  const row = projectRow()
   fireEvent.pointerEnter(row)
   act(() => { vi.advanceTimersByTime(500) })
 }
 
 /** Close it again, so the next hover rebuilds the card from current props. */
 function closeHoverCard(): void {
-  const row = screen.getByRole('treeitem').parentElement as HTMLElement
+  const row = projectRow()
   fireEvent.pointerLeave(row)
   act(() => { vi.advanceTimersByTime(500) })
+}
+
+/** The Project treeitem's hover-card wrapper; the tree also holds the bucket
+ * header, and an open card repeats the title outside any treeitem. */
+function projectRow(): HTMLElement {
+  const row = screen.getAllByRole('treeitem').find(item => item.textContent?.includes('Project'))
+  return row?.parentElement as HTMLElement
 }
 
 describe('Host home in the assembled browsing region', () => {

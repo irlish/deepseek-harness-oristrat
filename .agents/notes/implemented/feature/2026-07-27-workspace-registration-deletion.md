@@ -12,7 +12,7 @@ The existing visual-only menu row also left deletion semantics undefined across 
 
 ## Decision
 
-`ctx.workspaceRegistry.delete(id)` deletes only the Workspace registration: its id leaves durable `workspaceIds`, its `workspaces` table row and entity-cache entry disappear, and its ordered `sessionIds` account disappears with that row. It never calls filesystem removal or `SessionPersistence`; the directory, every user file, every live Session, and every persisted Session log remain. Because sidebar grouping is the complement of all surviving Workspace accounts, those Sessions immediately appear under Ungrouped, including the current Session.
+`ctx.workspaceRegistry.delete(id)` deletes only the Workspace registration: its id leaves durable `workspaceIds`, its `workspaces` table row and entity-cache entry disappear, and its ordered `sessionIds` account disappears with that row. It never calls filesystem removal or `SessionPersistence`; the directory, every user file, every live Session, and every persisted Session log remain. Because sidebar grouping is the complement of all surviving Workspace accounts, those Sessions immediately appear under Recent Sessions, including the current Session.
 
 Unknown ids return `false` at the domain contract. `workspace.delete({ workspaceId })` maps that distinction to `workspace-not-found`; success returns `{ deleted: true }`. `workspace.list` remains the reconnect baseline.
 
@@ -32,13 +32,13 @@ The delete confirmation remains pending until the React Workspace projection has
 
 ## Confirmation interaction
 
-The existing Workspace row menu opens a shared `Modal` before deletion. The text states all three consequences: the Workspace leaves the list, the folder and session logs remain, and its Sessions appear under Ungrouped. While the request is pending, the confirm and Cancel controls are disabled, duplicate confirmation is ignored, and Escape or Close cannot dismiss the operation. Failure keeps the Modal open with the error; Cancel, Escape, and Close before submission never delete.
+The existing Workspace row menu opens a shared `Modal` before deletion. The text states all three consequences: the Workspace leaves the list, the folder and session logs remain, and its Sessions appear under Recent Sessions. While the request is pending, the confirm and Cancel controls are disabled, duplicate confirmation is ignored, and Escape or Close cannot dismiss the operation. Failure keeps the Modal open with the error; Cancel, Escape, and Close before submission never delete.
 
 The menu, Modal, and buttons retain their existing structure and design tokens. Session deletion remains visual-only and outside this decision.
 
 ## Alternatives considered
 
-**Cascade-delete Sessions.** Rejected because Workspace registration does not own Session persistence and the product requirement is to preserve histories under Ungrouped. Session deletion needs its own lifecycle, running checks, descendant semantics, and explicit UI.
+**Cascade-delete Sessions.** Rejected because Workspace registration does not own Session persistence and the product requirement is to preserve histories under Recent Sessions. Session deletion needs its own lifecycle, running checks, descendant semantics, and explicit UI.
 
 **Move the folder to Trash.** Rejected because the record cannot prove directory ownership. A future destructive filesystem action must be separately named, separately confirmed, and enforce explicit safety boundaries.
 
@@ -52,7 +52,7 @@ The menu, Modal, and buttons retain their existing structure and design tokens. 
 
 Workspace package tests pin successful metadata-only deletion, same-path re-registration, unknown-id idempotence, table-failure rollback, explicit-marker restart recovery, unexplained-corruption rejection, and cache/table invariant behavior. Apiproxy and carrier tests pin the schema, handler, `workspace-not-found`, retained Session/folder, fresh-id re-registration, and committed `host/workspace-removed` frame. Client tests pin unary direct echo, duplicate removal, late changed frames, and deletion racing an in-flight baseline. Component tests pin confirmation, projection-settled closing, success-frame-before-unary ordering, failure, Cancel, Escape, and Close. The browser scenario observes every transient alert, slot error, console error, and page error while reusing a deleted title for a different directory.
 
-The assembled keyless Web scenario registers an existing temporary project directory, accounts a persisted Session, makes that Session current, confirms deletion in Chromium, and verifies the Workspace group disappears while Ungrouped retains the current Session. It checks the user file and JSONL log before and after deletion and repeats the UI, directory, and log assertions after reload. The scenario holds the seeded attachment frame until the browser selects the adoption-created New Session, proves that the seed is absent from the group, then delivers the frame and selects the only non-blank Session. Host attachment completion and a two-row count cannot prove browser membership: the group header plus New Session already satisfy that count, and the arriving seed can replace the positional locator between click and assertion.
+The assembled keyless Web scenario registers an existing temporary project directory, accounts a persisted Session, makes that Session current, confirms deletion in Chromium, and verifies the Workspace group disappears while Recent Sessions retains the current Session. It checks the user file and JSONL log before and after deletion and repeats the UI, directory, and log assertions after reload. The scenario holds the seeded attachment frame until the browser selects the adoption-created New Session, proves that the seed is absent from the group, then delivers the frame and selects the only non-blank Session. Host attachment completion and a two-row count cannot prove browser membership: the group header plus New Session already satisfy that count, and the arriving seed can replace the positional locator between click and assertion.
 
 ## Consequences
 

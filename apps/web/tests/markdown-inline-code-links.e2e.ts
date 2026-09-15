@@ -111,7 +111,7 @@ describe('web e2e: Markdown inline-code links', () => {
     onTestFailed(() => saveFailureShot(page, 'web-e2e-markdown-inline-code-links'))
     const groupRow = page.locator('[role="treeitem"]').first()
     await groupRow.waitFor({ timeout: 15_000 })
-    await groupRow.click()
+    if (await groupRow.getAttribute('aria-expanded') !== 'true') await groupRow.click()
     const sessionRow = page.locator('[role="treeitem"]').nth(1)
     await sessionRow.waitFor({ timeout: 10_000 })
     await sessionRow.click()

@@ -148,7 +148,9 @@ describe('WorkspaceBrowser', () => {
         }])),
         useHostInfo: selector => selector({ home: '/home/u', isLoopback: true }),
       })
-      fireEvent.pointerEnter(screen.getByRole('treeitem').parentElement as HTMLElement)
+      fireEvent.pointerEnter(
+        screen.getByText('Project').closest('[role="treeitem"]')?.parentElement as HTMLElement,
+      )
       act(() => { vi.advanceTimersByTime(500) })
       expect(screen.getByText('~/Documents/project')).toBeTruthy()
     } finally {
@@ -394,12 +396,12 @@ describe('WorkspaceBrowser', () => {
     fireEvent.click(screen.getByRole('button', { name: '视图选项' }))
     fireEvent.click(screen.getByRole('menuitem', { name: '最近更新' }))
     await waitFor(() => {
-      const rows = screen.getAllByRole('treeitem').slice(1)
+      const rows = screen.getAllByRole('treeitem').slice(2)
       expect(rows[0]?.textContent).toContain('one')
       expect(rows[1]?.textContent).toContain('two')
     })
 
-    const [one, two] = screen.getAllByRole('treeitem').slice(1) as [HTMLElement, HTMLElement]
+    const [one, two] = screen.getAllByRole('treeitem').slice(2) as [HTMLElement, HTMLElement]
     two.getBoundingClientRect = () => ({
       top: 150, bottom: 184, left: 0, right: 200, width: 200, height: 34, x: 0, y: 150, toJSON: () => ({}),
     })
@@ -409,7 +411,7 @@ describe('WorkspaceBrowser', () => {
 
     fireEvent.click(screen.getByRole('button', { name: '视图选项' }))
     fireEvent.click(screen.getByRole('menuitem', { name: '手动排序' }))
-    expect(screen.getAllByRole('treeitem').slice(1)[0]?.textContent).toContain('two')
+    expect(screen.getAllByRole('treeitem').slice(2)[0]?.textContent).toContain('two')
 
     // User activity updates the timestamp baseline in Manual mode without
     // changing the shared visual order.
@@ -419,14 +421,14 @@ describe('WorkspaceBrowser', () => {
       expect(b.store.getSnapshot().sessionUpdatedAtByAccount.alpha).toEqual({ one: 4, two: 2 })
     })
     expect(b.store.getSnapshot().sessionOrderByAccount.alpha).toEqual(['two', 'one'])
-    expect(screen.getAllByRole('treeitem').slice(1)[0]?.textContent).toContain('two')
+    expect(screen.getAllByRole('treeitem').slice(2)[0]?.textContent).toContain('two')
 
     // Entering Last updated performs one complete recency sort.
     fireEvent.click(screen.getByRole('button', { name: '视图选项' }))
     fireEvent.click(screen.getByRole('menuitem', { name: '最近更新' }))
     await waitFor(() => {
       expect(b.store.getSnapshot().sessionOrderByAccount.alpha).toEqual(['one', 'two'])
-      expect(screen.getAllByRole('treeitem').slice(1)[0]?.textContent).toContain('one')
+      expect(screen.getAllByRole('treeitem').slice(2)[0]?.textContent).toContain('one')
     })
 
     // A later user activity timestamp promotes that Session once while the
@@ -435,7 +437,7 @@ describe('WorkspaceBrowser', () => {
     rerender(b, { useSessions: hook(promoted) })
     await waitFor(() => {
       expect(b.store.getSnapshot().sessionOrderByAccount.alpha).toEqual(['two', 'one'])
-      expect(screen.getAllByRole('treeitem').slice(1)[0]?.textContent).toContain('two')
+      expect(screen.getAllByRole('treeitem').slice(2)[0]?.textContent).toContain('two')
     })
 
     b.view.unmount()
@@ -444,7 +446,7 @@ describe('WorkspaceBrowser', () => {
       useWorkspaces: hook(workspaceState([workspace('alpha', ['two', 'one'])])),
     })
     expect(restored.store.getSnapshot().sessionOrderByAccount.alpha).toEqual(['two', 'one'])
-    expect(screen.getAllByRole('treeitem').slice(1)[0]?.textContent).toContain('two')
+    expect(screen.getAllByRole('treeitem').slice(2)[0]?.textContent).toContain('two')
   })
 
   it('archives a session from the row menu and hides archived rows in both modes', async () => {
@@ -520,7 +522,7 @@ describe('WorkspaceBrowser', () => {
     expect(startSession).toHaveBeenCalledWith(wid('alpha'))
   })
 
-  it('auto-expands the Ungrouped bucket for a loose current session; its header has no menu and its ＋ is inert', () => {
+  it('auto-expands the recent-sessions bucket for a loose current session; its header has no menu and its ＋ starts an unassigned session', () => {
     const startSession = vi.fn()
     mount({
       useSessions: hook(sessionState([summary('loose', 1)], { current: sid('loose') })),
@@ -529,9 +531,23 @@ describe('WorkspaceBrowser', () => {
     })
     // The loose session's group is UNGROUPED_KEY: expanded by the effect.
     expect(screen.getByText('loose')).toBeTruthy()
-    expect(screen.queryByRole('button', { name: '工作区“未分组”的操作' })).toBeNull()
-    fireEvent.click(screen.getByRole('button', { name: '在“未分组”中新建会话' }))
-    expect(startSession).not.toHaveBeenCalled()
+    expect(screen.queryByRole('button', { name: '工作区“最近会话”的操作' })).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: '在“最近会话”中新建会话' }))
+    expect(startSession).toHaveBeenCalledExactlyOnceWith()
+  })
+
+  it('shows the recent-sessions bucket before every workspace, open by default', () => {
+    mount({
+      useSessions: hook(sessionState([summary('loose', 1)])),
+      useWorkspaces: hook(workspaceState([workspace('alpha', [])])),
+    })
+    // The leading bucket header is followed by its session row (the bucket is
+    // open by default), and only then comes the collapsed workspace header.
+    const headers = screen.getAllByRole('treeitem')
+    expect(headers[0]?.textContent).toContain('最近会话')
+    expect(headers[1]?.textContent).toContain('loose')
+    expect(headers[2]?.textContent).toContain('alpha')
+    expect(screen.getByText('loose')).toBeTruthy()
   })
 
   it('keeps an already-expanded group when the selection moves within it', () => {
@@ -1010,7 +1026,7 @@ describe('WorkspaceBrowser', () => {
     vi.useFakeTimers()
     try {
       const b = mount()
-      expect(screen.getByText('暂无会话')).toBeTruthy()
+      expect(screen.getByText('未关联工作区的会话会显示在这里')).toBeTruthy()
       b.store.actions.setGroupBy('flat')
       rerender(b, {})
       expect(screen.getByText('暂无会话')).toBeTruthy()
@@ -1177,7 +1193,7 @@ describe('WorkspaceBrowser', () => {
       insertSessionBefore,
     })
     fireEvent.click(screen.getByText('alpha'))
-    const rows = screen.getAllByRole('treeitem').slice(1) // drop the group header
+    const rows = screen.getAllByRole('treeitem').slice(2) // drop the two group headers
     const [one, , three] = rows as [HTMLElement, HTMLElement, HTMLElement]
     three.getBoundingClientRect = () => ({
       top: 200, bottom: 234, left: 0, right: 200, width: 200, height: 34, x: 0, y: 200, toJSON: () => ({}),
@@ -1211,7 +1227,8 @@ describe('WorkspaceBrowser', () => {
       useWorkspaces: hook(workspaceState([])),
       insertSessionBefore,
     })
-    fireEvent.click(screen.getByText('未分组'))
+    // The recent-sessions bucket is open by default: rows are draggable right away.
+    expect(screen.getByText('最近会话')).toBeTruthy()
 
     const dragAfter = (sourceTitle: string, targetTitle: string): void => {
       const source = screen.getByText(sourceTitle).closest('[role="treeitem"]') as HTMLElement
@@ -1283,7 +1300,7 @@ describe('WorkspaceBrowser', () => {
       insertSessionBefore,
     })
     fireEvent.click(screen.getByText('alpha'))
-    const [one, two] = screen.getAllByRole('treeitem').slice(1) as [HTMLElement, HTMLElement]
+    const [one, two] = screen.getAllByRole('treeitem').slice(2) as [HTMLElement, HTMLElement]
     two.getBoundingClientRect = () => ({
       top: 150, bottom: 184, left: 0, right: 200, width: 200, height: 34, x: 0, y: 150, toJSON: () => ({}),
     })
@@ -1309,7 +1326,7 @@ describe('WorkspaceBrowser', () => {
       insertSessionBefore,
     })
     fireEvent.click(screen.getByText('alpha'))
-    const [one, two] = screen.getAllByRole('treeitem').slice(1) as [HTMLElement, HTMLElement]
+    const [one, two] = screen.getAllByRole('treeitem').slice(2) as [HTMLElement, HTMLElement]
     two.getBoundingClientRect = () => ({
       top: 150, bottom: 184, left: 0, right: 200, width: 200, height: 34, x: 0, y: 150, toJSON: () => ({}),
     })
@@ -1334,7 +1351,7 @@ describe('WorkspaceBrowser', () => {
         insertSessionBefore,
       })
       fireEvent.click(screen.getByText('alpha'))
-      const [one, two] = screen.getAllByRole('treeitem').slice(1) as [HTMLElement, HTMLElement]
+      const [one, two] = screen.getAllByRole('treeitem').slice(2) as [HTMLElement, HTMLElement]
       two.getBoundingClientRect = () => ({
         top: 150, bottom: 184, left: 0, right: 200, width: 200, height: 34, x: 0, y: 150, toJSON: () => ({}),
       })
@@ -1426,7 +1443,7 @@ describe('WorkspaceBrowser', () => {
     const dialog = screen.getByRole('dialog', { name: '删除工作区' })
     expect(dialog.textContent).toContain('将把“Alpha”从工作区列表中移除')
     expect(dialog.textContent).toContain('文件夹与会话记录会保留')
-    expect(dialog.textContent).toContain('其会话将显示在“未分组”下')
+    expect(dialog.textContent).toContain('其会话将显示在“最近会话”下')
 
     const confirm = screen.getByRole<HTMLButtonElement>('button', { name: '删除工作区' })
     fireEvent.click(confirm)

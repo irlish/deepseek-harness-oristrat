@@ -306,7 +306,12 @@ function SessionTree({
     setGroupExpanded(currentGroup, true)
   }, [current, currentGroup, setGroupExpanded, groupExpansion])
   const expandedGroups = useMemo(
-    () => Object.entries(groupExpansion).filter(([, expanded]) => expanded).map(([key]) => key),
+    () => {
+      const explicit = Object.entries(groupExpansion).filter(([, expanded]) => expanded).map(([key]) => key)
+      // The unassigned recent-sessions column defaults open until the user
+      // explicitly collapses it (an own key in the persisted expansion map).
+      return Object.hasOwn(groupExpansion, UNGROUPED_KEY) ? explicit : [...explicit, UNGROUPED_KEY]
+    },
     [groupExpansion],
   )
   const ungroupedSessionIds = useMemo(() => {
@@ -445,8 +450,11 @@ function SessionTree({
       console.warn('workspace reorder rejected:', reason)
     })
   }
-  const workspaceDropAtListStart = groups[0]?.workspaceId !== undefined
-    && workspaceDrag?.over?.id === groups[0].workspaceId
+  // The unassigned column leads every workspace, so the "top of the
+  // workspace list" drop anchor is the first real-workspace group.
+  const firstWorkspaceGroup = groups.find(group => group.workspaceId !== undefined)
+  const workspaceDropAtListStart = firstWorkspaceGroup?.workspaceId !== undefined
+    && workspaceDrag?.over?.id === firstWorkspaceGroup.workspaceId
     && workspaceDrag.over.half === 'before'
 
   return (
@@ -457,9 +465,6 @@ function SessionTree({
         role="tree"
         aria-label={t('section.sessions')}
       >
-        {groups.length === 0 && (
-          <div className={css.empty}>{t('empty.none')}</div>
-        )}
         {groups.map((group) => {
           const workspaceId = group.workspaceId
           const collapsed = collapsedSessionRows(group.sessions)
@@ -530,10 +535,11 @@ function SessionTree({
                   setGroupExpanded(group.key, !group.expanded)
                 }}
                 onCreate={() => {
-                  if (group.workspaceId !== undefined) {
-                    setGroupExpanded(group.key, true)
-                    startSession(group.workspaceId)
-                  }
+                  setGroupExpanded(group.key, true)
+                  // The unassigned column's "+" starts the workspace-less
+                  // New Session flow (Host default directory).
+                  if (group.workspaceId !== undefined) startSession(group.workspaceId)
+                  else startSession()
                 }}
                 drag={workspaceDragProps}
                 actions={group.workspaceId === undefined
@@ -549,6 +555,9 @@ function SessionTree({
                     },
                   }}
               />
+              {group.key === UNGROUPED_KEY && group.expanded && group.sessionCount === 0 && (
+                <div className={css.empty}>{t('empty.unassigned')}</div>
+              )}
               {(sessionsExpanded
                 ? group.sessions
                 : collapsed.rows

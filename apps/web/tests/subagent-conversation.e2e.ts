@@ -546,8 +546,13 @@ describe('web e2e: persisted subagent conversation and human continuation', () =
     await expect.poll(
       () => page.getByRole('tree', { name: 'Sessions' }).getByRole('treeitem').count(),
       { timeout: 15_000 },
-    ).toBe(3)
-    expect(await page.getByText('Ungrouped', { exact: true }).count()).toBe(0)
+    ).toBe(4)
+    // The always-present Recent Sessions bucket stays row-less: the fork sits
+    // beside its workspace-owning ancestor, not outside every Workspace.
+    await expect.poll(
+      () => page.getByText('Sessions without a workspace appear here').count(),
+      { timeout: 15_000 },
+    ).toBe(1)
     const hierarchy = page.getByRole('navigation', { name: 'Session hierarchy' })
     await expect.poll(() => hierarchy.getByRole('button').count()).toBe(1)
     await compareOrRefreshGolden(

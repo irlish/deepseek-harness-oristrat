@@ -232,7 +232,7 @@ async function liveAgent(scaffold: WebScaffold, sessionId: SessionId): Promise<A
 
 /** Expand the first Workspace row and open the named Session. */
 async function openSession(page: Page, title: string): Promise<void> {
-  const workspace = page.locator('[role="treeitem"]').first()
+  const workspace = page.locator('[role="treeitem"]').nth(1)
   await workspace.waitFor({ timeout: 15_000 })
   const deadline = Date.now() + 5_000
   while (await workspace.getAttribute('aria-expanded') !== 'true') {
@@ -396,7 +396,7 @@ describe.skipIf(MODE === 'record')('web e2e: conversational reminders', () => {
     await workspace.attachSession(atHandle.agent.id)
     await page.reload({ waitUntil: 'load' })
     await page.waitForSelector('[class*="frame"]', { timeout: 30_000 })
-    const workspaceItem = page.locator('[role="treeitem"]').first()
+    const workspaceItem = page.locator('[role="treeitem"]').nth(1)
     await workspaceItem.waitFor({ timeout: 15_000 })
     const expansionDeadline = Date.now() + 5_000
     while (await workspaceItem.getAttribute('aria-expanded') !== 'true') {
@@ -638,7 +638,7 @@ describe.skipIf(MODE === 'record')('web e2e: active Schedule catalog', () => {
       await openSidebar.click()
       await page.getByRole('button', { name: 'Collapse sidebar' }).waitFor({ timeout: 10_000 })
     }
-    const workspaceRow = page.locator('[role="treeitem"]').first()
+    const workspaceRow = page.locator('[role="treeitem"]').nth(1)
     await workspaceRow.waitFor({ timeout: 15_000 })
     const expansionDeadline = Date.now() + 5_000
     while (await workspaceRow.getAttribute('aria-expanded') !== 'true') {

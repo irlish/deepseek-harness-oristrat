@@ -213,7 +213,8 @@ describe('web e2e: Markdown image rendering', () => {
 
   it.skipIf(MODE === 'record')('loads permitted images and shows authored text for failures', async () => {
     onTestFailed(() => saveFailureShot(page, 'web-e2e-markdown-images'))
-    await page.getByRole('treeitem').first().click()
+    const bucketRow = page.getByRole('treeitem').first()
+    if (await bucketRow.getAttribute('aria-expanded') !== 'true') await bucketRow.click()
     await page.getByRole('treeitem').nth(1).click()
     await expect.poll(() => page.getByText('REMOTE_IMAGE_DONE', { exact: true }).count(), {
       timeout: 15_000,
