@@ -9,7 +9,7 @@ kind: "package-reference"
 
 ## 概述
 
-dsh Web 客户端的侧边栏让用户识别当前构建、启动新会话、将导航折叠为 56px 轨道、浏览 Workspace 与 Session，以及打开 Settings。它会将 Settings 入口固定在底部，并在隐藏空闲滚动条时避免浏览器行发生位移。New Session 优先使用显式选择的 Workspace，其次使用当前 Session 所属的 Workspace，再其次使用最近活跃的 Workspace；如果都不存在，则打开空白的 New Session 页面。部署可以替换品牌标记或名称，同时保留导航控件和轨道几何。
+dsh Web 客户端的侧边栏让用户识别当前构建、启动新会话、切换部署工作模式、将导航折叠为 56px 轨道、浏览 Workspace 与 Session，以及打开 Settings。它会将 Settings 入口固定在底部，并在隐藏空闲滚动条时避免浏览器行发生位移。New Session 优先使用显式选择的 Workspace，其次使用当前 Session 所属的 Workspace，再其次使用最近活跃的 Workspace；如果都不存在，则打开空白的 New Session 页面。部署可以替换品牌标记或名称，同时保留导航控件和轨道几何。
 
 ## 目录
 
@@ -30,6 +30,10 @@ dsh Web 客户端的侧边栏让用户识别当前构建、启动新会话、将
 ### 品牌与 New Session
 
 展开的品牌行把 `sidebar.brand.mark` 与 `sidebar.brand.name` 渲染为两个独立的 single slot；收起轨道则渲染同一个 mark slot。没有占位者时，外壳使用鱼形标记和本地化的本地构建标签。完整构建会在标签下方显示代码徽标；该徽标使用 `DSH_CLIENT_VERSION`、可选的 7 位 `DSH_CLIENT_COMMIT_HASH` 与 `DSH_CLIENT_GIT_DIRTY=true` 组装成 `version[-commit][-dirty]`；缺少版本元数据时不显示徽标。New Session 优先使用作用域操作明确指定的 Workspace，否则使用当前 Session 所属 Workspace，再否则使用最近活跃 Workspace；一个 Workspace 都没有时则清空选择，进入空白 New Session 页面。
+
+### 工作模式切换器
+
+展开的品牌行还在品牌旁挂载一个 Codex 风格的模式 chip：它显示当前部署工作模式，并打开双条目菜单（编码——MSCE 规范引擎开发；工作——方案、PPT 与文档的自由创作）。chip 经 `ctx.settingsScope.bind` 从 settings 域的共享 describe 镜像派生 `oristrat` settings 命名空间——自身不贡献线路读取，也不给冷启动 RPC 预算新增直连 `settings.describe` 调用方——且只在写入被提交后移动，因此被拒绝或失败的写入不会改变显示的模式。收起轨道不渲染该 chip。Host 侧消费者（`dsh-context-oristrat-msce-norms`、`dsh-guard-msce-gate`）按存储的模式限定 MSCE 规范与门禁的生效范围。
 
 ### 全局面板入口
 

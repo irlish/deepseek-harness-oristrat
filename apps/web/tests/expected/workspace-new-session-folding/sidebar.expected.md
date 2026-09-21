@@ -1,4 +1,8 @@
 - tree "Sessions":
+  - treeitem "Recent Sessions" [expanded]:
+    - img
+    - text: Recent Sessions
+  - text: Sessions without a workspace appear here
   - treeitem "{{workspace}} Workspace actions for {{workspace}} New session in {{workspace}}" [expanded]:
     - img
     - text: {{workspace}}

@@ -462,6 +462,14 @@
   padding: 0 16px 0 20px;
 }
 
+/* Trailing cluster of extra hero mode actions (the PPT entry rides here). */
+.heroModeCluster {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+}
+
 /* Hero: the composer sits inside the session scroll body; center there so
    the tree seat matches active (sticky footer) without a Root remount. */
 .root[data-phase='hero'] .scrollBody {

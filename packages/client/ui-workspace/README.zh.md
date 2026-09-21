@@ -25,7 +25,7 @@ kind: "package-reference"
 <a id="use-this-package"></a>
 ## 使用本包
 
-用侧边栏浏览 Workspace 及其 Session、重排它们并新建会话；在 Session Intent 主视觉区用选择器为新会话选择 Workspace。分组树始终以**最近会话**桶开头——它收容不属于任何 Workspace 的 Session（即 Ungrouped 记账）。该桶默认展开，其 ＋ 会创建一个无 Workspace 的会话（由 Host 落在其默认工作目录）；当不存在任何 Workspace 时，新会话也会落入该桶。打开的 Workspace 默认显示五条非空白 Session，并在首条提示词落地前把当前选中的空白**新会话**作为一条临时额外行。**展开其余**会显示隐藏条目；关闭再打开 Workspace 会恢复该折叠投影。
+用侧边栏浏览 Workspace 及其 Session、重排它们并新建会话；在 Session Intent 主视觉区用选择器为新会话选择 Workspace。分组树始终以**最近会话**桶开头——它收容不属于任何 Workspace 的 Session（即 Ungrouped 记账）。该桶默认展开，其 ＋ 会创建一个无 Workspace 的会话（由 Host 落在其默认工作目录）；当不存在任何 Workspace 时，新会话也会落入该桶。hero 选择器在 Workspace 行之上列出**不关联工作区**条目：选择它会创建一个不属于任何 Workspace 的会话；在零 Workspace 时，锚点手势打开这个双条目菜单，而不是直接进入目录流程。无所属 Workspace 的空白 Session 保持可对话——其 chip 显示**未关联工作区**，composer 可用。打开的 Workspace 默认显示五条非空白 Session，并在首条提示词落地前把当前选中的空白**新会话**作为一条临时额外行。**展开其余**会显示隐藏条目；关闭再打开 Workspace 会恢复该折叠投影。
 
 ### 重排序与视图选项
 
@@ -51,7 +51,7 @@ Session 行渲染运行时的实时 `pendingInteraction` 分类：审批显示**
 
 -----
 
-`ctx.uiWorkspace.openSession(id)` 会选中会话，并让主区域返回会话界面；这两项构成一次 UI 导航操作，即使目标会话已经是当前会话也同样执行。`openWorkspace(id, beforeOpen?)` 和 `forkSession(id)` 仅在请求未被后续导航替代时打开结果；新会话在能解析出 Workspace 目标时使用 `openWorkspace`，否则接通「最近会话」桶。可选的同步准备回调仅对仍有效的工作区请求执行，因此过期请求不会搬移 composer 草稿。后续导航或所有者释放会阻止晚到的 UI 提交，但不取消底层会话创建。选中失败时保留当前全局面板。会话行读取 `usePanelInfo`，在全局面板活跃时不显示会话选中样式；仅把焦点移到搜索框或目录选择器不会离开该面板。
+`ctx.uiWorkspace.openSession(id)` 会选中会话，并让主区域返回会话界面；这两项构成一次 UI 导航操作，即使目标会话已经是当前会话也同样执行。`openWorkspace(id, beforeOpen?)` 和 `forkSession(id)` 仅在请求未被后续导航替代时打开结果；新会话在能解析出 Workspace 目标时使用 `openWorkspace`，否则接通「最近会话」桶。`openUnassigned(beforeOpen?)` 是每一次无工作区启动背后的公共导航——hero 选择器的**不关联工作区**条目与该桶的 ＋——携带同样的替代守卫与同步准备回调。准备回调仅对仍有效的请求执行，因此过期请求不会搬移 composer 草稿。后续导航或所有者释放会阻止晚到的 UI 提交，但不取消底层会话创建。选中失败时保留当前全局面板。会话行读取 `usePanelInfo`，在全局面板活跃时不显示会话选中样式；仅把焦点移到搜索框或目录选择器不会离开该面板。
 
 <a id="understand-the-implementation"></a>
 ## 理解实现

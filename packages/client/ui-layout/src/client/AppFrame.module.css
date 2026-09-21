@@ -104,7 +104,11 @@
   padding-top: 20px;
 }
 
+/* Fork: on Windows the shell publishes --dsh-wco-top (the window-controls
+   overlay height); the centre and rightbar columns then start below it so
+   their header rows form the second visual line, flush to the right edge
+   like the reference client. Zero on every other surface. */
 .frame[data-desktop-frame] > .centerCol,
 .frame[data-desktop-frame] > .rightbarCol {
-  padding-top: 8px;
+  padding-top: calc(8px + var(--dsh-wco-top, 0px));
 }

@@ -198,6 +198,8 @@
     "@vitest/coverage-v8": "^4.1.8",
     "@yao-pkg/pkg": "6.21.0",
     "@yarnpkg/cli-dist": "4.17.1",
+    "dsh-ppt": "file:apps/desktop/vendor/ppt/dsh-ppt-0.1.1-rc.2.tgz",
+    "dsh-ppt-composer": "file:apps/desktop/vendor/ppt/dsh-ppt-composer-0.1.1-rc.2.tgz",
     "eslint-plugin-sonarjs": "^4.1.0",
     "execa": "^10.0.0",
     "fast-check": "^4.8.0",

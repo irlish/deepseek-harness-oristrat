@@ -78,7 +78,17 @@ export type DesktopProjectMutation =
 const PROJECT_NAME = '@deepseek-ai/dsh-desktop-runtime'
 const DSH_PACKAGE = '@deepseek-ai/dsh'
 const CORE_BUILD_PACKAGE = '@deepseek-ai/dsh-subprocess-local'
-const DESKTOP_PROFILE_BUNDLES = ['@deepseek-ai/dsh-base', '@deepseek-ai/dsh-web-app'] as const
+/** Built-in bundle prefix of profiles created before the fork PPTD bundles joined the release. */
+const LEGACY_PROFILE_BUNDLES = ['@deepseek-ai/dsh-base', '@deepseek-ai/dsh-web-app'] as const
+// Fork: the vendored DSH PPTD route bundles ship in the core package set and link
+// from the runtime tree like the other built-ins, so the composer joins the
+// built-in prefix instead of the installable plugin list. The composer applies
+// the dsh-ppt plugin itself with its intersected config, so dsh-ppt must not
+// appear as its own patch-layer entry (a second entry double-registers its
+// skill provider).
+const DESKTOP_PROFILE_BUNDLES = [...LEGACY_PROFILE_BUNDLES, 'dsh-ppt-composer'] as const
+/** Built-in names earlier fork prefixes mounted that the current prefix retires. */
+const RETIRED_PROFILE_BUNDLES: readonly string[] = ['dsh-ppt']
 const WORKSPACE_SETTINGS = 'nodeLinker: hoisted\nautoInstallPeers: false\nstrictDepBuilds: true\n'
 const PACKAGE_NAME_PATTERN = /^(?:@[a-z0-9][a-z0-9._~-]*\/[a-z0-9][a-z0-9._~-]*|[a-z0-9][a-z0-9._~-]*)$/u
 const VERSION_PATTERN = /^[0-9A-Za-z][0-9A-Za-z.+_-]*$/u
@@ -307,6 +317,9 @@ export class DesktopProjectManager {
     return this.withLock(async () => {
       const target = this.readRuntime()
       this.descriptor = target
+      // Fork: upgrade pre-PPTD profiles to the current built-in prefix before any
+      // bundles-list validation or the unchanged-release short-circuit below.
+      if (existsSync(join(this.paths.profile, 'package.json'))) migrateProfileBundles(this.paths.profile)
       const previous = readDesktopProfileState(this.paths.profile)
       if (!existsSync(this.pendingPackages) && previous?.runtimeId === desktopRuntimeId(target)
         && previous.lockHash === desktopPluginLockHash(this.paths.profile)
@@ -608,4 +621,29 @@ export function createPluginProfile(projectDir: string): void {
     dsh: { profile: { bundles: [...DESKTOP_PROFILE_BUNDLES] } },
   } satisfies DesktopProjectManifest)
   writeFileSync(join(projectDir, 'pnpm-workspace.yaml'), workspaceFile(), { mode: 0o600 })
+}
+
+/**
+ * Rewrite a profile manifest whose bundle list still begins with the legacy two-bundle
+ * prefix so it begins with the current built-in prefix, preserving remaining plugin order.
+ * Manifests with an unknown prefix are left for `profilePluginNames` to reject loudly.
+ * @param projectDir - Desktop profile directory holding `package.json`.
+ * @returns True when the manifest was rewritten.
+ */
+export function migrateProfileBundles(projectDir: string): boolean {
+  const manifest = projectManifest(projectDir)
+  const bundles = manifest.dsh.profile.bundles
+  if (DESKTOP_PROFILE_BUNDLES.every((bundle, index) => bundles[index] === bundle)) return false
+  if (!LEGACY_PROFILE_BUNDLES.every((bundle, index) => bundles[index] === bundle)) return false
+  const builtIn: readonly string[] = DESKTOP_PROFILE_BUNDLES
+  const plugins = bundles.slice(LEGACY_PROFILE_BUNDLES.length)
+    .filter(plugin => !builtIn.includes(plugin) && !RETIRED_PROFILE_BUNDLES.includes(plugin))
+  writeJson(join(projectDir, 'package.json'), {
+    ...manifest,
+    dsh: {
+      ...manifest.dsh,
+      profile: { ...manifest.dsh.profile, bundles: [...DESKTOP_PROFILE_BUNDLES, ...plugins] },
+    },
+  } satisfies DesktopProjectManifest)
+  return true
 }

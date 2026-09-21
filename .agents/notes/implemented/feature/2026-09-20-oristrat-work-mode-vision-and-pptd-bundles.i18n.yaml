@@ -1,0 +1,6 @@
+# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
+# side as of the last confirmed-consistent state. Both languages carry equal authority;
+# after editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write .agents/notes/implemented/feature/2026-09-20-oristrat-work-mode-vision-and-pptd-bundles.md
+2026-09-20-oristrat-work-mode-vision-and-pptd-bundles.md: 9ca30be44e7a6994c4f270903557753e836fcccc
+2026-09-20-oristrat-work-mode-vision-and-pptd-bundles.zh.md: 4ef3caff3f762b4b6fbfe37423305ef9ab0112a7

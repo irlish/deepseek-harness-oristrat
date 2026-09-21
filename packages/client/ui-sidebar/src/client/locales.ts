@@ -7,6 +7,12 @@ export const zh = {
   'toggle.open': '打开侧边栏',
   'toggle.collapse': '收起侧边栏',
   'panels.label': '全局面板',
+  'mode.label': '工作模式',
+  'mode.coding': '编码',
+  'mode.work': '工作',
+  'mode.coding.desc': 'MSCE 规范引擎开发',
+  'mode.work.desc': '自由创作：方案、PPT、文档',
+  'mode.switchFailed': '模式切换失败',
 } satisfies Record<string, string>
 
 /** The sidebar namespace key union. */
@@ -19,4 +25,10 @@ export const en = {
   'toggle.open': 'Open sidebar',
   'toggle.collapse': 'Collapse sidebar',
   'panels.label': 'Global panels',
+  'mode.label': 'Work mode',
+  'mode.coding': 'Coding',
+  'mode.work': 'Work',
+  'mode.coding.desc': 'MSCE-governed engine development',
+  'mode.work.desc': 'Free-form proposals, PPT, and docs',
+  'mode.switchFailed': 'Mode switch failed',
 } satisfies Record<SidebarKey, string>

@@ -88,6 +88,7 @@ function mount(
   items: readonly WorkspaceView[] = [workspace('alpha', 'Alpha')],
   createWorkspace = vi.fn(),
   occupancy = occupancySource(),
+  extra: { onPickUnassigned?: () => void; unassignedSelected?: boolean } = {},
 ) {
   const onPick = vi.fn()
   const onClose = vi.fn()
@@ -102,6 +103,8 @@ function mount(
       usePanelInfo={usePanelInfo} useResource={useResource}
       useWorkspaces={hook(workspaceState(nextItems))}
       onPick={onPick}
+      onPickUnassigned={extra.onPickUnassigned}
+      unassignedSelected={extra.unassignedSelected}
       onClose={onClose}
       createWorkspace={createWorkspace}
       useDirectoryFlow={occupancy.useDirectoryFlow}
@@ -123,6 +126,30 @@ function chooseAdd(): void {
 }
 
 describe('WorkspacePicker', () => {
+  it('offers the no-Workspace entry and keeps a real menu over the auto folder flow', () => {
+    const onPickUnassigned = vi.fn()
+    mount([], vi.fn(), occupancySource(), { onPickUnassigned })
+    // Zero Workspaces plus the no-Workspace choice is a real choice: the
+    // anchor gesture lists both entries instead of collapsing into the
+    // directory flow the add-only surface jumps into.
+    expect(screen.queryByTestId('directory-flow')).toBeNull()
+    const entries = screen.getAllByRole('menuitem')
+    expect(entries.map(entry => entry.textContent)).toEqual(['不关联工作区', '添加工作区…'])
+    fireEvent.click(screen.getByRole('menuitem', { name: '不关联工作区' }))
+    expect(onPickUnassigned).toHaveBeenCalledOnce()
+  })
+
+  it('checks the no-Workspace entry only while the owner reports it selected', () => {
+    mount([workspace('alpha', 'Alpha')], vi.fn(), occupancySource(), {
+      onPickUnassigned: vi.fn(), unassignedSelected: true,
+    })
+    // No leading icon on the entry: its only svg is the trailing check.
+    expect(screen.getByRole('menuitem', { name: '不关联工作区' }).querySelectorAll('svg')).toHaveLength(1)
+    cleanup()
+    mount([workspace('alpha', 'Alpha')], vi.fn(), occupancySource(), { onPickUnassigned: vi.fn() })
+    expect(screen.getByRole('menuitem', { name: '不关联工作区' }).querySelectorAll('svg')).toHaveLength(0)
+  })
+
   it('lists same-title Workspaces separately and forwards the selected id', () => {
     const b = mount([workspace('alpha', 'Shared'), workspace('beta', 'Shared')])
     const entries = screen.getAllByRole('menuitem', { name: 'Shared' })

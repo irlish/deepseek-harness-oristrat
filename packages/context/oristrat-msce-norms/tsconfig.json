@@ -11,6 +11,8 @@
   ],
   "references": [
     { "path": "../../../vendor/cordis" },
-    { "path": "../../core/system-prompt" }
+    { "path": "../../../vendor/schemastery" },
+    { "path": "../../core/system-prompt" },
+    { "path": "../../settings/settings" }
   ]
 }

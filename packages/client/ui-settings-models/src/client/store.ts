@@ -71,7 +71,7 @@ export function joinProviderDirectory(
     if (provider.id === 'deepseek-official') continue
     rows.push({
       provider: provider.id,
-      displayName: displayNameOf(provider.id ?? provider.name, provider.name),
+      displayName: displayNameOf(provider.id, provider.name),
       settingsNs: '',
       settingsPath: [],
       active: true,

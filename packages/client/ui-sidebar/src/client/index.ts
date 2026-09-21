@@ -9,13 +9,15 @@ import type {} from '@deepseek-ai/dsh-client-locale/client'
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 // Type-only: pulls the Session root standard-props merge.
 import type {} from '@deepseek-ai/dsh-client-ui-session/client'
-import type { SidebarPanelMetadata, SidebarRootInjected } from './contract/slots.ts'
+// Type-only: pulls the ctx.settingsScope Context merge.
+import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
+import type { SidebarMode, SidebarPanelMetadata, SidebarRootInjected } from './contract/slots.ts'
 import { SidebarRoot } from './SidebarRoot.tsx'
 import { en, zh, type SidebarKey } from './locales.ts'
 
 export type {
   SidebarBrandMarkOwnerProps, SidebarBrandNameOwnerProps, SidebarFooterActionOwnerProps,
-  SidebarPanelIconOwnerProps, SidebarPanelMetadata,
+  SidebarMode, SidebarPanelIconOwnerProps, SidebarPanelMetadata,
   SidebarRootComponentProps, SidebarRootInjected, SidebarSectionOwnerProps, SidebarSettingsOwnerProps,
 } from './contract/slots.ts'
 export type { SidebarKey } from './locales.ts'
@@ -30,12 +32,25 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
 /** Dictionary namespace owned by this plugin. */
 const NS = 'sidebar'
 
+/** Settings namespace owning the deployment work mode (host-registered). */
+const MODE_NS = 'oristrat'
+
+/** The stored section shape; anything unrecognized reads as coding (fail closed). */
+interface OristratModeSettings {
+  mode?: unknown
+}
+
+/** Parse the stored mode; anything unrecognized reads as coding (fail closed). */
+function parseMode(value: OristratModeSettings | undefined): SidebarMode {
+  return value?.mode === 'work' ? 'work' : 'coding'
+}
+
 interface WorkspaceNavigation {
   startSession(workspaceId?: Parameters<SidebarRootInjected['startSession']>[0]): void
 }
 
 /** Services required by the sidebar plugin. */
-export const inject = ['slots', 'layout', 'uiWorkspace', 'locale']
+export const inject = ['slots', 'layout', 'uiWorkspace', 'locale', 'settingsScope']
 
 /** Registers the sidebar shell and its service callbacks.
  * @param ctx - Client root context.
@@ -60,13 +75,32 @@ export function apply(ctx: ClientContext): void {
   ctx.effect(() => ctx.slots.subscribe('sidebar.panellist', syncPanels), 'ui-sidebar: panel entries')
   ctx.effect(() => ctx.locale.subscribe(syncPanels), 'ui-sidebar: panel labels')
 
+  // The work-mode mirror: a scope over the settings domain's shared describe
+  // mirror (no wire read of its own), moved only by committed writes — the
+  // switcher never displays a mode the Host refused, and a refused or failed
+  // write leaves it on the last committed mode.
+  const modeSection = ctx.settingsScope.bind<OristratModeSettings>({ namespace: MODE_NS })
+  const mode = createSnapshotStore<SidebarMode>('coding')
+  const syncMode = (): void => {
+    const next = parseMode(modeSection.getSnapshot().value)
+    if (mode.getSnapshot() !== next) mode.set(next)
+  }
+  ctx.effect(() => modeSection.subscribe(syncMode), 'ui-sidebar: mode scope')
+  syncMode()
+  const setMode = (next: SidebarMode): void => {
+    void modeSection.set('mode', next).catch(() => {
+      // The scope owns recovery; the mirror re-derives the committed mode.
+    })
+  }
+
   const injectProps = (): SidebarRootInjected => ({
     // The shell's New Session button rides the Workspace UI's shared action
     // (current Session Workspace, then recent Workspace).
     startSession: (workspaceId) => { workspaceNavigation.startSession(workspaceId) },
     toggleSidebar: () => { ctx.layout.toggleSidebar() },
     selectPanel: (id) => { ctx.layout.selectPanel(id) },
-    hooks: { panels },
+    setMode,
+    hooks: { panels, mode },
   })
   ctx.slots.inject('sidebar', () => ctx.slots.register({
     name: 'sidebar',

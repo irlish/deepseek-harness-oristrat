@@ -8,6 +8,7 @@ import { apply, inject } from '@deepseek-ai/dsh-client-ui-sidebar/client'
 import type { SidebarRootInjected } from '@deepseek-ai/dsh-client-ui-sidebar/client'
 import type { MainPanelId } from '@deepseek-ai/dsh-client-ui-layout/client'
 import { apply as hostApply } from '../src/index.ts'
+import { provideSidebarModeScope } from './support.client.ts'
 
 const owners = new Set<Fiber>()
 afterEach(async () => {
@@ -22,7 +23,7 @@ function SidebarFrame({ renderSlot }: PropsRenderSlots<'sidebar'>) {
   return renderSlot('sidebar', { collapsed: false, width: 300 })
 }
 
-async function bench(declare = true) {
+async function bench(declare = true, initialMode?: 'coding' | 'work') {
   const root = new Context()
   let ctx: Context | undefined
   const owner = root.plugin((owned: Context) => { ctx = owned })
@@ -35,6 +36,7 @@ async function bench(declare = true) {
   ctx.provide('layout', layout)
   ctx.provide('uiWorkspace', uiWorkspace as never)
   ctx.provide('locale', new LocaleRuntime(ctx))
+  const modeScope = provideSidebarModeScope(ctx, initialMode)
   const slots = ctx.get('slots') as SlotRegistry
   if (declare) {
     slots.register(
@@ -45,7 +47,7 @@ async function bench(declare = true) {
       SidebarFrame,
     )
   }
-  return { ctx, slots, layout, uiWorkspace }
+  return { ctx, slots, layout, uiWorkspace, modeScope }
 }
 
 describe('ui-sidebar apply', () => {
@@ -54,7 +56,7 @@ describe('ui-sidebar apply', () => {
   })
 
   it('declares only the services it uses', () => {
-    expect(inject).toEqual(['slots', 'layout', 'uiWorkspace', 'locale'])
+    expect(inject).toEqual(['slots', 'layout', 'uiWorkspace', 'locale', 'settingsScope'])
   })
 
   it('registers the shell and declares its child seats', async () => {
@@ -70,7 +72,7 @@ describe('ui-sidebar apply', () => {
     // Copy rides the standard locale seat, not the inject face.
     expect(b.slots.entries('sidebar')[0]!.locale).toBe('sidebar')
     const injected = (b.slots.entries('sidebar')[0]!.inject as () => SidebarRootInjected)()
-    expect(Object.keys(injected)).toEqual(['startSession', 'toggleSidebar', 'selectPanel', 'hooks'])
+    expect(Object.keys(injected)).toEqual(['startSession', 'toggleSidebar', 'selectPanel', 'setMode', 'hooks'])
     expect(injected.hooks.panels.getSnapshot()).toEqual([])
     expect(b.slots.entries('main')).toEqual([])
     // Both arms delegate to the Workspace UI's shared New Session action.
@@ -129,6 +131,56 @@ describe('ui-sidebar apply', () => {
       await panel.dispose()
       await sidebar.dispose()
     }
+  })
+
+  it('mirrors the work mode through the shared settings scope', async () => {
+    const b = await bench(true, 'work')
+    const sidebar = b.ctx.plugin({ inject: [...inject], apply })
+    await sidebar.await()
+    const injected = (b.slots.entries('sidebar')[0]!.inject as () => SidebarRootInjected)()
+    const mode = injected.hooks.mode
+    // The seeded scope snapshot carries the stored document into the mirror.
+    expect(mode.getSnapshot()).toEqual('work')
+    expect(b.modeScope.listenerCount()).toBe(1)
+    // The write goes through the scope; the mirror moves only on the commit fold.
+    injected.setMode('coding')
+    expect(b.modeScope.set).toHaveBeenCalledExactlyOnceWith('mode', 'coding')
+    await new Promise(resolve => setTimeout(resolve, 0))
+    expect(mode.getSnapshot()).toEqual('work')
+    b.modeScope.publish({ status: 'ready', value: { mode: 'coding' } })
+    expect(mode.getSnapshot()).toEqual('coding')
+    await sidebar.dispose()
+    expect(b.modeScope.listenerCount()).toBe(0)
+  })
+
+  it('keeps the last known mode when a write fails', async () => {
+    const b = await bench(true, 'coding')
+    const sidebar = b.ctx.plugin({ inject: [...inject], apply })
+    await sidebar.await()
+    const injected = (b.slots.entries('sidebar')[0]!.inject as () => SidebarRootInjected)()
+    b.modeScope.set.mockRejectedValueOnce(new Error('wire down'))
+    injected.setMode('work')
+    await new Promise(resolve => setTimeout(resolve, 0))
+    expect(b.modeScope.set).toHaveBeenCalledExactlyOnceWith('mode', 'work')
+    expect(injected.hooks.mode.getSnapshot()).toEqual('coding')
+    await sidebar.dispose()
+  })
+
+  it('reads a malformed or missing stored section as coding', async () => {
+    const b = await bench()
+    const sidebar = b.ctx.plugin({ inject: [...inject], apply })
+    await sidebar.await()
+    const injected = (b.slots.entries('sidebar')[0]!.inject as () => SidebarRootInjected)()
+    const mode = injected.hooks.mode
+    // The loading scope (no committed document yet) fails closed to coding.
+    expect(mode.getSnapshot()).toEqual('coding')
+    b.modeScope.publish({ status: 'ready', value: { mode: 'weird' } })
+    expect(mode.getSnapshot()).toEqual('coding')
+    b.modeScope.publish({ status: 'unavailable', value: undefined })
+    expect(mode.getSnapshot()).toEqual('coding')
+    b.modeScope.publish({ status: 'ready', value: { mode: 'work' } })
+    expect(mode.getSnapshot()).toEqual('work')
+    await sidebar.dispose()
   })
 
   it('removes the entry and child declaration on teardown', async () => {

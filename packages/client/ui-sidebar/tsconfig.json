@@ -9,6 +9,9 @@
   ],
   "references": [
     {
+      "path": "../ui-settings"
+    },
+    {
       "path": "../../api/workspace-controller/tsconfig.client.json"
     },
     {

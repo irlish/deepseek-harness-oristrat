@@ -151,6 +151,7 @@ root
 │     │  └─ conversation.approval.detail
 │     ├─ conversation.composer.bar
 │     │  ├─ conversation.input.attachments
+│     │  ├─ conversation.input.accessory
 │     │  ├─ conversation.input.plan
 │     │  └─ conversation.input.model
 │     ├─ conversation.input.overlay
@@ -161,7 +162,8 @@ root
 │     ├─ conversation.hero.brand.mark
 │     ├─ conversation.hero.workspace
 │     │  └─ conversation.hero.workspace.directoryFlow
-│     └─ conversation.hero.agentPreset
+│     ├─ conversation.hero.agentPreset
+│     └─ conversation.hero.modeActions
 ├─ rightbar
 │  └─ rightbar.session
 │     ├─ sidebar.right.pane.tab

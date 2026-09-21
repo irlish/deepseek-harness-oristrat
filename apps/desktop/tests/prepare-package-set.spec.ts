@@ -36,6 +36,10 @@ describe('desktop package-set selection', () => {
       ['@deepseek-ai/cordis', packed('@deepseek-ai/cordis')],
       ['@deepseek-ai/platform-package', packed('@deepseek-ai/platform-package')],
       ['@deepseek-ai/unused', packed('@deepseek-ai/unused')],
+      // Fork bundles root the closure beside the Host; their third-party
+      // dependencies resolve from the registry and stay unselected.
+      ['dsh-ppt', packed('dsh-ppt', { dependencies: { pptxgenjs: '^4.0.1' } })],
+      ['dsh-ppt-composer', packed('dsh-ppt-composer', { dependencies: { 'dsh-ppt': '0.1.1-rc.2' } })],
     ])
     expect(selectDesktopPackageClosure(available).map(entry => entry.manifest.name)).toEqual([
       '@deepseek-ai/cordis',
@@ -43,6 +47,8 @@ describe('desktop package-set selection', () => {
       '@deepseek-ai/dsh-base',
       '@deepseek-ai/dsh-desktop-host',
       '@deepseek-ai/platform-package',
+      'dsh-ppt',
+      'dsh-ppt-composer',
     ])
   })
 
@@ -59,6 +65,11 @@ describe('desktop package-set selection', () => {
     expect(() => selectDesktopPackageClosure(new Map([
       ['@deepseek-ai/dsh', packed('@deepseek-ai/dsh')],
     ]))).toThrow(/omit @deepseek-ai\/dsh-desktop-host/u)
+    // The fork bundles are roots too: a vendor tree without them fails loud.
+    expect(() => selectDesktopPackageClosure(new Map([
+      ['@deepseek-ai/dsh', packed('@deepseek-ai/dsh')],
+      ['@deepseek-ai/dsh-desktop-host', packed('@deepseek-ai/dsh-desktop-host')],
+    ]))).toThrow(/omit dsh-ppt/u)
   })
 
   it('requires the Desktop Host entry and its packaged overlay', () => {

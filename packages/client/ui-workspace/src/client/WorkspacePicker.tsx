@@ -21,6 +21,7 @@ import type { DirectoryFlowOwnerProps, WorkspacePickerProps } from './contract/s
 import css from './WorkspacePicker.module.css'
 
 const ADD_WORKSPACE = '::add-workspace'
+const NO_WORKSPACE = '::no-workspace'
 
 /** Core flow props: the owner supplies popover control and pick semantics. */
 export interface WorkspacePickFlowProps {
@@ -48,6 +49,10 @@ export interface WorkspacePickFlowProps {
   side?: 'bottom' | 'top' | 'right'
   /** Currently active workspace (trailing check in the picker list). */
   selectedId?: WorkspaceId | undefined
+  /** Offer the no-Workspace choice (the Recent Sessions bucket); absent hides the entry. */
+  onPickUnassigned?: (() => void) | undefined
+  /** Trailing check on the no-Workspace entry. */
+  unassignedSelected?: boolean | undefined
 }
 
 /**
@@ -68,6 +73,8 @@ export function WorkspacePickFlow({
   addOnly = false,
   side = 'bottom',
   selectedId,
+  onPickUnassigned,
+  unassignedSelected = false,
 }: WorkspacePickFlowProps) {
   const workspaceSnapshot = useWorkspaces(state => state)
   const workspaces = workspaceSnapshot.items
@@ -101,17 +108,23 @@ export function WorkspacePickFlow({
   const addEntries: MenuEntry[] = flowAvailable
     ? [{ id: ADD_WORKSPACE, label: t('menu.addWorkspace'), icon: <IconPlusOutline16 size={16} />, disabled: flowBusy }]
     : []
+  // The no-Workspace entry is owner-opt-in: the conversation hero supplies the
+  // callback so a New Session may stay outside every Workspace (the Recent
+  // Sessions bucket); surfaces without it list only real Workspaces.
+  const unassignedEntries: MenuEntry[] = onPickUnassigned === undefined
+    ? []
+    : [{ id: NO_WORKSPACE, label: t('menu.noWorkspace'), disabled: flowBusy }]
   // With workspaces listed, the add action pins below the scroll region
   // (divider + always visible); otherwise it IS the menu.
   const pinAdd = !addOnly && workspaces.length > 0
   const items: MenuEntry[] = pinAdd
-    ? workspaces.map(workspace => ({
+    ? [...unassignedEntries, ...workspaces.map(workspace => ({
       id: workspace.workspaceId,
       label: workspace.title,
       icon: <IconFolderClose16 size={16} />,
       disabled: flowBusy,
-    }))
-    : addEntries
+    }))]
+    : [...unassignedEntries, ...addEntries]
   // Nothing listed and nothing to add with (a composition that mounts this
   // package without any directory-picker): an empty popover would claim a
   // choice that does not exist, so the anchor gesture shows nothing at all.
@@ -143,6 +156,7 @@ export function WorkspacePickFlow({
   // A menu exists to disambiguate between targets. With no workspaces listed
   // and the add action the only entry left, the anchor gesture IS that action:
   // a one-row popover would cost a click and offer nothing to choose between.
+  // An offered no-Workspace entry keeps a real choice, so the menu stays.
   // The owner's open request is consumed the same way selecting the entry
   // would consume it (close the popover, raise the flow). An empty list is
   // only final once the baseline lands — until then the menu stays up with its
@@ -150,6 +164,7 @@ export function WorkspacePickFlow({
   // made unnecessary; the add-only surface lists nothing and never waits.
   const listSettled = addOnly || workspaceSnapshot.phase === 'ready'
   const addIsTheOnlyEntry = !pinAdd && listSettled && addEntries.length === 1
+    && unassignedEntries.length === 0
   // `flowBusy` gates this exactly as it disables the equivalent menu entry: a
   // pick still being adopted owns the surface until it settles.
   useEffect(() => {
@@ -177,6 +192,12 @@ export function WorkspacePickFlow({
       openDirectoryFlow()
       return
     }
+    if (id === NO_WORKSPACE) {
+      // The entry renders only while the owner supplies the callback.
+      /* v8 ignore next -- unreachable: the menu lists this id only with the callback present */
+      onPickUnassigned?.()
+      return
+    }
     onPick(id as WorkspaceId)
   }
 
@@ -187,7 +208,7 @@ export function WorkspacePickFlow({
         anchor={null}
         items={items}
         {...pinAdd ? { footer: addEntries } : {}}
-        selectedId={selectedId}
+        selectedId={unassignedSelected ? NO_WORKSPACE : selectedId}
         onSelect={handleSelect}
         onClose={onClose}
         side={side}
@@ -228,6 +249,8 @@ export function WorkspacePicker({
   useWorkspaces,
   selectedId,
   onPick,
+  onPickUnassigned,
+  unassignedSelected,
   onClose,
   createWorkspace,
   useDirectoryFlow,
@@ -244,6 +267,8 @@ export function WorkspacePicker({
       useDirectoryFlow={useDirectoryFlow}
       renderDirectoryFlow={owner => renderSlot('conversation.hero.workspace.directoryFlow', owner)}
       selectedId={selectedId}
+      onPickUnassigned={onPickUnassigned}
+      unassignedSelected={unassignedSelected}
       onPick={onPick}
       onClose={onClose}
     />

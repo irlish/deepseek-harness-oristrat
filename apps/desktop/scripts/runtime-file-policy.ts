@@ -16,6 +16,9 @@ export function desktopRuntimeFileExclusion(
     return 'package-manager metadata'
   }
   const file = parts.at(-1) ?? ''
+  // The electron-builder packager drops zero-byte git placeholders from extraResources
+  // copies, so the sealed inventory must omit them too or afterPack verification fails.
+  if (file === '.gitkeep') return 'git placeholder'
   if (/\.(?:[cm]?[jt]s|css)\.map$/u.test(file)) return 'source map'
   if (/\.d\.[cm]?ts$/u.test(file)) return 'TypeScript declaration'
   if (/\.tsbuildinfo$/u.test(file)) return 'TypeScript build cache'

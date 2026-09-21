@@ -162,6 +162,8 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
     'conversation.hero.brand.mark': { kind: 'single'; scope: 'root'; owner: HeroBrandMarkOwnerProps }
     /** Agent-preset control staged for a New Session. */
     'conversation.hero.agentPreset': { kind: 'single'; scope: 'root'; owner: HeroAgentPresetOwnerProps }
+    /** Extra mode actions in the blank-session Hero row (the PPT entry rides here). */
+    'conversation.hero.modeActions': { kind: 'list'; scope: 'session'; owner: InputZone }
     /** Full-width entries above the composer card. */
     'conversation.input.dock': { kind: 'list'; scope: 'session'; owner: InputZone }
     /** Floating entries rendered inside the resident composer card. */
@@ -184,6 +186,8 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
     'conversation.input.plan': { kind: 'single'; scope: 'session'; owner: InputControlOwnerProps }
     /** Model selector inside the composer tool row. */
     'conversation.input.model': { kind: 'single'; scope: 'session'; owner: InputControlOwnerProps }
+    /** Extension entries sharing the composer prompt row ahead of the editor. */
+    'conversation.input.accessory': { kind: 'list'; scope: 'session'; owner: InputZone }
   }
 
   interface GlobalStandardProps {
@@ -261,6 +265,8 @@ export type ConvViewProps = PropsRuntime<'conversation.view'>
 export interface ConversationInjected {
   /** Connect and open a blank Session in the selected Workspace. */
   selectWorkspace: (workspaceId: WorkspaceId) => Promise<void>
+  /** Connect and open a blank Session outside every Workspace (the Recent Sessions bucket). */
+  selectUnassigned: () => Promise<void>
   /** Session-addressed composer block source, or the stable absent source. */
   hooks: { composerBlock: ObservableSnapshot<ComposerBlock | undefined> }
 }
@@ -300,6 +306,8 @@ export interface ComposerBarOwnerProps {
   placeholder?: string
   /** Optional content rendered above the composer surface. */
   accessory?: ReactNode
+  /** Point-in-time zone for `conversation.input.accessory` entries; absent without a Session. */
+  extensionZone?: InputZone | undefined
 }
 
 /** Package-private operations injected into the resident composer bar. */
@@ -340,6 +348,7 @@ export type ComposerBarProps =
     | 'conversation.input.attachments' | 'conversation.input.overlay'
     | 'conversation.input.left' | 'conversation.input.plan'
     | 'conversation.input.right' | 'conversation.input.model'
+    | 'conversation.input.accessory'
     | 'conversation.composer.dock'
   >
   & InjectFace<ComposerBarInjected>
@@ -373,6 +382,7 @@ export type ConversationSlotProps =
     | 'conversation.hero.brand.mark'
     | 'conversation.hero.workspace'
     | 'conversation.hero.agentPreset'
+    | 'conversation.hero.modeActions'
   >
   & InjectFace<ConversationInjected>
   & PropsLocale<'conversation'>
@@ -411,5 +421,9 @@ export interface EmptyWorkspaceOwnerProps {
   /** Currently selected Workspace, when available. */
   selectedId?: WorkspaceId | undefined
   onPick: (workspaceId: WorkspaceId) => void
+  /** Stage a New Session outside every Workspace; absent hides the picker's no-Workspace entry. */
+  onPickUnassigned?: (() => void) | undefined
+  /** The staged or current blank Session sits outside every Workspace. */
+  unassignedSelected?: boolean | undefined
   onClose: () => void
 }

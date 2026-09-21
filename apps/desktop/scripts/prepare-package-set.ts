@@ -27,6 +27,10 @@ import { resolveDesktopTargetBuildPaths } from './desktop-build-paths.mjs'
 
 const DSH_PACKAGE = '@deepseek-ai/dsh'
 const ROOT_PACKAGES = [DSH_PACKAGE, DESKTOP_HOST_PACKAGE] as const
+// Fork: the vendored DSH PPTD route ships as two patch-layer bundles outside
+// the workspace graph; they root the closure beside dsh and its Host.
+const FORK_BUNDLE_ROOTS = ['dsh-ppt', 'dsh-ppt-composer'] as const
+const FORK_VENDOR_PPT_DIR = resolve(import.meta.dirname, '..', 'vendor', 'ppt')
 const APP_ROOT = resolve(import.meta.dirname, '..')
 const REPOSITORY_ROOT = resolve(APP_ROOT, '..', '..')
 
@@ -74,7 +78,7 @@ export function selectDesktopPackageClosure(
       if (available.has(dependency)) visit(dependency)
     }
   }
-  for (const name of ROOT_PACKAGES) {
+  for (const name of [...ROOT_PACKAGES, ...FORK_BUNDLE_ROOTS]) {
     if (!available.has(name)) throw new Error(`desktop package set: packed inputs omit ${name}`)
     visit(name)
   }
@@ -158,6 +162,7 @@ function main(): void {
     buildPaths.packedDsh,
     buildPaths.packedVendor,
     buildPaths.packedLandlock,
+    FORK_VENDOR_PPT_DIR,
   ]
   const { values } = parseArgs({
     options: { from: { type: 'string', multiple: true }, out: { type: 'string' } },

@@ -10,8 +10,10 @@ import {
   dialog,
   ipcMain,
   Menu,
+  nativeTheme,
   protocol,
   type IpcMainInvokeEvent,
+  type TitleBarOverlayOptions,
 } from 'electron'
 import { resolveDesktopPaths } from './paths.ts'
 import { DesktopProjectManager, type DesktopProjectHooks } from './project-manager.ts'
@@ -120,6 +122,19 @@ function installClipboardFallback(contents: BrowserWindow['webContents']): void 
   })
 }
 
+/** Fork: reference-client Windows title bar overlay height in CSS pixels. */
+const WINDOWS_TITLEBAR_HEIGHT = 36
+
+/**
+ * Fork: window-controls overlay matching the reference client on Windows: a
+ * transparent band so the Web header shows through, theme-aware glyphs.
+ * @param dark - Whether the current renderer theme is dark.
+ * @returns Electron title bar overlay options.
+ */
+function windowsTitleBarOverlay(dark: boolean): TitleBarOverlayOptions {
+  return { color: '#00000000', symbolColor: dark ? '#f3f4f6' : '#202124', height: WINDOWS_TITLEBAR_HEIGHT }
+}
+
 function createWindow(preload: string, show = false): BrowserWindow {
   const window = new BrowserWindow({
     // Fork: the reference client keeps the macOS title bar blank; session
@@ -128,6 +143,14 @@ function createWindow(preload: string, show = false): BrowserWindow {
     // Fork: the reference client hides the native title bar (no hairline,
     // content rides at the window top) and re-shows the traffic lights.
     ...(process.platform === 'darwin' ? { titleBarStyle: 'hidden' as const } : {}),
+    // Fork: Windows matches the reference client — hidden title bar with the
+    // native window-controls overlay and an auto-hidden menu bar (Alt still
+    // reveals it), so no menu row or hairline splits the Web header.
+    ...(process.platform === 'win32' ? {
+      titleBarStyle: 'hidden' as const,
+      titleBarOverlay: windowsTitleBarOverlay(nativeTheme.shouldUseDarkColors),
+      autoHideMenuBar: true,
+    } : {}),
     width: 1280,
     height: 840,
     minWidth: 880,
@@ -511,14 +534,26 @@ async function main(): Promise<void> {
     // them every text field (API key drafts included) silently ignores paste.
   }, { role: 'editMenu' }, { role: 'viewMenu' }, { role: 'windowMenu' }]))
 
-  // Fork: macOS drag strip mirroring the reference client: a 24px fixed band
-  // between the traffic-light zone and the header actions, injected once per
-  // load so the frameless window stays movable.
-  const installMacDragRegion = (window: BrowserWindow): void => {
-    if (process.platform !== 'darwin') return
+  // Fork: keep the Windows overlay glyphs in step with renderer theme flips.
+  nativeTheme.on('updated', () => {
+    if (process.platform !== 'win32') return
+    for (const open of BrowserWindow.getAllWindows()) {
+      if (!open.isDestroyed()) open.setTitleBarOverlay(windowsTitleBarOverlay(nativeTheme.shouldUseDarkColors))
+    }
+  })
+
+  // Fork: desktop drag strip mirroring the reference client: a 24px fixed
+  // band between the traffic-light zone (macOS) or the window edge (Windows)
+  // and the header actions, injected once per load so the frameless window
+  // stays movable. Windows also publishes the window-controls overlay height
+  // as `--dsh-wco-top` so the centre and rightbar columns start below it and
+  // their header rows sit flush right on the second visual line.
+  const installDesktopDragRegion = (window: BrowserWindow): void => {
+    if (process.platform !== 'darwin' && process.platform !== 'win32') return
     const inject = (): void => {
       if (window.isDestroyed()) return
       void window.webContents.executeJavaScript(`(() => {
+        document.documentElement.style.setProperty('--dsh-wco-top', '${process.platform === 'win32' ? '36px' : '0px'}')
         if (document.getElementById('dsh-desktop-drag-region')) return
         const dragRegion = document.createElement('div')
         dragRegion.id = 'dsh-desktop-drag-region'
@@ -527,8 +562,8 @@ async function main(): Promise<void> {
           position: 'fixed',
           zIndex: '18',
           top: '0',
-          left: '80px',
-          right: '220px',
+          left: '${process.platform === 'darwin' ? '80px' : '0px'}',
+          right: '${process.platform === 'darwin' ? '220px' : '140px'}',
           height: '24px',
           background: 'transparent',
           pointerEvents: 'auto',
@@ -556,10 +591,10 @@ async function main(): Promise<void> {
     if (process.platform === 'darwin') {
       window.setWindowButtonVisibility(true)
       alignWindowButtons(window)
-      window.webContents.on('did-finish-load', () => alignWindowButtons(window))
-      window.webContents.on('zoom-changed', () => setImmediate(() => alignWindowButtons(window)))
-      installMacDragRegion(window)
+      window.webContents.on('did-finish-load', () => { alignWindowButtons(window) })
+      window.webContents.on('zoom-changed', () => { setImmediate(() => { alignWindowButtons(window) }) })
     }
+    installDesktopDragRegion(window)
     mainWindow = window
     window.on('closed', () => { if (mainWindow === window) mainWindow = undefined })
     window.webContents.on('preload-error', (_event, _path, error) => {

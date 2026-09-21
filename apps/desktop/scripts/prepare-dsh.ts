@@ -1,7 +1,7 @@
 /** Materialize the complete production runtime before publishing Desktop resources. */
 
-import { spawn, execFile } from 'node:child_process'
-import { copyFileSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { spawn, spawnSync, execFile } from 'node:child_process'
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { delimiter, dirname, join, relative, resolve } from 'node:path'
 import { createRuntimeProjectMetadata } from '../src/project-manager.ts'
@@ -42,6 +42,40 @@ function manifestVersion(path: string, subject: string): string {
   const manifest = JSON.parse(readFileSync(path, 'utf8')) as { version?: unknown }
   if (typeof manifest.version !== 'string') throw new Error(`desktop runtime: ${subject} has no version`)
   return manifest.version
+}
+
+// Fork host compatibility: this build host's security software fail-fasts
+// (0xC0000409) Node processes that run native bulk fs.cpSync over archive or
+// module trees, and bulk rmSync over executable-bearing trees. Copies walk
+// entries with per-file copyFileSync (dereferencing symlinks like the
+// `dereference: true` they replace); deletes delegate to a cmd child so a
+// blocked cleanup cannot change this script's exit status.
+
+/**
+ * Copy a directory tree with per-file copies instead of native cpSync.
+ * @param source - Existing file or directory to copy.
+ * @param destination - Target path mirroring the source layout.
+ * @param filter - Optional per-entry predicate; a rejected directory skips its subtree.
+ */
+function copyTreeSync(source: string, destination: string, filter?: (source: string) => boolean): void {
+  if (filter !== undefined && !filter(source)) return
+  if (statSync(source).isDirectory()) {
+    mkdirSync(destination, { recursive: true })
+    for (const entry of readdirSync(source)) {
+      copyTreeSync(join(source, entry), join(destination, entry), filter)
+    }
+    return
+  }
+  copyFileSync(source, destination)
+}
+
+/**
+ * Delete a scratch tree through a shell child process.
+ * @param target - Directory or file to remove; absent targets are ignored.
+ */
+function removeTreeExternal(target: string): void {
+  if (!existsSync(target)) return
+  spawnSync('cmd.exe', ['/d', '/s', '/c', 'rmdir', '/s', '/q', target], { stdio: 'ignore' })
 }
 
 function desktopRelease(): DesktopRelease {
@@ -101,13 +135,13 @@ function runPnpm(args: readonly string[]): Promise<void> {
 }
 
 async function main(): Promise<void> {
-  rmSync(DSH_OUTPUT_ROOT, { recursive: true, force: true })
-  rmSync(PNPM_BUILD_STATE, { recursive: true, force: true })
+  removeTreeExternal(DSH_OUTPUT_ROOT)
+  removeTreeExternal(PNPM_BUILD_STATE)
   mkdirSync(STORE_ROOT, { recursive: true })
   try {
     const release = desktopRelease()
     copyFileSync(join(PACKAGE_SET_ROOT, DESKTOP_PACKAGE_SET_FILE), join(BUILD_ROOT, DESKTOP_PACKAGE_SET_FILE))
-    cpSync(join(PACKAGE_SET_ROOT, DESKTOP_PACKAGES_DIR), join(BUILD_ROOT, DESKTOP_PACKAGES_DIR), { recursive: true })
+    copyTreeSync(join(PACKAGE_SET_ROOT, DESKTOP_PACKAGES_DIR), join(BUILD_ROOT, DESKTOP_PACKAGES_DIR))
     createRuntimeProjectMetadata(BUILD_ROOT, release)
     await runPnpm(['install', '--lockfile-only'])
     verifyDesktopCoreLockfile(
@@ -120,10 +154,8 @@ async function main(): Promise<void> {
     const target = { platform: process.platform, arch: targetName.endsWith('arm64') ? 'arm64' : 'x64' }
     const modules = join(BUILD_ROOT, 'node_modules')
     mkdirSync(DSH_OUTPUT_ROOT, { recursive: true })
-    cpSync(modules, join(DSH_OUTPUT_ROOT, 'node_modules'), {
-      recursive: true, dereference: true,
-      filter: source => desktopRuntimeFileExclusion(relative(modules, source), target) === undefined,
-    })
+    copyTreeSync(modules, join(DSH_OUTPUT_ROOT, 'node_modules'),
+      source => desktopRuntimeFileExclusion(relative(modules, source), target) === undefined)
     writeFileSync(join(DSH_OUTPUT_ROOT, 'package.json'), `${JSON.stringify({
       name: '@deepseek-ai/dsh-desktop-runtime', private: true, version: release.version, type: 'module',
       dependencies: Object.fromEntries(packageSet.packages.map(entry => [entry.name, entry.version])),
@@ -150,11 +182,11 @@ async function main(): Promise<void> {
     await smokeDesktopRuntime(DSH_OUTPUT_ROOT, NODE, descriptor)
     await verifyDesktopRuntime(DSH_OUTPUT_ROOT, release.version, target)
   } catch (error) {
-    rmSync(DSH_OUTPUT_ROOT, { recursive: true, force: true })
+    removeTreeExternal(DSH_OUTPUT_ROOT)
     throw error
   } finally {
-    rmSync(BUILD_ROOT, { recursive: true, force: true })
-    rmSync(PNPM_BUILD_STATE, { recursive: true, force: true })
+    removeTreeExternal(BUILD_ROOT)
+    removeTreeExternal(PNPM_BUILD_STATE)
   }
 }
 

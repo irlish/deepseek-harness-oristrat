@@ -170,6 +170,59 @@
   color: var(--dsw-alias-label-secondary);
 }
 
+/* Codex-style work-mode chip: rides the brand row's right side and opens the
+   two-mode menu. Quiet chrome until hovered, matching the icon buttons. */
+.modeChip {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  height: 28px;
+  padding: 0 8px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary);
+  font: inherit;
+  font-size: 13px;
+  line-height: 28px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.modeChip:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+.modeChipName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.modeChipChevron {
+  flex: none;
+  opacity: 0.7;
+}
+
+/* Two-line menu cell: mode name over its one-line description. */
+.modeEntry {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.modeEntryName {
+  font-size: 13px;
+  line-height: 18px;
+}
+
+.modeEntryDesc {
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--dsw-alias-label-secondary);
+}
+
 .iconButton:hover {
   background: var(--dsw-alias-interactive-bg-hover);
 }

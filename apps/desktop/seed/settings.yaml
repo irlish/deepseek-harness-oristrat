@@ -31,3 +31,5 @@ llm-pi-ai:
 agent-default-model:
   provider: oristrat-official
   model: glm-5.3
+oristrat:
+  mode: coding

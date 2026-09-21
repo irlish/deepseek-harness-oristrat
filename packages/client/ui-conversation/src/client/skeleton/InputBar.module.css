@@ -111,6 +111,13 @@
   padding: 10px 12px 0;
 }
 
+/* The extension seat wrapper hides while the slot carries no occupant: card
+   geometry shifts only for actual accessory content. An owner-passed
+   `accessory` replaces the slot child, so it never matches this rule. */
+.accessory:has([data-slot='conversation.input.accessory']:empty) {
+  display: none;
+}
+
 /* Floating overlay anchor (menu / popupSelect shell): entries position
    themselves against the card (bottom: 100% + gap); closed entries render null. */
 .overlayAnchor {

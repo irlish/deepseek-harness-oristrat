@@ -4,7 +4,7 @@ import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { afterEach, describe, expect, it } from 'vitest'
 import { resolveDesktopPaths } from '../src/paths.ts'
-import { DesktopProjectManager, packageNameFromSpec, type DesktopProjectHooks } from '../src/project-manager.ts'
+import { DesktopProjectManager, migrateProfileBundles, packageNameFromSpec, type DesktopProjectHooks } from '../src/project-manager.ts'
 import { runtimeFixture } from './runtime-fixture.ts'
 
 const roots: string[] = []
@@ -70,6 +70,43 @@ afterEach(async () => {
 })
 
 describe('desktop external plugin profile', () => {
+  it('heals a legacy two-bundle profile manifest into the built-in prefix', async () => {
+    const { manager } = setup()
+    await manager.applyRelease()
+    const manifestPath = join(manager.paths.profile, 'package.json')
+    type ProfileManifest = { dsh: { profile: { bundles: string[] } } }
+    const read = (): string[] => (JSON.parse(readFileSync(manifestPath, 'utf8')) as ProfileManifest).dsh.profile.bundles
+    const write = (bundles: string[]): void => {
+      const manifest = JSON.parse(readFileSync(manifestPath, 'utf8')) as ProfileManifest
+      manifest.dsh.profile.bundles = bundles
+      writeFileSync(manifestPath, JSON.stringify(manifest))
+    }
+    // A profile written by the earlier release: legacy prefix plus one plugin.
+    write(['@deepseek-ai/dsh-base', '@deepseek-ai/dsh-web-app', 'plugin'])
+    expect(migrateProfileBundles(manager.paths.profile)).toBe(true)
+    expect(read()).toEqual([
+      '@deepseek-ai/dsh-base', '@deepseek-ai/dsh-web-app', 'dsh-ppt-composer', 'plugin',
+    ])
+    // Already-migrated manifests are left alone.
+    expect(migrateProfileBundles(manager.paths.profile)).toBe(false)
+    // An alpha prefix that mounted dsh-ppt itself collapses to the current prefix.
+    write(['@deepseek-ai/dsh-base', '@deepseek-ai/dsh-web-app', 'dsh-ppt', 'dsh-ppt-composer', 'plugin'])
+    expect(migrateProfileBundles(manager.paths.profile)).toBe(true)
+    expect(read()).toEqual([
+      '@deepseek-ai/dsh-base', '@deepseek-ai/dsh-web-app', 'dsh-ppt-composer', 'plugin',
+    ])
+    // An unknown prefix is not rewritten; profilePluginNames rejects it loudly.
+    write(['other-base', 'plugin'])
+    expect(migrateProfileBundles(manager.paths.profile)).toBe(false)
+    expect(read()).toEqual(['other-base', 'plugin'])
+    // applyRelease heals a plugin-free legacy manifest end to end.
+    write(['@deepseek-ai/dsh-base', '@deepseek-ai/dsh-web-app'])
+    await expect(manager.applyRelease()).resolves.toBe(false)
+    expect(read()).toEqual([
+      '@deepseek-ai/dsh-base', '@deepseek-ai/dsh-web-app', 'dsh-ppt-composer',
+    ])
+  })
+
   it('reuses plugin files without scanning manifests and can disable or reset them', async () => {
     const { manager } = setup()
     await manager.applyRelease()

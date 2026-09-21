@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-The dsh web client sidebar lets users recognize the active build, start a new session, collapse navigation to a 56px rail, browse Workspaces and Sessions, and open Settings. It preserves a bottom-pinned Settings entry and hides idle scrollbars without moving browser rows. New Session uses an explicitly selected Workspace, then the current Session's Workspace, then the most recently active Workspace; if none exists, it opens a blank New Session page. Deployments can replace the brand mark or name while retaining the navigation controls and rail geometry.
+The dsh web client sidebar lets users recognize the active build, start a new session, switch the deployment work mode, collapse navigation to a 56px rail, browse Workspaces and Sessions, and open Settings. It preserves a bottom-pinned Settings entry and hides idle scrollbars without moving browser rows. New Session uses an explicitly selected Workspace, then the current Session's Workspace, then the most recently active Workspace; if none exists, it opens a blank New Session page. Deployments can replace the brand mark or name while retaining the navigation controls and rail geometry.
 
 ## Table of Contents
 
@@ -30,6 +30,10 @@ The sidebar is the navigation shell: users see the brand, start new sessions, co
 ### Brand and New Session
 
 The expanded brand row renders `sidebar.brand.mark` and `sidebar.brand.name` as independent single slots; the collapsed rail renders the same mark slot. Without occupants, the shell uses the fish mark and a localized local-build label. A complete build stacks a code badge below the label as `version[-commit][-dirty]`, using `DSH_CLIENT_VERSION`, the optional 7-character `DSH_CLIENT_COMMIT_HASH`, and `DSH_CLIENT_GIT_DIRTY=true`; missing version metadata omits the badge. New Session targets the explicit Workspace used by a scoped action, otherwise the current Session's Workspace, otherwise the most recently active Workspace; when none exists it clears into the blank New Session page.
+
+### Work mode switcher
+
+The expanded brand row also hangs a Codex-style mode chip beside the brand: it names the current deployment work mode and opens a two-entry menu (Coding — MSCE-governed engine development; Work — free-form proposals, PPT, and docs). The chip derives the `oristrat` settings namespace from the settings domain's shared describe mirror through `ctx.settingsScope.bind` — no wire read of its own and no direct `settings.describe` caller added to the cold-boot RPC budget — and moves only on committed writes, so a refused or failed write leaves the previous mode displayed. The collapsed rail omits the chip. The host-side consumers (`dsh-context-oristrat-msce-norms`, `dsh-guard-msce-gate`) scope the MSCE norms and gate to the stored mode.
 
 ### Global panel entries
 

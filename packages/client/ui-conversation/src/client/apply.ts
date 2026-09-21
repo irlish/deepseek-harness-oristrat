@@ -91,6 +91,7 @@ interface WorkspaceNavigation {
     workspaceId: Parameters<ConversationInjected['selectWorkspace']>[0],
     beforeOpen: (sessionId: SessionId) => void,
   ): Promise<void>
+  openUnassigned(beforeOpen: (sessionId: SessionId) => void): Promise<void>
 }
 
 /** Action registration used by the composer without importing its command-UI consumer. */
@@ -251,33 +252,40 @@ export function apply(ctx: Context, config: Config = Config({})): void {
       'conversation.hero.brand.mark': { kind: 'single', scope: 'root' },
       'conversation.hero.workspace': { kind: 'single', scope: 'root' },
       'conversation.hero.agentPreset': { kind: 'single', scope: 'root' },
+      'conversation.hero.modeActions': { kind: 'list', scope: 'session' },
     },
-    inject: (sessionId: SessionId | undefined): ConversationInjected => ({
-      hooks: {
-        composerBlock: sessionId === undefined ? ABSENT_BLOCK : composerBlocks.storeFor(sessionId),
-      },
-      selectWorkspace: workspaceId => workspaceNavigation.openWorkspace(workspaceId, (nextId) => {
-        if (sessionId !== undefined && nextId !== sessionId) {
-          const from = inputHub.shell(sessionId)
-          const draft = from.snapshot.draft
-          const attachmentIds = from.snapshot.attachmentIds
-          const next = inputHub.shell(nextId)
-          if (attachmentIds.length === 0 || next.addAttachments(attachmentIds)) {
-            if (sessions.binding(nextId) === undefined) {
-              throw new Error(`ui-conversation: session "${nextId}" resolved no binding`)
-            }
-            concreteConversation(ctx).rebindDraftFiles(nextId, attachmentIds)
-            if (draft !== '') {
-              next.setDraft(draft)
-              from.setDraft('')
-            }
-            if (attachmentIds.length > 0) {
-              for (const id of attachmentIds) from.removeAttachment(id)
-            }
+    inject: (sessionId: SessionId | undefined): ConversationInjected => {
+      // One draft-carry closure serves both navigation callbacks: the blank
+      // target inherits the outgoing session's draft and attachments exactly
+      // when the navigation actually lands on a different Session.
+      const carryDraft = (nextId: SessionId): void => {
+        if (sessionId === undefined || nextId === sessionId) return
+        const from = inputHub.shell(sessionId)
+        const draft = from.snapshot.draft
+        const attachmentIds = from.snapshot.attachmentIds
+        const next = inputHub.shell(nextId)
+        if (attachmentIds.length === 0 || next.addAttachments(attachmentIds)) {
+          if (sessions.binding(nextId) === undefined) {
+            throw new Error(`ui-conversation: session "${nextId}" resolved no binding`)
+          }
+          concreteConversation(ctx).rebindDraftFiles(nextId, attachmentIds)
+          if (draft !== '') {
+            next.setDraft(draft)
+            from.setDraft('')
+          }
+          if (attachmentIds.length > 0) {
+            for (const id of attachmentIds) from.removeAttachment(id)
           }
         }
-      }),
-    }),
+      }
+      return {
+        hooks: {
+          composerBlock: sessionId === undefined ? ABSENT_BLOCK : composerBlocks.storeFor(sessionId),
+        },
+        selectWorkspace: workspaceId => workspaceNavigation.openWorkspace(workspaceId, carryDraft),
+        selectUnassigned: () => workspaceNavigation.openUnassigned(carryDraft),
+      }
+    },
   }, ConversationRoot)
 
   const registerConversationSession = () => slots.register({
@@ -326,6 +334,7 @@ export function apply(ctx: Context, config: Config = Config({})): void {
       'conversation.input.plan': { kind: 'single', scope: 'session' },
       'conversation.input.right': { kind: 'list', scope: 'session' },
       'conversation.input.model': { kind: 'single', scope: 'session' },
+      'conversation.input.accessory': { kind: 'list', scope: 'session' },
       'conversation.composer.dock': { kind: 'list', scope: 'session' },
     },
     inject: (sessionId: SessionId | undefined): ComposerBarInjected => {

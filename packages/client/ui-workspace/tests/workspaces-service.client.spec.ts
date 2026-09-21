@@ -467,6 +467,35 @@ describe('UiWorkspaceService', () => {
     })
   })
 
+  it('runs unassigned preparation only while its navigation is current', async () => {
+    const superseded = bench({
+      sessions: sessionState([summary('current')], sid('current')),
+      workspaces: workspaceState([]),
+    })
+    const stale = vi.fn()
+    const pending = superseded.uiWorkspace.openUnassigned(stale)
+    superseded.uiWorkspace.openSession(sid('current'))
+    await pending
+    expect(stale).not.toHaveBeenCalled()
+    expect(superseded.sessions.open).toHaveBeenCalledExactlyOnceWith(sid('current'))
+
+    const prepared = bench({ workspaces: workspaceState([]) })
+    const preparation = vi.fn((_sessionId: SessionId) => {
+      prepared.layout.selectPanel('panel-a' as MainPanelId)
+    })
+    await prepared.uiWorkspace.openUnassigned(preparation)
+    // Preparation that navigates supersedes its own open: the Session stays put.
+    expect(preparation).toHaveBeenCalledExactlyOnceWith(sid('created-none'))
+    expect(prepared.sessions.open).not.toHaveBeenCalled()
+    expect(prepared.selectPanel).toHaveBeenCalledExactlyOnceWith('panel-a')
+
+    const plain = bench({ workspaces: workspaceState([]) })
+    const ready = vi.fn()
+    await plain.uiWorkspace.openUnassigned(ready)
+    expect(ready).toHaveBeenCalledExactlyOnceWith(sid('created-none'))
+    expect(plain.sessions.open).toHaveBeenCalledExactlyOnceWith(sid('created-none'))
+  })
+
   it('skips Workspace-member blanks while the Workspace baseline is reconnecting', async () => {
     // A pending baseline still carries the previous generation's membership:
     // an unassigned start must not recycle a blank that a Workspace owns.

@@ -47,7 +47,7 @@ export const InputBar = memo(function InputBar({
   renderSlot, useBusyEnter, useFileUploads, useNotices, useLexicon, useMenuLauncher,
   useProjection, sessionId, variant, disabled: inert = false, blocked,
   workspacePickerOpen = false, onRequestWorkspace,
-  placeholder, accessory,
+  placeholder, accessory, extensionZone,
 }: InputBarProps) {
   const input = useInput(s => s)
   const notice = useNotices(s => s)
@@ -440,7 +440,6 @@ export const InputBar = memo(function InputBar({
         {sessionId !== undefined && (
           <div className={css.overlayAnchor}>{renderSlot('conversation.input.overlay', {})}</div>
         )}
-        {accessory !== undefined && <div className={css.accessory}>{accessory}</div>}
         {renderSlot('conversation.input.attachments', {
           attachments,
           canAcceptDrop,
@@ -453,6 +452,14 @@ export const InputBar = memo(function InputBar({
             size: imageSizeText(imageLimits.maxImageBytes),
           },
         })}
+        {/* Accessory seat: an owner-passed node wins; otherwise the extension
+            slot renders against the point-in-time zone (absent without a
+            session, so the whole seat stays unmounted). */}
+        {(accessory !== undefined || extensionZone !== undefined) && (
+          <div className={css.accessory}>
+            {accessory ?? (extensionZone === undefined ? null : renderSlot('conversation.input.accessory', extensionZone))}
+          </div>
+        )}
         {/* One scrollport, one text surface: the contenteditable grows with
             its content and .scroll — capped at 14 lines in CSS — is the only
             thing that scrolls. Chips are decorator portals inside the same
@@ -561,9 +568,9 @@ export const InputBar = memo(function InputBar({
           </div>
         </div>
       </div>
-      {variant === 'composer' && input !== undefined && sessionId !== undefined
-        ? renderSlot('conversation.composer.dock', {})
-        : null}
+      {/* The dock seat rides the point-in-time session zone like the accessory
+          seat; bundle choosers mount below the resident card there. */}
+      {extensionZone !== undefined ? renderSlot('conversation.composer.dock', extensionZone) : null}
     </div>
   )
 })

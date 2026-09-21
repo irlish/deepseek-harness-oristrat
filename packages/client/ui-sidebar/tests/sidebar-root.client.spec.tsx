@@ -33,9 +33,12 @@ type AttentionSnapshot = Parameters<Parameters<SidebarRootComponentProps['useSes
 const noAttention: AttentionSnapshot = new Map()
 const useSessionPendingInteraction: SidebarRootComponentProps['useSessionPendingInteraction'] = selector => selector(noAttention)
 
-function mountShell({ collapsed = false, width = 300 }: { collapsed?: boolean; width?: number } = {}) {
+function mountShell({
+  collapsed = false, width = 300, mode = 'coding',
+}: { collapsed?: boolean; width?: number; mode?: 'coding' | 'work' } = {}) {
   const startSession = vi.fn()
   const toggleSidebar = vi.fn()
+  const setMode = vi.fn()
   let regionOwner: SidebarSectionOwnerProps | undefined
   let settingsOwner: SidebarSettingsOwnerProps | undefined
   let footerActionOwner: SidebarFooterActionOwnerProps | undefined
@@ -48,7 +51,8 @@ function mountShell({ collapsed = false, width = 300 }: { collapsed?: boolean; w
       useSessions={neverHook} useSessionPendingInteraction={useSessionPendingInteraction}
       usePanelInfo={usePanelInfo} selectPanel={() => {}} usePanels={selector => selector([])}
       useResource={useResource} useWorkspaces={neverHook}
-      startSession={startSession} toggleSidebar={toggleSidebar} t={t}
+      useMode={selector => selector(mode)}
+      startSession={startSession} toggleSidebar={toggleSidebar} setMode={setMode} t={t}
       renderSlot={((
         key: string,
         owner: SidebarFooterActionOwnerProps | SidebarSectionOwnerProps | SidebarSettingsOwnerProps,
@@ -72,6 +76,7 @@ function mountShell({ collapsed = false, width = 300 }: { collapsed?: boolean; w
   return {
     startSession,
     toggleSidebar,
+    setMode,
     regionOwner: () => {
       if (regionOwner === undefined) throw new Error('region owner not rendered')
       return regionOwner
@@ -105,13 +110,34 @@ describe('SidebarRoot shell', () => {
     expect(b.toggleSidebar).toHaveBeenCalledOnce()
   })
 
+  it('switches the work mode through the top-left chip menu', () => {
+    const b = mountShell({ mode: 'coding' })
+    const chip = screen.getByRole('button', { name: 'Work mode' })
+    expect(chip.textContent).toContain('Coding')
+    fireEvent.click(chip)
+    expect(screen.getByRole('menuitem', { name: /Coding/ })).toBeTruthy()
+    fireEvent.click(screen.getByRole('menuitem', { name: /Work/ }))
+    expect(b.setMode).toHaveBeenCalledExactlyOnceWith('work')
+    // Selecting closes the menu.
+    expect(screen.queryByRole('menuitem')).toBeNull()
+  })
+
+  it('names the stored mode on the chip and leaves the rail without it', () => {
+    mountShell({ mode: 'work' })
+    expect(screen.getByRole('button', { name: 'Work mode' }).textContent).toContain('Work')
+    cleanup()
+    mountShell({ mode: 'work', collapsed: true })
+    expect(screen.queryByRole('button', { name: 'Work mode' })).toBeNull()
+  })
+
   it('renders the Oristrat brand fallback when no package fills the slots', () => {
     const { container } = render(<SidebarRoot
       collapsed={false} width={300}
       useSessions={neverHook} useSessionPendingInteraction={useSessionPendingInteraction}
       usePanelInfo={usePanelInfo} selectPanel={() => {}} usePanels={selector => selector([])}
       useResource={useResource} useWorkspaces={neverHook}
-      startSession={vi.fn()} toggleSidebar={vi.fn()} t={t}
+      useMode={selector => selector('coding')}
+      startSession={vi.fn()} toggleSidebar={vi.fn()} setMode={vi.fn()} t={t}
       renderSlot={((_key: string, _owner: unknown, options?: { fallback?: ReactNode }) =>
         options?.fallback ?? null) as SidebarRootComponentProps['renderSlot']}
     />)

@@ -37,7 +37,9 @@ import {
   encodeDesktopResponseStart,
   type DesktopHostRequestFrame,
 } from './wire.ts'
+import type { DesktopPipeWebServer } from './pipe-webserver.ts'
 
+export { apply, inject, name } from './pipe-webserver.ts'
 export { DESKTOP_HOST_PROTOCOL_VERSION } from './wire.ts'
 
 /** One request forwarded from Electron's `dsh-app://` handler. */
@@ -308,6 +310,9 @@ export async function runDesktopHost(
   const api = connection.createSharedFetchHandler('/api')
   const assets = assetHandler(ctx, resolve(runtimeDir))
   const streams = remoteStreamHandler(ctx)
+  // Bundle host plugins register extension RPC channels against webServer;
+  // the pipe stand-in dispatches them before the asset fallback owns the path.
+  const pipeWeb = ctx.get('webServer') as DesktopPipeWebServer | undefined
   const requests = new Map<number, AbortController>()
   let disposing: Promise<void> | undefined
 
@@ -339,11 +344,15 @@ export async function runDesktopHost(
           signal: controller.signal,
         }
         const request = new Request(url, init)
-        const response = url.pathname === DESKTOP_STREAM_PATH
-          ? await streams.fetch(request)
-          : url.pathname.startsWith('/api/')
-            ? await api.fetch(request)
-            : await assets.fetch(request)
+        let response: Response
+        if (url.pathname === DESKTOP_STREAM_PATH) {
+          response = await streams.fetch(request)
+        } else if (url.pathname.startsWith('/api/')) {
+          response = await api.fetch(request)
+        } else {
+          response = (pipeWeb !== undefined ? await pipeWeb.dispatch(request) : undefined)
+            ?? await assets.fetch(request)
+        }
         await writeResponse(encodeDesktopResponseStart(command.streamId, {
           status: response.status,
           headers: [...response.headers.entries()],

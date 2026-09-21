@@ -19,11 +19,13 @@
 import { useEffect, useRef, useState } from 'react'
 import clsx from 'clsx'
 import {
-  IconNewChatOutline16, IconPanelLeftOutline16, OristratBrand, OristratMark, Tooltip,
+  IconChevronDownOutline14, IconCodeOutline16, IconNewChatOutline16, IconPanelLeftOutline16,
+  IconSparkle16, Menu, OristratBrand, OristratMark, Tooltip,
 } from '@deepseek-ai/dsh-client-ui-primitives'
-import type { InjectFace, PropsRenderSlots, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
+import type { MenuEntry } from '@deepseek-ai/dsh-client-ui-primitives'
+import type { InjectFace, PropsLocale, PropsRenderSlots, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import type {
-  SidebarPanelMetadata, SidebarRootComponentProps, SidebarRootInjected, SidebarSectionOwnerProps,
+  SidebarMode, SidebarPanelMetadata, SidebarRootComponentProps, SidebarRootInjected, SidebarSectionOwnerProps,
 } from './contract/slots.ts'
 import css from './SidebarRoot.module.css'
 
@@ -44,6 +46,57 @@ type PanelRowProps =
   & Pick<PropsRuntime<'sidebar'>, 'usePanelInfo'>
   & Pick<InjectFace<SidebarRootInjected>, 'selectPanel'>
   & PropsRenderSlots<'sidebar.panellist'>
+
+type ModeSwitcherProps =
+  Pick<InjectFace<SidebarRootInjected>, 'setMode' | 'useMode'>
+  & PropsLocale<'sidebar'>
+
+/**
+ * Codex-style work-mode switcher hung at the sidebar's top-left: a quiet chip
+ * naming the current mode that opens the two-mode menu. The mode source moves
+ * only when the Host commits the settings write, so the chip never shows a
+ * mode that is not stored.
+ */
+function ModeSwitcher({ setMode, useMode, t }: ModeSwitcherProps) {
+  const mode = useMode(snapshot => snapshot)
+  const [open, setOpen] = useState(false)
+  const entry = (id: SidebarMode): MenuEntry => ({
+    id,
+    icon: id === 'work' ? <IconSparkle16 size={16} /> : <IconCodeOutline16 size={16} />,
+    label: (
+      <span className={css.modeEntry}>
+        <span className={css.modeEntryName}>{t(id === 'work' ? 'mode.work' : 'mode.coding')}</span>
+        <span className={css.modeEntryDesc}>{t(id === 'work' ? 'mode.work.desc' : 'mode.coding.desc')}</span>
+      </span>
+    ),
+  })
+  const anchor = (
+    <button
+      type="button"
+      className={clsx(css.modeChip, css.wide)}
+      aria-label={t('mode.label')}
+      aria-haspopup="menu"
+      aria-expanded={open}
+      onClick={() => { setOpen(value => !value) }}
+    >
+      {mode === 'work' ? <IconSparkle16 size={14} /> : <IconCodeOutline16 size={14} />}
+      <span className={css.modeChipName}>{t(mode === 'work' ? 'mode.work' : 'mode.coding')}</span>
+      <IconChevronDownOutline14 className={css.modeChipChevron} />
+    </button>
+  )
+  return (
+    <Menu
+      open={open}
+      anchor={anchor}
+      items={[entry('coding'), entry('work')]}
+      selectedId={mode}
+      onSelect={(id) => { setMode(id as SidebarMode); setOpen(false) }}
+      onClose={() => { setOpen(false) }}
+      align="start"
+      portal
+    />
+  )
+}
 
 /** Each panel row subscribes only to its own selection state. */
 function PanelRow({ id, label, wide, usePanelInfo, selectPanel, renderSlot }: PanelRowProps) {
@@ -81,8 +134,10 @@ export function SidebarRoot({
   startSession,
   toggleSidebar,
   selectPanel,
+  setMode,
   usePanels,
   usePanelInfo,
+  useMode,
   t,
   renderSlot,
 }: SidebarRootComponentProps) {
@@ -188,6 +243,8 @@ export function SidebarRoot({
             </span>
           </button>
         )}
+        {/* Work-mode switcher (wide only): hung top-left beside the brand. */}
+        {!collapsed && <ModeSwitcher setMode={setMode} useMode={useMode} t={t} />}
         {/* Rail resting state is the whale mark; hovering swaps in the panel
             icon (the expand affordance, figma sidebar-hover flow). */}
         <Tooltip label={collapsed ? t('toggle.open') : t('toggle.collapse')} delayMs={500}>

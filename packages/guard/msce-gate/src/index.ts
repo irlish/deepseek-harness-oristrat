@@ -5,11 +5,15 @@
  * of its rules physical inside MSCE workspaces: no code mutation before
  * Harness-Aware Discovery left evidence in the session, and no git handoff
  * before an `MSCE_SUBMISSION_GATE: PASS` newer than the last mutation. Every
- * other workspace and every other tool passes through untouched.
+ * other workspace and every other tool passes through untouched. In work mode
+ * (settings `oristrat.mode`, registered by the norms plugin) both gates lift
+ * entirely; an absent or unreadable settings service reads as coding, so the
+ * gates stay enforced.
  */
 import { existsSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import type { Context } from '@deepseek-ai/cordis'
+import type {} from '@deepseek-ai/dsh-settings'
 import type { ToolExecutionResult } from '@deepseek-ai/dsh-tools'
 
 /** Plugin name as the Loader row sees it. */
@@ -57,10 +61,19 @@ function isMsceWorkspace(cwd: string | undefined): boolean {
   return entries.some(entry => MARKER_ENTRIES.test(entry))
 }
 
+/** Whether the deployment currently runs in free-form work mode. */
+function isWorkMode(ctx: Context): boolean {
+  const section = ctx.get('settings')?.get('oristrat')
+  return typeof section === 'object' && section !== null
+    && (section as { mode?: unknown }).mode === 'work'
+}
+
 /** Stable text of one session event for marker scanning. */
 function textOf(event: unknown): string {
   try {
-    return JSON.stringify(event) ?? ''
+    // JSON.stringify returns undefined for undefined input despite its string typing.
+    const text = JSON.stringify(event) as string | undefined
+    return text ?? ''
   } catch {
     return ''
   }
@@ -81,6 +94,7 @@ function blocked(message: string): ToolExecutionResult {
  */
 export function apply(ctx: Context): void {
   ctx.on('tools/execute', async (exec, next): Promise<ToolExecutionResult> => {
+    if (isWorkMode(ctx)) return next()
     const session = exec.agent?.session as
       | { meta?: { cwd?: string }; cwd?: string; events?: readonly unknown[] }
       | undefined
@@ -90,9 +104,10 @@ export function apply(ctx: Context): void {
     const texts = events.map(textOf)
     const discovery = texts.some(text => DISCOVERY_TOOLS.test(text) && DISCOVERY_TOKENS.some(token => text.includes(token)))
     if (MUTATION_TOOLS.has(exec.name) && !discovery) return blocked(DISCOVERY_BLOCK)
-    const command = exec.name === 'bash'
-      ? String((exec.arguments as { command?: unknown } | undefined)?.command ?? '')
-      : ''
+    const rawCommand = exec.name === 'bash'
+      ? (exec.arguments as { command?: unknown } | undefined)?.command
+      : undefined
+    const command = typeof rawCommand === 'string' ? rawCommand : ''
     if (GIT_SUBMIT.test(command)) {
       let lastMutation = -1
       let lastPass = -1

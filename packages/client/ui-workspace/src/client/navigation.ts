@@ -27,6 +27,13 @@ export interface UiWorkspace {
    */
   openWorkspace(workspaceId: WorkspaceId, beforeOpen?: (sessionId: SessionId) => void): Promise<void>
   /**
+   * Connect the unassigned bucket (Recent Sessions) and open its blank Session
+   * unless a later navigation supersedes it.
+   * @param beforeOpen - optional synchronous preparation for the selected Session, skipped after supersession.
+   * @returns completion; a superseded request may create a Session but does not open it.
+   */
+  openUnassigned(beforeOpen?: (sessionId: SessionId) => void): Promise<void>
+  /**
    * Fork a Session and open the child unless a later navigation supersedes it.
    * @param sessionId - source Session.
    * @returns completion; a superseded request leaves its child available without selecting it.
@@ -155,11 +162,13 @@ class UiWorkspaceService extends Service implements UiWorkspace {
     return attempt
   }
 
-  /** Connect the unassigned bucket and open its Session unless a later navigation supersedes it. */
-  private async openUnassigned(): Promise<void> {
+  async openUnassigned(beforeOpen?: (sessionId: SessionId) => void): Promise<void> {
     const navigation = AbortSignal.any([this.ctx.layout.beginNavigation(), this.lifetime.signal])
+    const isCurrent = (): boolean => !navigation.aborted
     const sessionId = await this.connectUnassigned()
-    if (!navigation.aborted) this.openSession(sessionId)
+    if (!isCurrent()) return
+    beforeOpen?.(sessionId)
+    if (isCurrent()) this.openSession(sessionId)
   }
 
   openSession(sessionId: SessionId): void {

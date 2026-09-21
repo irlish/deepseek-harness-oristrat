@@ -1,5 +1,13 @@
 const api = window.dshDesktop
 
+// The shell CSP forbids inline style attributes; hand each ring circle its
+// animation index through CSSOM so the loading animation survives the policy.
+for (const ring of document.querySelectorAll('#logo .ring')) {
+  ring.querySelectorAll('circle').forEach((circle, index) => {
+    circle.style.setProperty('--i', String(index))
+  })
+}
+
 // Plain-browser preview (no preload): static fallback copy so the loading
 // animation renders outside Electron for visual review and screenshots.
 const preview = navigator.language.startsWith('zh')

@@ -27,6 +27,13 @@
   config: {}
 
 - insert:
+    # The byte-pipe transport binds no socket: bundle Host plugins that register
+    # web routes against webServer receive this in-process stand-in, and the
+    # pipe router dispatches matched extension channels ahead of the asset
+    # fallback.
+    - id: pipe-webserver
+      name: '@deepseek-ai/dsh-desktop-host'
+
     - id: directory-picker-native
       name: '@deepseek-ai/dsh-host-directory-picker-native'
 

@@ -122,9 +122,22 @@ export type SidebarRootInjected = {
   toggleSidebar: () => void
   /** Select the global panel addressed by a sidebar row. */
   selectPanel: (id: MainPanelId) => void
+  /**
+   * Request the deployment work mode stored in the `oristrat` settings
+   * namespace. The write is fire-and-forget from the component's view: the
+   * mode source moves only when the Host commits, so a refused write leaves
+   * the switcher on its previous mode.
+   */
+  setMode: (mode: SidebarMode) => void
   /** Private reactive sources bound to framework selector hooks. */
-  hooks: { panels: ObservableSnapshot<readonly SidebarPanelMetadata[]> }
+  hooks: {
+    panels: ObservableSnapshot<readonly SidebarPanelMetadata[]>
+    mode: ObservableSnapshot<SidebarMode>
+  }
 }
+
+/** Deployment work modes mirrored by the sidebar switcher. */
+export type SidebarMode = 'coding' | 'work'
 
 /**
  * Full component props: layout owner state/actions plus the declared holes'

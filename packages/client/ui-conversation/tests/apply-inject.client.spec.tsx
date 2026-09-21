@@ -50,9 +50,15 @@ async function bench() {
   }
   runtime.ctx.provide('settingsScope', { bind: () => stubSettingsScope().scope } as never)
   const connectWorkspace = vi.fn(async () => ROOT)
+  const connectUnassigned = vi.fn(async () => ROOT)
   runtime.ctx.provide('uiWorkspace', {
     openWorkspace: async (_workspaceId: WorkspaceId, beforeOpen: (id: SessionId) => void) => {
       const id = await connectWorkspace()
+      beforeOpen(id)
+      runtime.sessions.open(id)
+    },
+    openUnassigned: async (beforeOpen: (id: SessionId) => void) => {
+      const id = await connectUnassigned()
       beforeOpen(id)
       runtime.sessions.open(id)
     },
@@ -109,7 +115,7 @@ async function bench() {
     conversationApi(id).injected.hooks.conversationViews
   return {
     runtime, feature, slots: runtime.slots, entryOf, conversationApi, headerApi, residentApi, composerApi,
-    inputApi, viewSource, sessionFake, connectWorkspace, rootUpload, uploads,
+    inputApi, viewSource, sessionFake, connectWorkspace, connectUnassigned, rootUpload, uploads,
   }
 }
 
@@ -372,6 +378,21 @@ describe('Conversation inject API', () => {
     await expect(b.residentApi(ROOT).selectWorkspace('workspace-4' as WorkspaceId))
       .rejects.toThrow('offline')
     expect(b.runtime.sessions.calls.filter(call => call.method === 'open')).toHaveLength(opens)
+    await b.runtime.dispose()
+  })
+
+  it('carries the draft through unassigned navigation', async () => {
+    const b = await bench()
+    const resident = b.residentApi(ROOT)
+    const { state, actions } = b.inputApi(ROOT)
+    actions.setDraft('carry me unassigned')
+    const other = 'other-2' as SessionId
+    await b.runtime.sessions.add({ id: other, session: {} }, { current: false })
+    b.connectUnassigned.mockResolvedValueOnce(other)
+    await resident.selectUnassigned()
+    expect(b.runtime.sessions.calls).toContainEqual({ method: 'open', args: [other] })
+    expect(state.getSnapshot().draft).toBe('')
+    expect(b.inputApi(other).state.getSnapshot().draft).toBe('carry me unassigned')
     await b.runtime.dispose()
   })
 

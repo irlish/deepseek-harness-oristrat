@@ -168,6 +168,7 @@ function mount(
   const inputActions = wiring.actions
   const stop = vi.fn()
   const open = vi.fn()
+  const retargetUnassigned = vi.fn(async () => {})
   const slotCalls: string[] = []
   const lineageOwners: ConversationHeaderLineageOwnerProps[] = []
   const viewTabs = options.viewTabs ?? [
@@ -314,11 +315,12 @@ function mount(
     renderSlot,
     renderSlotChain,
     selectWorkspace: retargetWorkspace,
+    selectUnassigned: retargetUnassigned,
     t,
   }
   const view = render(<ConversationRoot {...props} />)
   return {
-    view, store, wiring, sink, retargetWorkspace, session, conversation, slotCalls, lineageOwners, seatOwners, open,
+    view, store, wiring, sink, retargetWorkspace, retargetUnassigned, session, conversation, slotCalls, lineageOwners, seatOwners, open,
     pickerOwner: () => pickerOwner,
     rerender: () => { view.rerender(<ConversationRoot {...props} />) },
   }
@@ -382,20 +384,40 @@ describe('ConversationRoot resident composer', () => {
     expect(seat('conversation.input.plan')).toEqual({ locked: true })
   })
 
-  it('lets the no-workspace posture win over a block', () => {
-    // Picking a workspace is the earlier prerequisite; naming a model first
-    // would send the user somewhere they cannot act yet.
+  it('lets a raised block act on an unassigned blank session (no workspace lock remains)', () => {
+    // A Session outside every Workspace is conversable: the workspace
+    // prerequisite no longer owns the inert posture, so a raised block does.
     const b = mount(sessionSnapshotOf({ blank: true }), [], undefined, {
       summaryBlank: true,
       composerBlock: { reason: 'select a model first' },
     })
     const box = b.view.getByRole('textbox')
-    expect(box.getAttribute('aria-disabled')).not.toBe('true')
-    expect(box.getAttribute('contenteditable')).not.toBe('true')
-    expect(box.getAttribute('aria-haspopup')).toBe('menu')
-    expect(box.getAttribute('data-placeholder')).not.toBe('select a model first')
+    expect(box.getAttribute('aria-disabled')).toBe('true')
+    expect(box.getAttribute('data-placeholder')).toBe('select a model first')
+    expect(box.getAttribute('aria-haspopup')).not.toBe('menu')
     const modelSeat = b.seatOwners.filter(call => call.key === 'conversation.input.model').at(-1)?.owner
-    expect(modelSeat).toEqual({ locked: true })
+    expect(modelSeat).toEqual({ locked: false })
+  })
+
+  it('keeps an unassigned blank session conversable and wires the picker no-Workspace entry', () => {
+    const b = mount(sessionSnapshotOf({ blank: true }), [])
+    // Hero chrome with a live composer: the chip names the unassigned state
+    // instead of demanding a Workspace, and typing reaches the machine.
+    expect(b.view.container.querySelector('[data-phase]')?.getAttribute('data-phase')).toBe('hero')
+    expect(b.view.getByText('未关联工作区')).toBeTruthy()
+    const box = b.view.getByRole('textbox')
+    expect(box.getAttribute('aria-disabled')).toBeNull()
+    expect(box.getAttribute('contenteditable')).toBe('true')
+    act(() => { b.wiring.setDraft('unassigned draft') })
+    expect(b.store.store.getSnapshot().draft).toBe('unassigned draft')
+    const owner = b.pickerOwner() as {
+      open: boolean
+      unassignedSelected?: boolean
+      onPickUnassigned?: () => void
+    }
+    expect(owner.unassignedSelected).toBe(true)
+    act(() => { owner.onPickUnassigned?.() })
+    expect(b.retargetUnassigned).toHaveBeenCalledOnce()
   })
 
   it('keeps composer text in the machine, mirrors to the Conversation store, and submits through the sink', () => {
@@ -488,8 +510,9 @@ describe('ConversationRoot resident composer', () => {
     // Picker: open through the chip; a pick switches to the other
     // workspace's blank session (draft carry is apply-layer wiring).
     fireEvent.click(b.view.getByRole('button', { name: '选择工作区' }))
-    const owner = b.pickerOwner() as { open: boolean; onPick(id: WorkspaceId): void }
+    const owner = b.pickerOwner() as { open: boolean; unassignedSelected?: boolean; onPick(id: WorkspaceId): void }
     expect(owner.open).toBe(true)
+    expect(owner.unassignedSelected).toBe(false)
     act(() => { owner.onPick(wid('second')) })
     expect(b.retargetWorkspace).toHaveBeenCalledWith(wid('second'))
     expect(b.view.getByText('Selected Folder')).toBeTruthy()
@@ -609,6 +632,8 @@ describe('ConversationRoot resident composer', () => {
     // The agent-preset chip sits in the same row, for the same reason: both
     // choices are only open before the first message.
     expect(b.slotCalls).toContain('conversation.hero.agentPreset')
+    // The mode-action cluster (e.g. the PPT chip) rides the same session zone.
+    expect(b.slotCalls).toContain('conversation.hero.modeActions')
   })
 
   it('prompt failure renders the promptError strip (ordinary failure, no transaction UI)', () => {

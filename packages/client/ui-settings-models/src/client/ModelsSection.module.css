@@ -458,9 +458,113 @@
 
 .modelRow {
   display: grid;
-  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) auto auto;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) auto auto auto;
   align-items: center;
   gap: 6px;
+}
+
+/* Per-model image-input declaration (ModelImageInputToggle). The compact form
+   rides the model row: short title, hover fill, and a pure-CSS tooltip built
+   from data-tooltip; the full form is a grid-wide row with the hint line. */
+.modalityToggle {
+  grid-column: 1 / -1;
+  align-items: flex-start;
+  gap: 9px;
+  min-height: 36px;
+  padding: 4px;
+  display: flex;
+  cursor: pointer;
+}
+
+.modalityToggle[aria-disabled='true'] {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.modalityToggle input {
+  accent-color: var(--dsw-alias-brand-primary);
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin: 2px 0 0;
+}
+
+.modalityCopy {
+  flex-direction: column;
+  gap: 1px;
+  display: flex;
+}
+
+.modalityTitle {
+  color: var(--dsw-alias-label-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 18px;
+}
+
+.modalityHint {
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 11px;
+  line-height: 16px;
+}
+
+.modalityToggleCompact {
+  grid-column: auto;
+  align-items: center;
+  gap: 5px;
+  min-height: 28px;
+  white-space: nowrap;
+  border-radius: 6px;
+  padding: 0 4px;
+  position: relative;
+}
+
+.modalityToggleCompact:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+.modalityToggleCompact input {
+  width: 14px;
+  height: 14px;
+  margin: 0;
+}
+
+.modalityToggleCompact .modalityCopy {
+  display: block;
+}
+
+.modalityToggleCompact .modalityTitle {
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 11px;
+  line-height: 16px;
+}
+
+.modalityToggleCompact::after {
+  content: attr(data-tooltip);
+  z-index: 12;
+  pointer-events: none;
+  box-sizing: border-box;
+  width: max-content;
+  max-width: 260px;
+  color: var(--dsw-alias-label-primary-foreground);
+  background: var(--dsw-alias-label-primary);
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 16px;
+  white-space: normal;
+  visibility: hidden;
+  opacity: 0;
+  position: absolute;
+  top: calc(100% + 5px);
+  right: 0;
+}
+
+.modalityToggleCompact:hover::after,
+.modalityToggleCompact:focus-within::after {
+  visibility: visible;
+  opacity: 1;
 }
 
 /* Square, label-free affordances: the row's own inputs carry the meaning, so

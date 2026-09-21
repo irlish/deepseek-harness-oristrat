@@ -25,7 +25,7 @@ import type { SubmitOutcome } from '../src/client/contract/input.ts'
 import { SessionInputShell } from '../src/client/input/facade.ts'
 import { $replaceDetectSpanWithText, $selectDetectSpan } from '../src/client/input/editor/span-map.ts'
 import type {
-  ComposerAttachment, ComposerAttachmentsOwnerProps, DraftFileUploads,
+  ComposerAttachment, ComposerAttachmentsOwnerProps, DraftFileUploads, InputZone,
 } from '../src/client/contract/slots.ts'
 import type { DraftAttachmentId } from '../src/client/contract/input.ts'
 import { InputBar } from '../src/client/skeleton/InputBar.tsx'
@@ -99,6 +99,10 @@ interface BenchOptions {
   commandMenuOpen?: boolean
   busyEnter?: 'queue' | 'steer'
   toggleCommandMenu?: (selection: { start: number; end: number }) => void
+  /** Node the accessory slot stub renders when dispatched. */
+  accessorySlot?: React.ReactNode
+  /** Extension zone passed through to the accessory seat. */
+  extensionZone?: InputZone
 }
 
 /** One pending queue row (the runtime snapshot shape, as the dock tests build it). */
@@ -161,6 +165,7 @@ function bench(over?: BenchOptions) {
     if (key === 'conversation.composer.dock') return over?.footer ?? null
     if (key === 'conversation.input.plan') return over?.planEntry ?? null
     if (key === 'conversation.input.model') return over?.modelEntry ?? null
+    if (key === 'conversation.input.accessory') return over?.accessorySlot ?? null
     return null
   }) as never
   const props: InputBarProps = {
@@ -212,6 +217,7 @@ function bench(over?: BenchOptions) {
     ...(over?.onRequestWorkspace !== undefined ? { onRequestWorkspace: over.onRequestWorkspace } : {}),
     ...(over?.placeholder !== undefined ? { placeholder: over.placeholder } : {}),
     ...(over?.accessory !== undefined ? { accessory: over.accessory } : {}),
+    ...(over?.extensionZone !== undefined ? { extensionZone: over.extensionZone } : {}),
   }
   const view = render(<InputBar {...props} />)
   const textarea = view.container.querySelector<HTMLDivElement>('[data-composer-input]')!
@@ -1559,6 +1565,7 @@ describe('strips and variants', () => {
 
   it('renders overlay, left/right, and footer slots at their layout positions', () => {
     const { view } = bench({
+      extensionZone: { session: {}, input: undefined } as unknown as InputZone,
       overlay: <i data-testid="ov" />,
       leftItems: <i data-testid="li" />,
       rightItems: <i data-testid="ri" />,
@@ -1578,15 +1585,37 @@ describe('command launcher chrome and control seats', () => {
     // Capability absent (no projection value): the chip renders nothing.
     expect(view.queryByLabelText(/^访问模式/)).toBeNull()
     // Every seat dispatched, nothing rendered (render passes may repeat; the
-    // seat set is the contract).
+    // seat set is the contract). The dock rides the extension zone like the
+    // accessory seat, so without a zone neither is dispatched.
     expect([...new Set(slotCalls.map(c => c.key))]).toEqual([
       'conversation.input.overlay', 'conversation.input.attachments',
       'conversation.input.plan', 'conversation.input.left',
       'conversation.input.right', 'conversation.input.model',
-      'conversation.composer.dock',
     ])
     expect(view.queryByLabelText('Plan mode')).toBeNull()
     expect(view.queryByLabelText('Model')).toBeNull()
+  })
+
+  it('dispatches the accessory slot against the extension zone when present', () => {
+    const zone = { session: {}, input: undefined } as unknown as InputZone
+    const { slotCalls, view } = bench({ extensionZone: zone, accessorySlot: <i data-testid="acc-slot" /> })
+    expect(view.getByTestId('acc-slot')).toBeTruthy()
+    const call = slotCalls.find(candidate => candidate.key === 'conversation.input.accessory')
+    expect(call?.owner).toBe(zone)
+    const dock = slotCalls.find(candidate => candidate.key === 'conversation.composer.dock')
+    expect(dock?.owner).toBe(zone)
+  })
+
+  it('keeps an owner-passed accessory ahead of the extension slot', () => {
+    const zone = { session: {}, input: undefined } as unknown as InputZone
+    const { slotCalls, view } = bench({
+      extensionZone: zone,
+      accessory: <i data-testid="acc-prop" />,
+      accessorySlot: <i data-testid="acc-slot" />,
+    })
+    expect(view.getByTestId('acc-prop')).toBeTruthy()
+    expect(view.queryByTestId('acc-slot')).toBeNull()
+    expect(slotCalls.some(candidate => candidate.key === 'conversation.input.accessory')).toBe(false)
   })
 
   it('passes the textarea selection to the command menu launcher and reflects its expanded state', () => {

@@ -12,6 +12,7 @@ import type { ReactNode } from 'react'
 import {
   IconChevronDownOutline14, IconChevronRightOutline14, IconPlusOutline16, IconTrashOutline16,
 } from '@deepseek-ai/dsh-client-ui-primitives'
+import { imageInputModalities, ModelImageInputToggle } from './ModelImageInputToggle.tsx'
 import type { en } from './locales.ts'
 import styles from './ModelsSection.module.css'
 
@@ -19,7 +20,7 @@ import styles from './ModelsSection.module.css'
 export type DeepSeekModelDraft = Record<string, unknown>
 
 /** The catalog fields this editor writes. */
-type CatalogField = 'id' | 'name' | 'contextWindow' | 'maxTokens'
+type CatalogField = 'id' | 'name' | 'contextWindow' | 'maxTokens' | 'inputModalities'
 
 /** The two token counts edited as K/M-suffixed text behind a row's disclosure. */
 type CapacityField = 'contextWindow' | 'maxTokens'
@@ -352,6 +353,17 @@ export function DeepSeekModelsEditor(props: DeepSeekModelsEditorProps): ReactNod
                     disabled={props.disabled}
                     onChange={(event) => {
                       update(index, 'name', event.target.value === '' ? undefined : event.target.value)
+                    }}
+                  />
+                  <ModelImageInputToggle
+                    model={model}
+                    field="inputModalities"
+                    index={index}
+                    t={props.t}
+                    disabled={props.disabled}
+                    compact
+                    onChange={(enabled) => {
+                      update(index, 'inputModalities', imageInputModalities(enabled))
                     }}
                   />
                   <button
