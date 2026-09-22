@@ -75,6 +75,9 @@
       "path": "../settings-controller"
     },
     {
+      "path": "../gui-repo"
+    },
+    {
       "path": "../gui-terminal"
     },
     {

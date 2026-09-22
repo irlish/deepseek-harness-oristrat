@@ -1,0 +1,124 @@
+/**
+ * BrowserPanel: the embedded-browser pane. The desktop main process owns the
+ * WebContentsView; this component owns its placement — it measures the
+ * surface element, opens the view over it, and re-pushes bounds while the
+ * pane resizes, scrolls, or the window changes. The toolbar drives history
+ * and navigation through the injected bridge; on the plain web host, where no
+ * bridge exists, the pane explains the desktop-only surface instead.
+ */
+import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
+import type { PropsLocale } from '@deepseek-ai/dsh-client-ui-slots'
+import { IconChevronLeftOutline14, IconChevronRightOutline14, IconRefreshOutline14 } from '@deepseek-ai/dsh-client-ui-primitives'
+import type { BrowserState, DesktopBrowserBridge } from './bridge.ts'
+import { boundsFromRect, normalizeUrlInput } from './bridge.ts'
+import type {} from './locales.ts'
+import css from './BrowserPanel.module.css'
+
+/** The panel's injected desktop bridge seat. */
+export interface BrowserPanelInjected {
+  /** The desktop embedded-browser face; undefined on the plain web host. */
+  bridge: DesktopBrowserBridge | undefined
+}
+
+/** The panel's composed props: injected bridge and copy. */
+export type BrowserPanelProps = PropsLocale<'browser-panel'> & BrowserPanelInjected
+
+/** Bridge rejections are surface noise: the next state push re-syncs the pane. */
+function ignoreBridgeError(_error: unknown): void {}
+
+/**
+ * Draw the embedded-browser pane.
+ * @param props - injected desktop bridge and localized copy.
+ * @returns the toolbar above the measured view surface.
+ */
+export function BrowserPanel({ t, bridge }: BrowserPanelProps): ReactNode {
+  const surfaceRef = useRef<HTMLDivElement | null>(null)
+  const bridgeRef = useRef(bridge)
+  bridgeRef.current = bridge
+  const [state, setState] = useState<BrowserState | null>(null)
+  const [draft, setDraft] = useState('')
+  const [failed, setFailed] = useState<string | null>(null)
+
+  const pushBounds = useCallback((): void => {
+    const active = bridgeRef.current
+    const element = surfaceRef.current
+    /* v8 ignore next -- pushers only run while the bridge is attached and the surface is mounted. */
+    if (active === undefined || element === null) return
+    active.setBounds(boundsFromRect(element.getBoundingClientRect())).catch(ignoreBridgeError)
+  }, [])
+
+  useEffect(() => {
+    const active = bridgeRef.current
+    if (active === undefined) return
+    const element = surfaceRef.current
+    /* v8 ignore next -- the surface ref is attached before the effect runs. */
+    if (element === null) return
+    const unsubscribe = active.subscribe(setState)
+    active.open(boundsFromRect(element.getBoundingClientRect())).catch(ignoreBridgeError)
+    const observer = typeof ResizeObserver === 'function'
+      ? new ResizeObserver(() => { pushBounds() })
+      : undefined
+    observer?.observe(element)
+    window.addEventListener('resize', pushBounds)
+    window.addEventListener('scroll', pushBounds, true)
+    return () => {
+      unsubscribe()
+      observer?.disconnect()
+      window.removeEventListener('resize', pushBounds)
+      window.removeEventListener('scroll', pushBounds, true)
+      active.close().catch(ignoreBridgeError)
+    }
+  }, [pushBounds])
+
+  const go = (event: FormEvent): void => {
+    event.preventDefault()
+    const active = bridgeRef.current
+    const url = normalizeUrlInput(draft)
+    if (active === undefined || url === undefined) return
+    setFailed(null)
+    active.navigate(url).catch((error: unknown) => {
+      setFailed(error instanceof Error ? error.message : String(error))
+    })
+  }
+
+  if (bridge === undefined) {
+    return (
+      <div className={css.panel}>
+        <div className={css.notice}>{t('state.desktopOnly')}</div>
+      </div>
+    )
+  }
+
+  // A const copy keeps the undefined check inside the JSX callbacks.
+  const desktop = bridge
+  return (
+    <div className={css.panel}>
+      <div className={css.toolbar}>
+        <button type="button" className={css.tool} aria-label={t('action.back')} disabled={state?.canGoBack !== true} onClick={() => { desktop.back().catch(ignoreBridgeError) }}>
+          <IconChevronLeftOutline14 />
+        </button>
+        <button type="button" className={css.tool} aria-label={t('action.forward')} disabled={state?.canGoForward !== true} onClick={() => { desktop.forward().catch(ignoreBridgeError) }}>
+          <IconChevronRightOutline14 />
+        </button>
+        <button type="button" className={css.tool} aria-label={t('action.reload')} onClick={() => { desktop.reload().catch(ignoreBridgeError) }}>
+          <IconRefreshOutline14 />
+        </button>
+        <form className={css.address} onSubmit={go}>
+          <input
+            type="text"
+            className={css.addressInput}
+            value={draft}
+            placeholder={state?.url === '' || state === null ? t('url.placeholder') : state.url}
+            aria-label={t('url.placeholder')}
+            onChange={(event) => { setDraft(event.target.value) }}
+          />
+          <button type="submit" className={css.go}>{t('action.open')}</button>
+        </form>
+      </div>
+      {failed !== null && <div className={css.error}>{t('state.error', { message: failed })}</div>}
+      <div ref={surfaceRef} className={css.surface}>
+        {state?.url === '' && <div className={css.notice}>{t('state.blank')}</div>}
+      </div>
+    </div>
+  )
+}

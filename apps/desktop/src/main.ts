@@ -16,10 +16,12 @@ import {
   type TitleBarOverlayOptions,
 } from 'electron'
 import { resolveDesktopPaths } from './paths.ts'
+import { migrateOristratThinkingLevels } from './settings-thinking-migration.ts'
 import { DesktopProjectManager, type DesktopProjectHooks } from './project-manager.ts'
 import { DesktopHostProcess } from './host-process.ts'
 import { DesktopBackendController, type DesktopBackendState } from './backend-controller.ts'
 import { DESKTOP_IPC, type DesktopUpdateState } from './ipc.ts'
+import { DesktopBrowserViewController, sanitizeBounds } from './browser-view.ts'
 import { formatDesktopMessage, resolveDesktopLocale } from './locale.ts'
 import { claimDesktopSingleInstance } from './single-instance.ts'
 import { DesktopUpdateCoordinator } from './update-coordinator.ts'
@@ -230,6 +232,10 @@ async function main(): Promise<void> {
   const resources = runtimeResources()
   const paths = resolveDesktopPaths()
   await seedFirstRunSettings(paths.home)
+  // Fork: existing settings documents predate the thinking-level roster; the
+  // composer slider needs declared efforts. A unreadable document stays for
+  // the settings service to fail on loudly.
+  await migrateOristratThinkingLevels(paths.home).catch((error: unknown) => { console.error(error) })
   const development = app.isPackaged ? undefined : join(app.getAppPath(), '.desktop-build', 'development', 'project')
   const activeProject = development ?? paths.profile
   const manager = new DesktopProjectManager(paths, resources)
@@ -462,6 +468,59 @@ async function main(): Promise<void> {
     await updates.install()
   })
 
+  // Fork: embedded browser view for the right-sidebar browser panel. The
+  // renderer owns placement and navigation intent; the view itself lives in
+  // the main process with its own persistent partition.
+  let browserController: DesktopBrowserViewController | undefined
+  let browserHost: BrowserWindow | undefined
+  const browserFor = (): DesktopBrowserViewController => {
+    const window = mainWindow
+    if (window === undefined || window.isDestroyed()) throw new Error('dsh desktop: no application window for the embedded browser')
+    if (browserController === undefined || browserHost !== window) {
+      browserController = new DesktopBrowserViewController(window)
+      browserHost = window
+    }
+    return browserController
+  }
+  ipcMain.handle(DESKTOP_IPC.browserOpen, (event, bounds: unknown, url: unknown) => {
+    assertDesktopSender(event, ['app'])
+    const placement = sanitizeBounds(bounds)
+    if (placement === undefined) throw new Error('dsh desktop: browser bounds must be four finite numbers')
+    browserFor().open(placement, typeof url === 'string' ? url : undefined)
+  })
+  ipcMain.handle(DESKTOP_IPC.browserClose, (event) => {
+    assertDesktopSender(event, ['app'])
+    browserController?.close()
+    browserController = undefined
+  })
+  ipcMain.handle(DESKTOP_IPC.browserNavigate, (event, url: unknown) => {
+    assertDesktopSender(event, ['app'])
+    if (typeof url !== 'string') throw new Error('dsh desktop: browser navigation target must be a string')
+    browserFor().navigate(url)
+  })
+  ipcMain.handle(DESKTOP_IPC.browserBack, (event) => {
+    assertDesktopSender(event, ['app'])
+    browserController?.back()
+  })
+  ipcMain.handle(DESKTOP_IPC.browserForward, (event) => {
+    assertDesktopSender(event, ['app'])
+    browserController?.forward()
+  })
+  ipcMain.handle(DESKTOP_IPC.browserReload, (event) => {
+    assertDesktopSender(event, ['app'])
+    browserController?.reload()
+  })
+  ipcMain.handle(DESKTOP_IPC.browserSetBounds, (event, bounds: unknown) => {
+    assertDesktopSender(event, ['app'])
+    const placement = sanitizeBounds(bounds)
+    if (placement === undefined) throw new Error('dsh desktop: browser bounds must be four finite numbers')
+    browserController?.setBounds(placement)
+  })
+  ipcMain.handle(DESKTOP_IPC.browserGetState, (event) => {
+    assertDesktopSender(event, ['app'])
+    return browserController?.getState() ?? { url: '', title: '', canGoBack: false, canGoForward: false, loading: false }
+  })
+
   const checkAndPrompt = async (manual: boolean): Promise<void> => {
     const state = await updates.check()
     if (state.phase === 'error') {
@@ -596,7 +655,14 @@ async function main(): Promise<void> {
     }
     installDesktopDragRegion(window)
     mainWindow = window
-    window.on('closed', () => { if (mainWindow === window) mainWindow = undefined })
+    window.on('closed', () => {
+      if (mainWindow === window) mainWindow = undefined
+      // The embedded view dies with its host window; drop the stale owner.
+      if (browserHost === window) {
+        browserController = undefined
+        browserHost = undefined
+      }
+    })
     window.webContents.on('preload-error', (_event, _path, error) => {
       void showEmergencyError(error).catch((failure: unknown) => { console.error(failure) })
     })

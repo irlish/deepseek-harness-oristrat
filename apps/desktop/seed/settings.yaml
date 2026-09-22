@@ -6,27 +6,43 @@ llm-pi-ai:
       displayName: Oristrat - official
       api: openai-completions
       baseURL: https://api.oristrat.com/v1
+      compat:
+        thinkingFormat: openai
       models:
         - id: glm-4.5
           name: GLM-4.5
+          reasoningEfforts: &oristrat-efforts
+            low: low
+            medium: medium
+            high: high
+            xhigh: xhigh
         - id: glm-4.5-air
           name: GLM-4.5-Air
+          reasoningEfforts: *oristrat-efforts
         - id: glm-4.6
           name: GLM-4.6
+          reasoningEfforts: *oristrat-efforts
         - id: glm-4.7
           name: GLM-4.7
+          reasoningEfforts: *oristrat-efforts
         - id: glm-5
           name: GLM-5
+          reasoningEfforts: *oristrat-efforts
         - id: glm-5-turbo
           name: GLM-5-Turbo
+          reasoningEfforts: *oristrat-efforts
         - id: glm-5.1
           name: GLM-5.1
+          reasoningEfforts: *oristrat-efforts
         - id: glm-5.2
           name: GLM-5.2
+          reasoningEfforts: *oristrat-efforts
         - id: glm-5.3
           name: GLM-5.3
+          reasoningEfforts: *oristrat-efforts
         - id: glm-5.3-flash
           name: GLM-5.3-Flash
+          reasoningEfforts: *oristrat-efforts
       apiKeyEnv: ORISTRAT_OFFICIAL_API_KEY
 agent-default-model:
   provider: oristrat-official

@@ -39,3 +39,17 @@
 
     - id: ui-directory-picker-native
       name: '@deepseek-ai/dsh-client-ui-directory-picker-native'
+
+    # Fork: external web search for proposals, PPT, docs, and any task that
+    # needs live facts. The Alibaba Bailian WebSearch MCP server authenticates
+    # with the user's DashScope key from $DSH_HOME/.env; a missing key or an
+    # offline host leaves the tools absent (failOnStartupError off) instead of
+    # blocking desktop startup, and the reconnect supervisor retries.
+    - id: mcp-client
+      name: '@deepseek-ai/dsh-mcp-client'
+      config:
+        transport: streamable-http
+        serverName: dashscope-websearch
+        url: https://dashscope.aliyuncs.com/api/v1/mcps/WebSearch/mcp
+        authorizationEnv: DASHSCOPE_API_KEY
+        failOnStartupError: false

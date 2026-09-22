@@ -7,7 +7,54 @@ import { Context } from '@deepseek-ai/cordis'
 import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
 import ToolRuntime from '@deepseek-ai/dsh-tools'
 import { createScope } from '@deepseek-ai/dsh-scope'
+import { CredentialProvider, credentialRef } from '@deepseek-ai/dsh-credentials'
+import type {
+  CredentialInfo,
+  CredentialKey,
+  CredentialRecord,
+  CredentialRecordEntry,
+  CredentialRecordInfo,
+  CredentialRef,
+  ResolvedCredential,
+} from '@deepseek-ai/dsh-credentials'
+import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js'
 import type { Config } from '@deepseek-ai/dsh-mcp-client'
+
+/**
+ * Credentials double resolving exactly one reference; every other lookup
+ * stays unconfigured so the missing-key failure path is observable.
+ */
+class StubCredentials extends CredentialProvider {
+  override resolve(ref: CredentialRef): Promise<ResolvedCredential | undefined> {
+    return Promise.resolve(ref === credentialRef('DASHSCOPE_API_KEY')
+      ? { value: 'sekret', source: 'test' }
+      : undefined)
+  }
+  override describe(_ref: CredentialRef): Promise<CredentialInfo> {
+    return Promise.resolve({ configured: false, writable: false })
+  }
+  override set(_ref: CredentialRef, _value: string): Promise<void> {
+    return Promise.resolve()
+  }
+  override unset(_ref: CredentialRef): Promise<void> {
+    return Promise.resolve()
+  }
+  override readRecord(_key: CredentialKey): Promise<CredentialRecord | undefined> {
+    return Promise.resolve(undefined)
+  }
+  override describeRecord(_key: CredentialKey): Promise<CredentialRecordInfo> {
+    return Promise.resolve({ configured: false, writable: false })
+  }
+  override listRecords(): Promise<readonly CredentialRecordEntry[]> {
+    return Promise.resolve([])
+  }
+  override modifyRecord(key: CredentialKey): Promise<CredentialRecord | undefined> {
+    return this.readRecord(key)
+  }
+  override deleteRecord(_key: CredentialKey): Promise<void> {
+    return Promise.resolve()
+  }
+}
 
 // ---- Mock MCP SDK ----
 
@@ -457,5 +504,68 @@ describe('apply (plugin lifecycle)', () => {
 
     expect(mockConnect).toHaveBeenCalled()
     expect(ctx.tools.get('mcp__web__remote')).toBeDefined()
+  })
+
+  it('resolves authorizationEnv into a Bearer header on the transport', async () => {
+    await ctx.plugin(StubCredentials)
+    await apply(ctx, {
+      transport: 'streamable-http',
+      serverName: 'web',
+      url: 'http://localhost:3000/mcp',
+      headers: { 'X-Custom': 'kept' },
+      authorizationEnv: 'DASHSCOPE_API_KEY',
+      toolCallTimeoutMs: 30_000,
+      failOnStartupError: false,
+    })
+
+    const transport = StreamableHTTPClientTransport as unknown as {
+      mock: { calls: [URL, { requestInit: { headers: Record<string, string> } }][] }
+    }
+    expect(transport.mock.calls.at(-1)?.[1]?.requestInit.headers)
+      .toEqual({ 'X-Custom': 'kept', Authorization: 'Bearer sekret' })
+    expect(ctx.tools.get('mcp__web__remote')).toBeDefined()
+  })
+
+  it('fails strict startup when the authorizationEnv credential is not configured', async () => {
+    await ctx.plugin(StubCredentials)
+    try {
+      await expect(apply(ctx, {
+        transport: 'streamable-http',
+        serverName: 'web',
+        url: 'http://localhost:3000/mcp',
+        headers: {},
+        authorizationEnv: 'MISSING_KEY',
+        toolCallTimeoutMs: 30_000,
+        failOnStartupError: true,
+        reconnect: { enabled: false },
+      })).rejects.toMatchObject({
+        message: 'mcp-client(web): initial connection or tool synchronization failed',
+        cause: new Error('mcp-client(web): credential "MISSING_KEY" is not configured — set it in the environment or $DSH_HOME/.env'),
+      })
+      expect(mockConnect).not.toHaveBeenCalled()
+    } finally {
+      await ctx.fiber.dispose()
+    }
+  })
+
+  it('fails strict startup when authorizationEnv has no credentials service', async () => {
+    try {
+      await expect(apply(ctx, {
+        transport: 'streamable-http',
+        serverName: 'web',
+        url: 'http://localhost:3000/mcp',
+        headers: {},
+        authorizationEnv: 'DASHSCOPE_API_KEY',
+        toolCallTimeoutMs: 30_000,
+        failOnStartupError: true,
+        reconnect: { enabled: false },
+      })).rejects.toMatchObject({
+        message: 'mcp-client(web): initial connection or tool synchronization failed',
+        cause: new Error('mcp-client(web): authorizationEnv "DASHSCOPE_API_KEY" requires the credentials service'),
+      })
+      expect(mockConnect).not.toHaveBeenCalled()
+    } finally {
+      await ctx.fiber.dispose()
+    }
   })
 })

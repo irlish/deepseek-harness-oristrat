@@ -18,6 +18,7 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { ToolListChangedNotificationSchema } from '@modelcontextprotocol/sdk/types.js'
 import type { Context } from '@deepseek-ai/cordis'
+import { credentialRef } from '@deepseek-ai/dsh-credentials'
 import { MAX_TIMER_DELAY_MS } from '@deepseek-ai/dsh-timeout'
 import { createTransport } from './transport.ts'
 import { syncTools } from './tools.ts'
@@ -234,6 +235,25 @@ export function startConnection(ctx: Context, config: Config, policy: ResolvedRe
    *
    * @param startup - Whether this is the plugin's activation attempt.
    */
+  /**
+   * Resolve the configured credential reference into a Bearer authorization
+   * header value, re-resolved per connection attempt so a rotated key reaches
+   * the next attempt without a restart.
+   * @returns the header value, or `undefined` when the server authenticates out-of-band.
+   */
+  async function resolveAuthorization(): Promise<string | undefined> {
+    if (config.transport !== 'streamable-http' || config.authorizationEnv === undefined) return undefined
+    const credentials = ctx.get('credentials')
+    if (credentials === undefined) {
+      throw new Error(`mcp-client(${config.serverName}): authorizationEnv "${config.authorizationEnv}" requires the credentials service`)
+    }
+    const resolved = await credentials.resolve(credentialRef(config.authorizationEnv))
+    if (resolved === undefined) {
+      throw new Error(`mcp-client(${config.serverName}): credential "${config.authorizationEnv}" is not configured — set it in the environment or $DSH_HOME/.env`)
+    }
+    return `Bearer ${resolved.value}`
+  }
+
   async function connectGeneration(startup: boolean): Promise<void> {
     const generation = new Client(
       { name: 'dsh-mcp-client', version: '0.0.1' },
@@ -269,7 +289,7 @@ export function startConnection(ctx: Context, config: Config, policy: ResolvedRe
       },
     )
     try {
-      await generation.connect(createTransport(config))
+      await generation.connect(createTransport(config, await resolveAuthorization()))
       if (hasClosed()) {
         attemptSettled = true
         generationDown(generation)

@@ -48,8 +48,9 @@ Add one entry per server; nothing else is required. After the harness starts, th
     serverName: web
     transport: streamable-http
     url: http://localhost:3000/mcp
+    authorizationEnv: MCP_TOKEN
     headers:
-      Authorization: !!js '`Bearer ${process.env.MCP_TOKEN}`'
+      X-Client: dsh
 ```
 
 | Field | Default | Meaning |
@@ -58,6 +59,7 @@ Add one entry per server; nothing else is required. After the harness starts, th
 | `serverName` | required | Namespace for the server's tool names; `[A-Za-z0-9_-]{1,32}`, unique inside one registration scope |
 | `command` / `args` / `env` / `cwd` | — | stdio: executable, arguments, extra env merged over scrubbed ambient env, working directory |
 | `url` / `headers` | — | streamable-http: endpoint URL and extra request headers |
+| `authorizationEnv` | — | streamable-http: credential reference resolved through the credentials service on every connection attempt and sent as `Authorization: Bearer <value>`; keeps secrets out of config files, and a rotated key reaches the next attempt without a restart |
 | `toolCallTimeoutMs` | `60,000` | Timeout per `tools/call` invocation |
 | `failOnStartupError` | `false` | Reject plugin activation when the initial connection or tool synchronization fails |
 | `reconnect.enabled` | `true` | Reconnect automatically after a lost connection |

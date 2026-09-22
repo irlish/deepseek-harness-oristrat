@@ -75,9 +75,22 @@
     - id: ui-terminal-panel
       name: '@deepseek-ai/dsh-client-ui-terminal-panel'
 
+    # Fork: right-sidebar repository environment panel (branch, change totals,
+    # local host, sources) over the gui-repo Remote namespace.
+    - id: ui-repo-panel
+      name: '@deepseek-ai/dsh-client-ui-repo-panel'
+
+    # Fork: right-sidebar embedded browser (desktop WebContentsView bridge).
+    - id: ui-browser-panel
+      name: '@deepseek-ai/dsh-client-ui-browser-panel'
+
     # Browser-interactive terminal: PTY sessions over the subprocess layer.
     - id: gui-terminal
       name: '@deepseek-ai/dsh-api-gui-terminal'
+
+    # Fork: read-only repository environment facts for the right sidebar.
+    - id: gui-repo
+      name: '@deepseek-ai/dsh-api-gui-repo'
 
     - id: workspace
       name: '@deepseek-ai/dsh-workspace'

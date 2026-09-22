@@ -1,5 +1,5 @@
 import { afterEach, expect, it, vi } from 'vitest'
-import { DESKTOP_IPC, type DshDesktopStartupApi } from '../src/ipc.ts'
+import { DESKTOP_IPC, type DshDesktopAppApi, type DshDesktopStartupApi } from '../src/ipc.ts'
 
 const electron = vi.hoisted(() => ({
   contextBridge: { exposeInMainWorld: vi.fn() },
@@ -9,10 +9,41 @@ vi.mock('electron', () => electron)
 
 afterEach(() => { vi.unstubAllGlobals(); vi.clearAllMocks(); vi.resetModules() })
 
-it.each(['dsh-app://app/index.html', 'https://shell/startup.html'])('exposes only the carrier marker to %s', async (url) => {
+it.each(['dsh-app://other/index.html', 'https://shell/startup.html'])('exposes only the carrier marker to %s', async (url) => {
   vi.stubGlobal('location', new URL(url))
   await import('../src/preload-app.ts')
   expect(electron.contextBridge.exposeInMainWorld).toHaveBeenCalledWith('dshDesktop', { protocolVersion: 1 })
+})
+
+it('exposes the embedded-browser face to application documents', async () => {
+  vi.stubGlobal('location', new URL('dsh-app://app/index.html'))
+  await import('../src/preload-app.ts')
+  const api = electron.contextBridge.exposeInMainWorld.mock.calls[0]?.[1] as DshDesktopAppApi
+  expect(api.protocolVersion).toBe(1)
+  await api.browser.open({ x: 0, y: 0, width: 10, height: 10 }, 'https://example.com')
+  await api.browser.navigate('https://example.com/two')
+  await api.browser.back()
+  await api.browser.forward()
+  await api.browser.reload()
+  await api.browser.setBounds({ x: 1, y: 2, width: 3, height: 4 })
+  await api.browser.state()
+  await api.browser.close()
+  expect(electron.ipcRenderer.invoke.mock.calls).toEqual([
+    [DESKTOP_IPC.browserOpen, { x: 0, y: 0, width: 10, height: 10 }, 'https://example.com'],
+    [DESKTOP_IPC.browserNavigate, 'https://example.com/two'],
+    [DESKTOP_IPC.browserBack], [DESKTOP_IPC.browserForward], [DESKTOP_IPC.browserReload],
+    [DESKTOP_IPC.browserSetBounds, { x: 1, y: 2, width: 3, height: 4 }],
+    [DESKTOP_IPC.browserGetState], [DESKTOP_IPC.browserClose],
+  ])
+  const listener = vi.fn()
+  const dispose = api.browser.subscribe(listener)
+  const handler = electron.ipcRenderer.on.mock.calls[0]?.[1] as (event: unknown, state: unknown) => void
+  handler({}, { url: 'https://example.com', title: 'Ex', canGoBack: false, canGoForward: false, loading: false })
+  expect(listener).toHaveBeenCalledWith({ url: 'https://example.com', title: 'Ex', canGoBack: false, canGoForward: false, loading: false })
+  dispose()
+  expect(electron.ipcRenderer.off).toHaveBeenCalledWith(DESKTOP_IPC.browserState, handler)
+  expect(api).not.toHaveProperty('plugins')
+  expect(api).not.toHaveProperty('backend')
 })
 
 it('provides startup controls and a removable state subscription to shell documents', async () => {

@@ -1,15 +1,16 @@
 /**
  * ModelSelect: the composer's named model seat (`conversation.input.model`).
- * Two-level selection per figma 496:26454's MenuDropdown: the root menu is
- * the Model / Effort row pair (label + current value + a right chevron),
- * each drilling into its own list — the provider-grouped model list over
- * the shared directory, and the effort levels. The trigger (313:14108's
- * ToggleButton) shows both: model name + effort in the caption tone.
- * Data and submission ride the SAME per-session ModelDirectory as the
- * /model popup; exact-model reasoning metadata and the selected effort come
- * from the Host rather than a client-owned vocabulary. A rejected selection
- * announces through the shared transient Toast anchored to the composer
- * card; the in-menu strip with Retry remains the catalog-load surface.
+ * Two-level selection per figma 496:26454's MenuDropdown: the root menu pairs
+ * the Model row (drilling into the provider-grouped list over the shared
+ * directory) with an inline Codex-style effort slider — one animated stop per
+ * offered reasoning level, committing through the same per-session
+ * ModelDirectory as the /model popup. Exact-model reasoning metadata and the
+ * selected effort come from the Host rather than a client-owned vocabulary;
+ * level names are localized by id where the locale owns one. The trigger
+ * (313:14108's ToggleButton) shows both: model name + effort in the caption
+ * tone. A rejected selection announces through the shared transient Toast
+ * anchored to the composer card; the in-menu strip with Retry remains the
+ * catalog-load surface.
  */
 import {
   useEffect, useId, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore,
@@ -17,24 +18,18 @@ import {
 } from 'react'
 import { createPortal } from 'react-dom'
 import clsx from 'clsx'
-import type { ModelReasoningEffort, ModelSelection } from '@deepseek-ai/dsh-api-remotes/client'
+import type { ModelSelection } from '@deepseek-ai/dsh-api-remotes/client'
 import {
   IconCheckOutline16, IconChevronDownOutline14, IconChevronRightOutline14,
   IconDataOutline16, IconWarningOutline16, Toast,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { PropsLocale } from '@deepseek-ai/dsh-client-ui-slots'
 import type { ModelSelectInjected } from './slots.ts'
+import { EffortSlider } from './EffortSlider.tsx'
 import css from './ModelSelect.module.css'
 
-/** Which pane the dropdown shows: the two-row root or one drilled-in list. */
-type Pane = 'root' | 'model' | 'effort'
-
-/** One dynamic effort row; undefined means preserve the provider default. */
-interface EffortChoice {
-  key: string
-  effort: string | undefined
-  label: string
-}
+/** Which pane the dropdown shows: the two-row root or the drilled-in model list. */
+type Pane = 'root' | 'model'
 
 /** Unplaced portal card: hidden but laid out at a fixed origin so offsetWidth/offsetHeight are real (Menu primitive's measure pass). */
 const MEASURE_STYLE: CSSProperties = { visibility: 'hidden', left: 0, top: 0 }
@@ -87,23 +82,28 @@ export function ModelSelect(
   const currentChoice = choices[selectedIndex]
   const reasoning = currentChoice?.model.reasoning
   const effectiveEffort = state.current?.reasoningEffort ?? reasoning?.defaultEffort
+  const levelName = (id: string, hostName: string): string => {
+    switch (id) {
+      case 'off': return t('effort.level.off')
+      case 'minimal': return t('effort.level.minimal')
+      case 'low': return t('effort.level.low')
+      case 'medium': return t('effort.level.medium')
+      case 'high': return t('effort.level.high')
+      case 'xhigh': return t('effort.level.xhigh')
+      case 'max': return t('effort.level.max')
+      default: return hostName
+    }
+  }
+  const sliderLevels = useMemo(() => reasoning === undefined
+    ? []
+    : reasoning.efforts.map(effort => ({ id: effort.id, name: levelName(effort.id, effort.name) })),
+  [reasoning, t])
   const effortLabel = reasoning === undefined
     ? undefined
     : effectiveEffort === undefined
       ? t('effort.providerDefault')
-      : reasoning.efforts.find(level => level.id === effectiveEffort)?.name ?? effectiveEffort
-  const effortChoices = useMemo<readonly EffortChoice[]>(() => reasoning === undefined
-    ? []
-    : [
-      ...reasoning.defaultEffort === undefined
-        ? [{ key: 'provider-default', effort: undefined, label: t('effort.providerDefault') }]
-        : [],
-      ...reasoning.efforts.map((effort: ModelReasoningEffort) => ({
-        key: `effort:${effort.id}`,
-        effort: effort.id,
-        label: effort.name,
-      })),
-    ], [reasoning, t])
+      : sliderLevels.find(level => level.id === effectiveEffort)?.name ?? effectiveEffort
+  const currentIndex = sliderLevels.findIndex(level => level.id === effectiveEffort)
   const busy = state.status === 'selecting'
 
   const reload = (): void => {
@@ -304,12 +304,21 @@ export function ModelSelect(
                 <span className={css.cellValue}>{modelLabel}</span>
                 <IconChevronRightOutline14 className={css.cellChevron} />
               </button>
-              {reasoning !== undefined && (
-                <button ref={itemRef()} type="button" role="menuitem" className={css.cell} onClick={() => { setPane('effort') }}>
-                  <span className={css.cellLabel}>{t('menu.effort')}</span>
-                  <span className={css.cellValue}>{effortLabel}</span>
-                  <IconChevronRightOutline14 className={css.cellChevron} />
-                </button>
+              {reasoning !== undefined && sliderLevels.length > 0 && (
+                <div className={css.effortBlock}>
+                  <div className={css.effortHead}>
+                    <span className={css.cellLabel}>{t('menu.effort')}</span>
+                    <span className={css.effortValue}>{effortLabel}</span>
+                  </div>
+                  <EffortSlider
+                    levels={sliderLevels}
+                    currentIndex={currentIndex}
+                    ariaLabel={t('slider.aria', { effort: effortLabel ?? '' })}
+                    unsetLabel={t('slider.unset')}
+                    disabled={busy}
+                    onSelect={(index) => { chooseEffort(sliderLevels[index]?.id) }}
+                  />
+                </div>
               )}
             </>
           )}
@@ -370,37 +379,6 @@ export function ModelSelect(
             </>
           )}
 
-          {pane === 'effort' && (
-            <>
-              {state.error !== null && lastActionRef.current === 'load' && (
-                <div className={css.error}>
-                  <span>{t('error.action', { message: state.error })}</span>
-                  <button type="button" className={css.retry} onClick={reload}>{t('action.reload')}</button>
-                </div>
-              )}
-              {effortChoices.length === 0
-                ? <div className={css.empty}>{t('empty.efforts')}</div>
-                : effortChoices.map(level => (
-                  <button
-                    ref={itemRef()}
-                    type="button"
-                    role="menuitemradio"
-                    aria-checked={effectiveEffort === level.effort}
-                    className={clsx(css.option, effectiveEffort === level.effort && css.selected)}
-                    key={level.key}
-                    disabled={busy}
-                    onClick={() => { chooseEffort(level.effort) }}
-                  >
-                    <span className={css.optionCopy}>
-                      <span className={css.modelName}>{level.label}</span>
-                    </span>
-                    <span className={css.check}>
-                      {effectiveEffort === level.effort ? <IconCheckOutline16 /> : null}
-                    </span>
-                  </button>
-                ))}
-            </>
-          )}
         </div>,
         document.body,
       )}

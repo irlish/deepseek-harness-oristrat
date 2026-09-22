@@ -582,6 +582,9 @@ importers:
       '@deepseek-ai/dsh-launch-environment':
         specifier: workspace:^
         version: link:../../packages/util/launch-environment
+      '@deepseek-ai/dsh-mcp-client':
+        specifier: workspace:^
+        version: link:../../packages/mcp/mcp-client
       '@deepseek-ai/dsh-web-frontend':
         specifier: workspace:^
         version: link:../web
@@ -885,6 +888,25 @@ importers:
         specifier: ^4.4.3
         version: 4.4.3
 
+  packages/api/gui-repo:
+    dependencies:
+      zod:
+        specifier: ^4.4.3
+        version: 4.4.3
+    devDependencies:
+      '@deepseek-ai/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+      '@deepseek-ai/dsh-subprocess':
+        specifier: workspace:^
+        version: link:../../subprocess/subprocess
+      '@deepseek-ai/dsh-subprocess-local':
+        specifier: workspace:^
+        version: link:../../subprocess/subprocess-local
+      '@deepseek-ai/dsh-typert-protocol':
+        specifier: workspace:^
+        version: link:../../typert/protocol
+
   packages/api/gui-terminal:
     dependencies:
       zod:
@@ -928,6 +950,9 @@ importers:
       '@deepseek-ai/dsh-api-gateway':
         specifier: workspace:^
         version: link:../gateway
+      '@deepseek-ai/dsh-api-gui-repo':
+        specifier: workspace:^
+        version: link:../gui-repo
       '@deepseek-ai/dsh-api-gui-terminal':
         specifier: workspace:^
         version: link:../gui-terminal
@@ -1797,6 +1822,9 @@ importers:
       '@deepseek-ai/dsh-agent-presets':
         specifier: workspace:^
         version: link:../../preset/agent-presets
+      '@deepseek-ai/dsh-api-gui-repo':
+        specifier: workspace:^
+        version: link:../../api/gui-repo
       '@deepseek-ai/dsh-api-gui-terminal':
         specifier: workspace:^
         version: link:../../api/gui-terminal
@@ -1848,6 +1876,9 @@ importers:
       '@deepseek-ai/dsh-client-ui-brand-official':
         specifier: workspace:^
         version: link:../../client/ui-brand-official
+      '@deepseek-ai/dsh-client-ui-browser-panel':
+        specifier: workspace:^
+        version: link:../../client/ui-browser-panel
       '@deepseek-ai/dsh-client-ui-chat':
         specifier: workspace:^
         version: link:../../client/ui-chat
@@ -1902,6 +1933,9 @@ importers:
       '@deepseek-ai/dsh-client-ui-renderer':
         specifier: workspace:^
         version: link:../../client/ui-renderer
+      '@deepseek-ai/dsh-client-ui-repo-panel':
+        specifier: workspace:^
+        version: link:../../client/ui-repo-panel
       '@deepseek-ai/dsh-client-ui-schedule':
         specifier: workspace:^
         version: link:../../client/ui-schedule
@@ -2432,6 +2466,39 @@ importers:
       react-dom:
         specifier: ^18.2.0
         version: 18.3.1(react@18.3.1)
+
+  packages/client/ui-browser-panel:
+    devDependencies:
+      '@deepseek-ai/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+      '@deepseek-ai/dsh-client-connection':
+        specifier: workspace:^
+        version: link:../connection
+      '@deepseek-ai/dsh-client-locale':
+        specifier: workspace:^
+        version: link:../locale
+      '@deepseek-ai/dsh-client-ui-primitives':
+        specifier: workspace:^
+        version: link:../ui-primitives
+      '@deepseek-ai/dsh-client-ui-renderer':
+        specifier: workspace:^
+        version: link:../ui-renderer
+      '@deepseek-ai/dsh-client-ui-sidebar-right':
+        specifier: workspace:^
+        version: link:../ui-sidebar-right
+      '@deepseek-ai/dsh-client-ui-slots':
+        specifier: workspace:^
+        version: link:../ui-slots
+      '@types/react':
+        specifier: ~18.3.1
+        version: 18.3.31
+      clsx:
+        specifier: ^2.1.1
+        version: 2.1.1
+      react:
+        specifier: ^18.2.0
+        version: 18.3.1
 
   packages/client/ui-chat:
     dependencies:
@@ -3519,6 +3586,48 @@ importers:
         specifier: 1.2.0
         version: 1.2.0(react@18.3.1)
 
+  packages/client/ui-repo-panel:
+    devDependencies:
+      '@deepseek-ai/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+      '@deepseek-ai/dsh-api-gui-repo':
+        specifier: workspace:^
+        version: link:../../api/gui-repo
+      '@deepseek-ai/dsh-api-remotes':
+        specifier: workspace:^
+        version: link:../../api/remotes
+      '@deepseek-ai/dsh-client-connection':
+        specifier: workspace:^
+        version: link:../connection
+      '@deepseek-ai/dsh-client-locale':
+        specifier: workspace:^
+        version: link:../locale
+      '@deepseek-ai/dsh-client-ui-primitives':
+        specifier: workspace:^
+        version: link:../ui-primitives
+      '@deepseek-ai/dsh-client-ui-renderer':
+        specifier: workspace:^
+        version: link:../ui-renderer
+      '@deepseek-ai/dsh-client-ui-session':
+        specifier: workspace:^
+        version: link:../ui-session
+      '@deepseek-ai/dsh-client-ui-sidebar-right':
+        specifier: workspace:^
+        version: link:../ui-sidebar-right
+      '@deepseek-ai/dsh-client-ui-slots':
+        specifier: workspace:^
+        version: link:../ui-slots
+      '@types/react':
+        specifier: ~18.3.1
+        version: 18.3.31
+      clsx:
+        specifier: ^2.1.1
+        version: 2.1.1
+      react:
+        specifier: ^18.2.0
+        version: 18.3.1
+
   packages/client/ui-schedule:
     devDependencies:
       '@deepseek-ai/cordis':
@@ -4203,6 +4312,9 @@ importers:
       '@deepseek-ai/dsh-api-remotes':
         specifier: workspace:^
         version: link:../../api/remotes
+      '@deepseek-ai/dsh-client-connection':
+        specifier: workspace:^
+        version: link:../connection
       '@deepseek-ai/dsh-client-locale':
         specifier: workspace:^
         version: link:../locale
@@ -7234,7 +7346,7 @@ importers:
         version: link:../../../vendor/schemastery
       '@earendil-works/pi-ai':
         specifier: ^0.85.1
-        version: 0.85.1(@modelcontextprotocol/sdk@1.29.0(zod@4.4.3))(ws@8.21.0)(zod@4.4.3)
+        version: 0.85.1(@modelcontextprotocol/sdk@1.29.0(zod@4.4.3))(supports-color@9.4.0)(ws@8.21.0)(zod@4.4.3)
     devDependencies:
       '@deepseek-ai/cordis':
         specifier: workspace:^
@@ -7521,6 +7633,9 @@ importers:
       '@deepseek-ai/dsh-attachment-local':
         specifier: workspace:^
         version: link:../../attachment/attachment-local
+      '@deepseek-ai/dsh-credentials':
+        specifier: workspace:^
+        version: link:../../credentials/credentials
       '@deepseek-ai/dsh-http-proxy':
         specifier: workspace:^
         version: link:../../util/http-proxy
@@ -19116,14 +19231,14 @@ snapshots:
     transitivePeerDependencies:
       - '@algolia/client-search'
 
-  '@earendil-works/pi-ai@0.85.1(@modelcontextprotocol/sdk@1.29.0(zod@4.4.3))(ws@8.21.0)(zod@4.4.3)':
+  '@earendil-works/pi-ai@0.85.1(@modelcontextprotocol/sdk@1.29.0(zod@4.4.3))(supports-color@9.4.0)(ws@8.21.0)(zod@4.4.3)':
     dependencies:
       '@anthropic-ai/sdk': 0.123.0(zod@4.4.3)
       '@aws-sdk/client-bedrock-runtime': 3.1048.0
       '@earendil-works/pi-telemetry': 0.85.1
       '@google/genai': 1.52.0(@modelcontextprotocol/sdk@1.29.0(zod@4.4.3))
       '@smithy/node-http-handler': 4.7.3
-      http-proxy-agent: 7.0.2
+      http-proxy-agent: 7.0.2(supports-color@9.4.0)
       https-proxy-agent: 7.0.6
       openai: 6.40.0(ws@8.21.0)(zod@4.4.3)
       partial-json: 0.1.7
@@ -21627,7 +21742,7 @@ snapshots:
       cross-spawn: 7.0.6
       debug: 4.4.3(supports-color@9.4.0)
       fs-extra: 10.1.0
-      http-proxy-agent: 7.0.2
+      http-proxy-agent: 7.0.2(supports-color@9.4.0)
       https-proxy-agent: 7.0.6
       js-yaml: 4.3.1
       sanitize-filename: 1.6.4
@@ -23003,7 +23118,7 @@ snapshots:
       statuses: 2.0.2
       toidentifier: 1.0.1
 
-  http-proxy-agent@7.0.2:
+  http-proxy-agent@7.0.2(supports-color@9.4.0):
     dependencies:
       agent-base: 7.1.4
       debug: 4.4.3(supports-color@9.4.0)

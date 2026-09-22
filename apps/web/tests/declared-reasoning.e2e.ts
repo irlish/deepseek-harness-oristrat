@@ -1,6 +1,7 @@
 // Web e2e scenario: a hand-declared model's `reasoningEfforts` reaches the
-// composer's effort pane — the levels a settings profile declares are exactly
-// what the picker offers, and picking one records it with the Agent default.
+// composer's effort slider — the levels a settings profile declares are exactly
+// the stops the slider offers, and sliding onto one records it with the Agent
+// default.
 // Zero model calls: declaring, describing, and switching are settings/llm
 // traffic only, so there is no fixture and a stray stream would fail loud.
 import { readFile } from 'node:fs/promises'
@@ -32,7 +33,8 @@ describe.skipIf(MODE === 'record')('web e2e: declared reasoning efforts reach th
     // The whole reasoning offer is the profile: key = selectable level, value
     // = the wire spelling dispatch would send (`max: ultra` renames; the
     // valueless `off` means "supported, send nothing"). The route sets no
-    // deployment default, so the pane leads with the provider-default entry.
+    // deployment default, so the slider starts at the unset provider-default
+    // position (hollow knob on the first stop).
     await scaffold.ctx.settings.update('llm-pi-ai', {
       providers: {
         'acme-gateway': {
@@ -65,26 +67,32 @@ describe.skipIf(MODE === 'record')('web e2e: declared reasoning efforts reach th
     const trigger = page.getByRole('button', { name: /^选择模型/ })
     await trigger.waitFor({ timeout: 15_000 })
     await trigger.click()
-    await page.getByRole('menuitem', { name: /推理等级/ }).click()
 
-    // Declared levels, nothing else: the provider-default entry (the route
-    // configures no `reasoning`), then Off/High/Max — minimal, low, medium,
-    // and xhigh were not declared and must not be offered.
-    const levels = page.getByRole('menuitemradio')
-    await expect.poll(async () => levels.allTextContents(), { timeout: 10_000 })
-      .toEqual(['Default', 'Off', 'High', 'Max'])
+    // Declared levels, nothing else: the root pane carries the effort slider
+    // directly (the drill-in pane is gone), with one stop per declared level —
+    // Off/High/Max — so the stop scale ends at 2; minimal, low, medium, and
+    // xhigh were not declared and must not widen it. The unset provider-default
+    // position sits on the first stop with a hollow knob.
+    const slider = page.getByRole('slider')
+    await expect.poll(async () => slider.getAttribute('aria-valuemax'), { timeout: 10_000 }).toBe('2')
+    await expect.poll(async () => slider.getAttribute('aria-valuenow')).toBe('0')
+    await expect.poll(async () => slider.getAttribute('aria-valuetext')).toBe('跟随提供商默认')
+    expect(await page.getByRole('menuitem', { name: /推理等级/ }).count()).toBe(0)
     const snapshot = await captureStableAria(page, '[role="menu"]', scaffold.workspaceCwd)
     await compareOrRefreshGolden(UI_EXPECTED, snapshot, MODE)
 
-    // Picking a level is the same gesture that saves the default selection, so
-    // the effort lands in the Agent default Settings section beside provider/model.
-    await page.getByRole('menuitemradio', { name: 'High' }).click()
+    // Sliding one stop right is the same gesture that saves the default
+    // selection, so the effort lands in the Agent default Settings section
+    // beside provider/model. From unset the first stop commits Off's neighbor,
+    // the second declared level High, and the commit closes the menu.
+    await slider.focus()
+    await page.keyboard.press('ArrowRight')
     await expect.poll(
       async () => readFile(join(scaffold.harnessHome, 'settings.yaml'), 'utf8'),
       { timeout: 10_000 },
     ).toContain('reasoningEffort: high')
     await expect.poll(() => trigger.getAttribute('aria-label'), { timeout: 10_000 })
-      .toBe('选择模型，当前 Acme Think，推理等级 High')
+      .toBe('选择模型，当前 Acme Think，推理等级 高')
     expect(tripwire.pageErrors).toEqual([])
   }, 60_000)
 

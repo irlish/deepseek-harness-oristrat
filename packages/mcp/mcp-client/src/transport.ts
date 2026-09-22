@@ -26,9 +26,11 @@ function buildChildEnv(extra: Record<string, string>): Record<string, string> {
  * Create an MCP transport from the resolved plugin config.
  *
  * @param config - Resolved plugin config discriminated on `transport`.
+ * @param authorization - Resolved `Authorization` header value for Streamable
+ * HTTP servers that authenticate with a credential reference; ignored by stdio.
  * @returns A connected-ready MCP Transport (stdio or Streamable HTTP).
  */
-export function createTransport(config: Config): Transport {
+export function createTransport(config: Config, authorization?: string): Transport {
   switch (config.transport) {
     case 'stdio':
       return new StdioClientTransport({
@@ -44,7 +46,14 @@ export function createTransport(config: Config): Transport {
       // object, so the cast records only that widening.
       return new StreamableHTTPClientTransport(
         new URL(config.url),
-        { requestInit: { headers: config.headers } },
+        {
+          requestInit: {
+            headers: {
+              ...config.headers,
+              ...authorization === undefined ? {} : { Authorization: authorization },
+            },
+          },
+        },
       ) as Transport
   }
 }

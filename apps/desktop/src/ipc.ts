@@ -21,6 +21,15 @@ export const DESKTOP_IPC = {
   updatesCheck: 'dsh-desktop:updates-check',
   updatesInstall: 'dsh-desktop:updates-install',
   updatesState: 'dsh-desktop:updates-state',
+  browserOpen: 'dsh-desktop:browser-open',
+  browserClose: 'dsh-desktop:browser-close',
+  browserNavigate: 'dsh-desktop:browser-navigate',
+  browserBack: 'dsh-desktop:browser-back',
+  browserForward: 'dsh-desktop:browser-forward',
+  browserReload: 'dsh-desktop:browser-reload',
+  browserSetBounds: 'dsh-desktop:browser-set-bounds',
+  browserGetState: 'dsh-desktop:browser-get-state',
+  browserState: 'dsh-desktop:browser-state',
 } as const
 
 /** Desktop release update state rendered by desktop-owned UI. */
@@ -28,6 +37,42 @@ export interface DesktopUpdateState {
   readonly phase: 'idle' | 'checking' | 'available' | 'installing' | 'ready' | 'error'
   readonly version?: string
   readonly message?: string
+}
+
+/** Placement of the embedded browser view, in application-window CSS pixels. */
+export interface DesktopBrowserBounds {
+  readonly x: number
+  readonly y: number
+  readonly width: number
+  readonly height: number
+}
+
+/** Navigation snapshot of the embedded browser view. */
+export interface DesktopBrowserState {
+  readonly url: string
+  readonly title: string
+  readonly canGoBack: boolean
+  readonly canGoForward: boolean
+  readonly loading: boolean
+}
+
+/** Embedded-browser controls of the desktop bridge. */
+export interface DesktopBrowserApi {
+  /** Attach (or re-attach) the view at one placement and optionally load a URL. */
+  open(bounds: DesktopBrowserBounds, url?: string): Promise<void>
+  /** Detach and destroy the view; a later `open` starts a fresh one. */
+  close(): Promise<void>
+  /** Load one http(s) URL in the view. */
+  navigate(url: string): Promise<void>
+  back(): Promise<void>
+  forward(): Promise<void>
+  reload(): Promise<void>
+  /** Move/resize the attached view to one placement. */
+  setBounds(bounds: DesktopBrowserBounds): Promise<void>
+  /** Current navigation snapshot. */
+  state(): Promise<DesktopBrowserState>
+  /** Subscribe to navigation snapshot pushes; returns the unsubscribe. */
+  subscribe(listener: (state: DesktopBrowserState) => void): () => void
 }
 
 /** Narrow bridge exposed through context isolation. */
@@ -60,4 +105,10 @@ export interface DshDesktopStartupApi extends Pick<DshDesktopApi, 'protocolVersi
   disablePlugins(): Promise<void>
   restart(): Promise<void>
   resetConfiguration(): Promise<void>
+}
+
+/** Application-document controls: the embedded browser and nothing else. */
+export interface DshDesktopAppApi {
+  readonly protocolVersion: 1
+  readonly browser: DesktopBrowserApi
 }

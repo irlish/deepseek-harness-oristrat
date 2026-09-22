@@ -17,6 +17,9 @@
     "lib/index.js",
     "lib/types/**/*.d.ts"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {},
   "peerDependencies": {
     "@deepseek-ai/cordis": "workspace:^",
@@ -31,5 +34,10 @@
     "@deepseek-ai/dsh-system-prompt": "workspace:^",
     "@deepseek-ai/schemastery": "workspace:^"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "directory": "packages/context/oristrat-msce-norms"
+  }
 }

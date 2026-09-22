@@ -17,6 +17,9 @@
     "lib/index.js",
     "lib/types/**/*.d.ts"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {},
   "peerDependencies": {
     "@deepseek-ai/cordis": "workspace:^",
@@ -28,5 +31,10 @@
     "@deepseek-ai/dsh-tools": "workspace:^"
   },
   "dependencies": {},
-  "license": "MIT"
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "directory": "packages/guard/msce-gate"
+  }
 }

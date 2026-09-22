@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write packages/context/oristrat-msce-norms/README.md
-README.md: 11dc127e24c47e3753916bc80eb63c4021dc72b1
-README.zh.md: d3de3c75b8538ba64d1e066bc572247b736a7da0
+README.md: fb36afc024ee1943a5cc465875e25d04b00f0954
+README.zh.md: 36ff6ad8c513d293738ad71e05ad15116c2a05e4

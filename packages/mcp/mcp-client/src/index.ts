@@ -86,6 +86,13 @@ export interface StreamableHttpConfig {
   url: string
   /** Additional headers attached to MCP requests. */
   headers: Record<string, string>
+  /**
+   * Credential reference whose resolved value rides every request as
+   * `Authorization: Bearer <value>`, re-resolved per connection attempt so a
+   * rotated key reaches the next attempt without a restart. Servers that
+   * authenticate out-of-band leave this unset.
+   */
+  authorizationEnv?: string
   /** Per-tool-call timeout in milliseconds. */
   toolCallTimeoutMs: number
   /** Fail plugin activation when the initial connection or tool synchronization fails. */
@@ -100,7 +107,7 @@ export type Config = StdioConfig | StreamableHttpConfig
 type StdioConfigInput = Omit<StdioConfig, 'args' | 'env' | 'cwd' | 'toolCallTimeoutMs' | 'failOnStartupError'>
   & Partial<Pick<StdioConfig, 'args' | 'env' | 'cwd' | 'toolCallTimeoutMs' | 'failOnStartupError'>>
 type StreamableHttpConfigInput = Omit<StreamableHttpConfig, 'headers' | 'toolCallTimeoutMs' | 'failOnStartupError'>
-  & Partial<Pick<StreamableHttpConfig, 'headers' | 'toolCallTimeoutMs' | 'failOnStartupError'>>
+  & Partial<Pick<StreamableHttpConfig, 'headers' | 'toolCallTimeoutMs' | 'failOnStartupError' | 'authorizationEnv'>>
 type ConfigInput = StdioConfigInput | StreamableHttpConfigInput
 
 const Reconnect: z<ReconnectConfig> = z.object({
@@ -127,6 +134,7 @@ export const Config = z.union([
     serverName: z.string().required().pattern(SERVER_NAME_PATTERN),
     url: z.string().required(),
     headers: z.dict(String).default({}),
+    authorizationEnv: z.string().role('credential-ref'),
     toolCallTimeoutMs: z.number().default(DEFAULT_TOOL_CALL_TIMEOUT_MS),
     failOnStartupError: z.boolean().default(false),
     reconnect: Reconnect,
