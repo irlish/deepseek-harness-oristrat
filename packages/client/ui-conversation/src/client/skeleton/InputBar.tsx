@@ -47,7 +47,7 @@ export const InputBar = memo(function InputBar({
   renderSlot, useBusyEnter, useFileUploads, useNotices, useLexicon, useMenuLauncher,
   useProjection, sessionId, variant, disabled: inert = false, blocked,
   workspacePickerOpen = false, onRequestWorkspace,
-  placeholder, accessory, extensionZone,
+  placeholder, accessory, extensionZone, workMode = false,
 }: InputBarProps) {
   const input = useInput(s => s)
   const notice = useNotices(s => s)
@@ -254,6 +254,11 @@ export const InputBar = memo(function InputBar({
 
   const canAcceptDrop = subagent === null && !locked && !machineBusy && addFiles !== undefined
 
+  // Work-only extension seats: the point-in-time zone reaches the accessory
+  // and dock seats only while the deployment mode is Work; the owner-passed
+  // accessory node is mode-independent.
+  const extensionSeatZone = workMode ? extensionZone : undefined
+
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const onPickFiles = (e: ChangeEvent<HTMLInputElement>): void => {
     const picked = e.target.files === null ? [] : [...e.target.files]
@@ -455,9 +460,9 @@ export const InputBar = memo(function InputBar({
         {/* Accessory seat: an owner-passed node wins; otherwise the extension
             slot renders against the point-in-time zone (absent without a
             session, so the whole seat stays unmounted). */}
-        {(accessory !== undefined || extensionZone !== undefined) && (
+        {(accessory !== undefined || extensionSeatZone !== undefined) && (
           <div className={css.accessory}>
-            {accessory ?? (extensionZone === undefined ? null : renderSlot('conversation.input.accessory', extensionZone))}
+            {accessory ?? (extensionSeatZone === undefined ? null : renderSlot('conversation.input.accessory', extensionSeatZone))}
           </div>
         )}
         {/* One scrollport, one text surface: the contenteditable grows with
@@ -569,8 +574,9 @@ export const InputBar = memo(function InputBar({
         </div>
       </div>
       {/* The dock seat rides the point-in-time session zone like the accessory
-          seat; bundle choosers mount below the resident card there. */}
-      {extensionZone !== undefined ? renderSlot('conversation.composer.dock', extensionZone) : null}
+          seat; bundle choosers mount below the resident card there, and only
+          while the deployment mode is Work. */}
+      {extensionSeatZone !== undefined ? renderSlot('conversation.composer.dock', extensionSeatZone) : null}
     </div>
   )
 })

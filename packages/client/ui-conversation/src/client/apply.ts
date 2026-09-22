@@ -3,7 +3,7 @@ import type { Context } from '@deepseek-ai/cordis'
 import z from '@deepseek-ai/schemastery'
 import type { ISessions } from '@deepseek-ai/dsh-api-session-controller/client'
 import { IconPaperclipOutline16 } from '@deepseek-ai/dsh-client-ui-primitives'
-import { createSnapshotStore, type BoundActions } from '@deepseek-ai/dsh-client-store'
+import { createSnapshotStore, type BoundActions, type ObservableSnapshot } from '@deepseek-ai/dsh-client-store'
 import { resolveSlotLabel } from '@deepseek-ai/dsh-client-ui-slots'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
 // Type-only service and declaration merges used by this assembly.
@@ -48,6 +48,14 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
 export const inject = [
   'slots', 'sessions', 'fileUpload', 'uiSession', 'uiWorkspace', 'locale', 'settingsScope',
 ]
+
+/** Settings namespace owning the deployment work mode (the sidebar switcher writes it). */
+const MODE_NAMESPACE = 'oristrat'
+
+/** The stored mode section; anything but `work` reads as Coding (fail closed). */
+interface OristratModeSettings {
+  mode?: unknown
+}
 
 /** Conversation runtime configuration. */
 export interface Config {
@@ -141,6 +149,14 @@ export function apply(ctx: Context, config: Config = Config({})): void {
   const submissionPolicy = new ComposerSubmissionPolicy(
     ctx.settingsScope.bind<ConversationSettings>({ namespace: CONVERSATION_SETTINGS_NAMESPACE }),
   )
+  // Work-only composer extension seats read the same settings namespace the
+  // sidebar switcher writes; the boolean source moves only on committed
+  // writes, so a refused mode change never flashes them.
+  const modeSection = ctx.settingsScope.bind<OristratModeSettings>({ namespace: MODE_NAMESPACE })
+  const workModeSource: ObservableSnapshot<boolean> = {
+    getSnapshot: () => modeSection.getSnapshot().value?.mode === 'work',
+    subscribe: listener => modeSection.subscribe(listener),
+  }
 
   ctx.slots.inject('settings.general.item', () => ctx.slots.register({
     name: 'settings.general.item',
@@ -281,6 +297,7 @@ export function apply(ctx: Context, config: Config = Config({})): void {
       return {
         hooks: {
           composerBlock: sessionId === undefined ? ABSENT_BLOCK : composerBlocks.storeFor(sessionId),
+          workMode: workModeSource,
         },
         selectWorkspace: workspaceId => workspaceNavigation.openWorkspace(workspaceId, carryDraft),
         selectUnassigned: () => workspaceNavigation.openUnassigned(carryDraft),

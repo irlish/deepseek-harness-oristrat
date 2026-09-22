@@ -33,7 +33,7 @@ The expanded brand row renders `sidebar.brand.mark` and `sidebar.brand.name` as 
 
 ### Work mode switcher
 
-The expanded brand row also hangs a Codex-style mode chip beside the brand: it names the current deployment work mode and opens a two-entry menu (Coding — MSCE-governed engine development; Work — free-form proposals, PPT, and docs). The chip derives the `oristrat` settings namespace from the settings domain's shared describe mirror through `ctx.settingsScope.bind` — no wire read of its own and no direct `settings.describe` caller added to the cold-boot RPC budget — and moves only on committed writes, so a refused or failed write leaves the previous mode displayed. The collapsed rail omits the chip. The host-side consumers (`dsh-context-oristrat-msce-norms`, `dsh-guard-msce-gate`) scope the MSCE norms and gate to the stored mode.
+The expanded sidebar hangs a Codex-style mode chip on its own row below the brand row: it names the current deployment work mode and opens a two-entry menu (Coding — MSCE-governed engine development; Work — free-form proposals, PPT, and docs). The chip derives the `oristrat` settings namespace from the settings domain's shared describe mirror through `ctx.settingsScope.bind` — no wire read of its own and no direct `settings.describe` caller added to the cold-boot RPC budget — and moves only on committed writes, so a refused or failed write leaves the previous mode displayed. The collapsed rail omits the chip. The host-side consumers (`dsh-context-oristrat-msce-norms`, `dsh-guard-msce-gate`) scope the MSCE norms and gate to the stored mode.
 
 ### Global panel entries
 

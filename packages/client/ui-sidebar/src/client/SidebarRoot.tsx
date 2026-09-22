@@ -243,8 +243,6 @@ export function SidebarRoot({
             </span>
           </button>
         )}
-        {/* Work-mode switcher (wide only): hung top-left beside the brand. */}
-        {!collapsed && <ModeSwitcher setMode={setMode} useMode={useMode} t={t} />}
         {/* Rail resting state is the whale mark; hovering swaps in the panel
             icon (the expand affordance, figma sidebar-hover flow). */}
         <Tooltip label={collapsed ? t('toggle.open') : t('toggle.collapse')} delayMs={500}>
@@ -264,6 +262,14 @@ export function SidebarRoot({
           </button>
         </Tooltip>
       </div>
+
+      {/* Work-mode switcher (wide only): its own row below the brand row, so
+          a narrow column never squeezes the chip against the wordmark. */}
+      {!collapsed && (
+        <div className={css.modeRow}>
+          <ModeSwitcher setMode={setMode} useMode={useMode} t={t} />
+        </div>
+      )}
 
       {/* Expanded, the button carries its own label — tooltip only on the rail. */}
       <Tooltip label={t('session.new.label')} delayMs={500} disabled={wide}>

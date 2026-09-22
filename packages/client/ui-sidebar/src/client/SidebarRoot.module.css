@@ -96,9 +96,19 @@
   gap: 8px;
   height: 60px;
   padding: 8px 0 8px 4px;
-  margin-bottom: 8px;
+  margin-bottom: 0;
   box-sizing: border-box;
   overflow: hidden;
+}
+
+/* The mode switcher rides its own row below the brand row: sharing one row
+   squeezed the chip against the wordmark once the column narrows. */
+.modeRow {
+  flex: none;
+  display: flex;
+  align-items: center;
+  padding: 0 8px 8px 4px;
+  margin-bottom: 4px;
 }
 
 .collapsed .logoRow {
@@ -170,8 +180,9 @@
   color: var(--dsw-alias-label-secondary);
 }
 
-/* Codex-style work-mode chip: rides the brand row's right side and opens the
-   two-mode menu. Quiet chrome until hovered, matching the icon buttons. */
+/* Codex-style work-mode chip: rides its own row below the brand row and
+   opens the two-mode menu. Quiet chrome until hovered, matching the icon
+   buttons. */
 .modeChip {
   flex: none;
   display: inline-flex;

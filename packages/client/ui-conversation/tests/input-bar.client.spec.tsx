@@ -103,6 +103,8 @@ interface BenchOptions {
   accessorySlot?: React.ReactNode
   /** Extension zone passed through to the accessory seat. */
   extensionZone?: InputZone
+  /** Deployment Work mode: extension seats render. */
+  workMode?: boolean
 }
 
 /** One pending queue row (the runtime snapshot shape, as the dock tests build it). */
@@ -218,6 +220,7 @@ function bench(over?: BenchOptions) {
     ...(over?.placeholder !== undefined ? { placeholder: over.placeholder } : {}),
     ...(over?.accessory !== undefined ? { accessory: over.accessory } : {}),
     ...(over?.extensionZone !== undefined ? { extensionZone: over.extensionZone } : {}),
+    ...(over?.workMode !== undefined ? { workMode: over.workMode } : {}),
   }
   const view = render(<InputBar {...props} />)
   const textarea = view.container.querySelector<HTMLDivElement>('[data-composer-input]')!
@@ -1565,6 +1568,7 @@ describe('strips and variants', () => {
 
   it('renders overlay, left/right, and footer slots at their layout positions', () => {
     const { view } = bench({
+      workMode: true,
       extensionZone: { session: {}, input: undefined } as unknown as InputZone,
       overlay: <i data-testid="ov" />,
       leftItems: <i data-testid="li" />,
@@ -1598,7 +1602,9 @@ describe('command launcher chrome and control seats', () => {
 
   it('dispatches the accessory slot against the extension zone when present', () => {
     const zone = { session: {}, input: undefined } as unknown as InputZone
-    const { slotCalls, view } = bench({ extensionZone: zone, accessorySlot: <i data-testid="acc-slot" /> })
+    const { slotCalls, view } = bench({
+      workMode: true, extensionZone: zone, accessorySlot: <i data-testid="acc-slot" />,
+    })
     expect(view.getByTestId('acc-slot')).toBeTruthy()
     const call = slotCalls.find(candidate => candidate.key === 'conversation.input.accessory')
     expect(call?.owner).toBe(zone)
@@ -1606,9 +1612,21 @@ describe('command launcher chrome and control seats', () => {
     expect(dock?.owner).toBe(zone)
   })
 
+  it('keeps the extension seats unmounted outside Work mode', () => {
+    const zone = { session: {}, input: undefined } as unknown as InputZone
+    const { slotCalls, view } = bench({
+      extensionZone: zone, accessorySlot: <i data-testid="acc-slot" />, footer: <i data-testid="foot" />,
+    })
+    expect(view.queryByTestId('acc-slot')).toBeNull()
+    expect(view.queryByTestId('foot')).toBeNull()
+    expect(slotCalls.some(candidate => candidate.key === 'conversation.input.accessory')).toBe(false)
+    expect(slotCalls.some(candidate => candidate.key === 'conversation.composer.dock')).toBe(false)
+  })
+
   it('keeps an owner-passed accessory ahead of the extension slot', () => {
     const zone = { session: {}, input: undefined } as unknown as InputZone
     const { slotCalls, view } = bench({
+      workMode: true,
       extensionZone: zone,
       accessory: <i data-testid="acc-prop" />,
       accessorySlot: <i data-testid="acc-slot" />,

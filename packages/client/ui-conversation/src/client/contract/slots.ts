@@ -268,7 +268,11 @@ export interface ConversationInjected {
   /** Connect and open a blank Session outside every Workspace (the Recent Sessions bucket). */
   selectUnassigned: () => Promise<void>
   /** Session-addressed composer block source, or the stable absent source. */
-  hooks: { composerBlock: ObservableSnapshot<ComposerBlock | undefined> }
+  hooks: {
+    composerBlock: ObservableSnapshot<ComposerBlock | undefined>
+    /** Live Work-mode flag: Work-only composer extension seats render only while it holds. */
+    workMode: ObservableSnapshot<boolean>
+  }
 }
 
 /** Business callbacks injected into the strict Session body. */
@@ -308,6 +312,8 @@ export interface ComposerBarOwnerProps {
   accessory?: ReactNode
   /** Point-in-time zone for `conversation.input.accessory` entries; absent without a Session. */
   extensionZone?: InputZone | undefined
+  /** Whether the Work-only extension seats (dock chooser, accessory entries) render. */
+  workMode?: boolean
 }
 
 /** Package-private operations injected into the resident composer bar. */

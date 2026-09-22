@@ -33,7 +33,7 @@ dsh Web 客户端的侧边栏让用户识别当前构建、启动新会话、切
 
 ### 工作模式切换器
 
-展开的品牌行还在品牌旁挂载一个 Codex 风格的模式 chip：它显示当前部署工作模式，并打开双条目菜单（编码——MSCE 规范引擎开发；工作——方案、PPT 与文档的自由创作）。chip 经 `ctx.settingsScope.bind` 从 settings 域的共享 describe 镜像派生 `oristrat` settings 命名空间——自身不贡献线路读取，也不给冷启动 RPC 预算新增直连 `settings.describe` 调用方——且只在写入被提交后移动，因此被拒绝或失败的写入不会改变显示的模式。收起轨道不渲染该 chip。Host 侧消费者（`dsh-context-oristrat-msce-norms`、`dsh-guard-msce-gate`）按存储的模式限定 MSCE 规范与门禁的生效范围。
+展开的侧边栏在品牌行下方的独立行挂载一个 Codex 风格的模式 chip：它显示当前部署工作模式，并打开双条目菜单（编码——MSCE 规范引擎开发；工作——方案、PPT 与文档的自由创作）。chip 经 `ctx.settingsScope.bind` 从 settings 域的共享 describe 镜像派生 `oristrat` settings 命名空间——自身不贡献线路读取，也不给冷启动 RPC 预算新增直连 `settings.describe` 调用方——且只在写入被提交后移动，因此被拒绝或失败的写入不会改变显示的模式。收起轨道不渲染该 chip。Host 侧消费者（`dsh-context-oristrat-msce-norms`、`dsh-guard-msce-gate`）按存储的模式限定 MSCE 规范与门禁的生效范围。
 
 ### 全局面板入口
 

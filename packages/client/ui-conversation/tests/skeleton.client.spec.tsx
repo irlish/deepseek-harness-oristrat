@@ -124,6 +124,8 @@ function mount(
     nestedSubagent?: boolean
     /** A composer block another plugin raised for this session. */
     composerBlock?: { reason: string }
+    /** Deployment Work mode: Work-only extension seats render. */
+    workMode?: boolean
     /** Mutable view ledger used by registration-order regressions. */
     viewTabs?: ViewTab[]
   } = {},
@@ -310,6 +312,7 @@ function mount(
     useWorkspaces: bindSnapshotSelector(workspaces),
     useProjection: (() => undefined),
     useComposerBlock: select => select(options.composerBlock),
+    useWorkMode: select => select(options.workMode === true),
     useInput,
     inputActions,
     renderSlot,
@@ -362,6 +365,16 @@ describe('ConversationRoot resident composer', () => {
     })
 
     expect(dispatchCount()).toBe(before)
+  })
+
+  it('gates the Work-only hero cluster and composer dock on the deployment mode', () => {
+    const coding = mount(sessionSnapshotOf())
+    expect(coding.slotCalls).not.toContain('conversation.hero.modeActions')
+    expect(coding.seatOwners.map(call => call.key)).not.toContain('conversation.composer.dock')
+
+    const work = mount(sessionSnapshotOf(), undefined, undefined, { workMode: true })
+    expect(work.slotCalls).toContain('conversation.hero.modeActions')
+    expect(work.seatOwners.map(call => call.key)).toContain('conversation.composer.dock')
   })
 
   it('renders the composer inert with the blocker\u2019s own reason', () => {
@@ -625,14 +638,15 @@ describe('ConversationRoot resident composer', () => {
   })
 
   it('blank session keeps the interactive picker chip (workspace switchable until the first message)', () => {
-    const b = mount(sessionSnapshotOf({ blank: true }))
+    const b = mount(sessionSnapshotOf({ blank: true }), undefined, undefined, { workMode: true })
     const chip = b.view.getByRole('button', { name: '选择工作区' })
     expect((chip as HTMLButtonElement).disabled).toBe(false)
     expect(b.slotCalls).toContain('conversation.hero.workspace')
     // The agent-preset chip sits in the same row, for the same reason: both
     // choices are only open before the first message.
     expect(b.slotCalls).toContain('conversation.hero.agentPreset')
-    // The mode-action cluster (e.g. the PPT chip) rides the same session zone.
+    // The mode-action cluster (e.g. the PPT chip) rides the same session zone
+    // while the deployment mode is Work.
     expect(b.slotCalls).toContain('conversation.hero.modeActions')
   })
 

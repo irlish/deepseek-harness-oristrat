@@ -130,7 +130,7 @@ function WidthHandle(props: {
 
 export function ConversationRoot({
   sessionId, useSession, useSessions, useSessionPendingInteraction,
-  useWorkspaces, useConversation, useInput, useComposerBlock,
+  useWorkspaces, useConversation, useInput, useComposerBlock, useWorkMode,
   renderSlot, renderSlotChain, selectWorkspace, selectUnassigned, t,
 }: ConversationRootProps) {
   const session = useSession(s => s)
@@ -148,6 +148,9 @@ export function ConversationRoot({
   // A plugin this package cannot import (ui-model-selection) says this session cannot
   // send; its reason is already localized by whoever raised it.
   const composerBlock = useComposerBlock(block => block)
+  // Work-only extension seats (hero mode actions, composer dock, accessory
+  // entries) render only while the stored deployment mode is Work.
+  const workMode = useWorkMode(flag => flag)
 
   const [pickerOpen, setPickerOpen] = useState(false)
   const [pendingWorkspaceId, setPendingWorkspaceId] = useState<WorkspaceId | undefined>()
@@ -327,9 +330,11 @@ export function ConversationRoot({
         onClose: () => { setPickerOpen(false) },
       })}
       {renderSlot('conversation.hero.agentPreset', {})}
-      <div className={css.heroModeCluster}>
-        {zone !== undefined && renderSlot('conversation.hero.modeActions', zone)}
-      </div>
+      {workMode && zone !== undefined && (
+        <div className={css.heroModeCluster}>
+          {renderSlot('conversation.hero.modeActions', zone)}
+        </div>
+      )}
     </div>
   )
 
@@ -346,6 +351,7 @@ export function ConversationRoot({
   const inputBar = renderSlot('conversation.composer.bar', {
     variant: hero ? 'hero' : 'composer',
     extensionZone: zone,
+    workMode,
     ...(inert
       ? {
         disabled: true,
