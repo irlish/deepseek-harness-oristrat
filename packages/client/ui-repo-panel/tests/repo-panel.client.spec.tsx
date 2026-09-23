@@ -95,12 +95,31 @@ describe('RepoEnvAction environment rows', () => {
     await waitFor(() => { expect(screen.getByText('当前工作区不是 Git 仓库')).toBeTruthy() })
   })
 
-  it('renders change totals, host, divergence, and joined sources', async () => {
+  it('renders change totals, host, divergence, and every remote with its url', async () => {
     openMenu({ repoStatus: vi.fn().mockResolvedValue(repoStatus({ ahead: 2, behind: 1 })) })
     await waitFor(() => { expect(screen.getByText('+12 -3 · 4 个文件')).toBeTruthy() })
     expect(screen.getByText('oristrat-mac')).toBeTruthy()
     expect(screen.getByText('领先 2 · 落后 1')).toBeTruthy()
-    expect(screen.getByText('origin · gitee')).toBeTruthy()
+    // Each remote keeps its own row so a long url is never truncated away.
+    const names = screen.getAllByRole('listitem').map(item => item.textContent)
+    expect(names).toEqual(['originhttps://example.com/a.git', 'giteehttps://gitee.com/a.git'])
+  })
+
+  it('labels the trigger icon for pointer and keyboard users', async () => {
+    openMenu()
+    await waitFor(() => { expect(screen.getByText('gitee')).toBeTruthy() })
+    const trigger = screen.getByRole('button', { name: '仓库环境' })
+    // The environment mark: two hollow nodes with their bars, no branch curve.
+    expect(trigger.querySelectorAll('circle')).toHaveLength(2)
+    expect(screen.queryByRole('tooltip')).toBeNull()
+    fireEvent.focus(trigger)
+    expect(screen.getByRole('tooltip').textContent).toBe('仓库环境与分支')
+    fireEvent.blur(trigger)
+    expect(screen.queryByRole('tooltip')).toBeNull()
+    fireEvent.mouseEnter(trigger)
+    expect(screen.getByRole('tooltip').textContent).toBe('仓库环境与分支')
+    fireEvent.mouseLeave(trigger)
+    await waitFor(() => { expect(screen.queryByRole('tooltip')).toBeNull() })
   })
 
   it('names a clean tree and omits divergence without an upstream', async () => {
@@ -165,7 +184,7 @@ describe('RepoEnvAction environment rows', () => {
     })
     const view = render(<RepoEnvAction {...props({ repoBranches })} />)
     fireEvent.click(screen.getByRole('button', { name: '仓库环境' }))
-    await waitFor(() => { expect(screen.getByText('origin · gitee')).toBeTruthy() })
+    await waitFor(() => { expect(screen.getByText('gitee')).toBeTruthy() })
     fireEvent.click(screen.getByRole('button', { name: /main/ }))
     await waitFor(() => { expect(calls.n).toBe(1) })
     fireEvent.click(screen.getByRole('button', { name: /main/ }))
@@ -181,7 +200,7 @@ describe('RepoEnvAction environment rows', () => {
     const repoCheckout = vi.fn().mockImplementation(() => new Promise(() => {}))
     const repoCreateBranch = vi.fn().mockImplementation(() => new Promise(() => {}))
     openMenu({ repoCheckout, repoCreateBranch })
-    await waitFor(() => { expect(screen.getByText('origin · gitee')).toBeTruthy() })
+    await waitFor(() => { expect(screen.getByText('gitee')).toBeTruthy() })
     fireEvent.click(screen.getByRole('button', { name: /main/ }))
     await waitFor(() => { expect(screen.getAllByRole('menuitemradio')).toHaveLength(3) })
     fireEvent.click(screen.getByRole('menuitemradio', { name: 'feature/x' }))
@@ -197,7 +216,7 @@ describe('RepoEnvAction environment rows', () => {
 
   it('falls back to the localized error when create reports no message', async () => {
     openMenu({ repoCreateBranch: vi.fn().mockResolvedValue({ ok: false }) })
-    await waitFor(() => { expect(screen.getByText('origin · gitee')).toBeTruthy() })
+    await waitFor(() => { expect(screen.getByText('gitee')).toBeTruthy() })
     fireEvent.click(screen.getByRole('button', { name: /main/ }))
     await waitFor(() => { expect(screen.getAllByRole('menuitemradio')).toHaveLength(3) })
     fireEvent.click(screen.getByRole('button', { name: '创建并检出新分支…' }))
@@ -208,7 +227,7 @@ describe('RepoEnvAction environment rows', () => {
 
   it('keeps the submenu loading note when the listing read rejects', async () => {
     openMenu({ repoBranches: vi.fn().mockRejectedValue(new Error('down')) })
-    await waitFor(() => { expect(screen.getByText('origin · gitee')).toBeTruthy() })
+    await waitFor(() => { expect(screen.getByText('gitee')).toBeTruthy() })
     fireEvent.click(screen.getByRole('button', { name: /main/ }))
     await waitFor(() => { expect(screen.getByText('正在读取仓库状态…')).toBeTruthy() })
   })
@@ -228,7 +247,7 @@ describe('RepoEnvAction environment rows', () => {
 describe('RepoEnvAction branch submenu', () => {
   it('lists branches behind a search box and checks the current one', async () => {
     openMenu()
-    await waitFor(() => { expect(screen.getByText('origin · gitee')).toBeTruthy() })
+    await waitFor(() => { expect(screen.getByText('gitee')).toBeTruthy() })
     fireEvent.click(screen.getByRole('button', { name: /main/ }))
     await waitFor(() => { expect(screen.getByRole('menu', { name: '切换分支' })).toBeTruthy() })
     await waitFor(() => { expect(screen.getAllByRole('menuitemradio')).toHaveLength(3) })
@@ -242,7 +261,7 @@ describe('RepoEnvAction branch submenu', () => {
 
   it('shows the loading note until the listing lands and on rejection', async () => {
     openMenu({ repoBranches: vi.fn().mockReturnValue(new Promise(() => {})) })
-    await waitFor(() => { expect(screen.getByText('origin · gitee')).toBeTruthy() })
+    await waitFor(() => { expect(screen.getByText('gitee')).toBeTruthy() })
     fireEvent.click(screen.getByRole('button', { name: /main/ }))
     expect(screen.getByText('正在读取仓库状态…')).toBeTruthy()
   })
@@ -250,7 +269,7 @@ describe('RepoEnvAction branch submenu', () => {
   it('checks out the picked branch and closes the menu', async () => {
     const repoCheckout = vi.fn().mockResolvedValue({ ok: true })
     openMenu({ repoCheckout })
-    await waitFor(() => { expect(screen.getByText('origin · gitee')).toBeTruthy() })
+    await waitFor(() => { expect(screen.getByText('gitee')).toBeTruthy() })
     fireEvent.click(screen.getByRole('button', { name: /main/ }))
     await waitFor(() => { expect(screen.getAllByRole('menuitemradio')).toHaveLength(3) })
     fireEvent.click(screen.getByRole('menuitemradio', { name: 'feature/x' }))
@@ -260,7 +279,7 @@ describe('RepoEnvAction branch submenu', () => {
 
   it('surfaces a refused checkout and a rejected one', async () => {
     const view = openMenu({ repoCheckout: vi.fn().mockResolvedValue({ ok: false, error: 'dirty tree' }) })
-    await waitFor(() => { expect(screen.getByText('origin · gitee')).toBeTruthy() })
+    await waitFor(() => { expect(screen.getByText('gitee')).toBeTruthy() })
     fireEvent.click(screen.getByRole('button', { name: /main/ }))
     await waitFor(() => { expect(screen.getAllByRole('menuitemradio')).toHaveLength(3) })
     fireEvent.click(screen.getByRole('menuitemradio', { name: 'feature/x' }))
@@ -268,7 +287,7 @@ describe('RepoEnvAction branch submenu', () => {
     view.unmount()
 
     const second = openMenu({ repoCheckout: vi.fn().mockRejectedValue(new Error('down')) })
-    await waitFor(() => { expect(screen.getByText('origin · gitee')).toBeTruthy() })
+    await waitFor(() => { expect(screen.getByText('gitee')).toBeTruthy() })
     fireEvent.click(screen.getByRole('button', { name: /main/ }))
     await waitFor(() => { expect(screen.getAllByRole('menuitemradio')).toHaveLength(3) })
     fireEvent.click(screen.getByRole('menuitemradio', { name: 'feature/x' }))
@@ -278,7 +297,7 @@ describe('RepoEnvAction branch submenu', () => {
 
   it('reports a checkout failure without an error message through the fallback', async () => {
     openMenu({ repoCheckout: vi.fn().mockResolvedValue({ ok: false }) })
-    await waitFor(() => { expect(screen.getByText('origin · gitee')).toBeTruthy() })
+    await waitFor(() => { expect(screen.getByText('gitee')).toBeTruthy() })
     fireEvent.click(screen.getByRole('button', { name: /main/ }))
     await waitFor(() => { expect(screen.getAllByRole('menuitemradio')).toHaveLength(3) })
     fireEvent.click(screen.getByRole('menuitemradio', { name: 'feature/x' }))
@@ -288,7 +307,7 @@ describe('RepoEnvAction branch submenu', () => {
   it('creates and checks out a new branch from the draft row', async () => {
     const repoCreateBranch = vi.fn().mockResolvedValue({ ok: true })
     openMenu({ repoCreateBranch })
-    await waitFor(() => { expect(screen.getByText('origin · gitee')).toBeTruthy() })
+    await waitFor(() => { expect(screen.getByText('gitee')).toBeTruthy() })
     fireEvent.click(screen.getByRole('button', { name: /main/ }))
     await waitFor(() => { expect(screen.getAllByRole('menuitemradio')).toHaveLength(3) })
     fireEvent.click(screen.getByRole('button', { name: '创建并检出新分支…' }))
@@ -303,7 +322,7 @@ describe('RepoEnvAction branch submenu', () => {
 
   it('surfaces a refused create and a rejected one', async () => {
     const view = openMenu({ repoCreateBranch: vi.fn().mockResolvedValue({ ok: false, error: 'exists' }) })
-    await waitFor(() => { expect(screen.getByText('origin · gitee')).toBeTruthy() })
+    await waitFor(() => { expect(screen.getByText('gitee')).toBeTruthy() })
     fireEvent.click(screen.getByRole('button', { name: /main/ }))
     await waitFor(() => { expect(screen.getAllByRole('menuitemradio')).toHaveLength(3) })
     fireEvent.click(screen.getByRole('button', { name: '创建并检出新分支…' }))
@@ -314,7 +333,7 @@ describe('RepoEnvAction branch submenu', () => {
     view.unmount()
 
     const second = openMenu({ repoCreateBranch: vi.fn().mockRejectedValue(new Error('down')) })
-    await waitFor(() => { expect(screen.getByText('origin · gitee')).toBeTruthy() })
+    await waitFor(() => { expect(screen.getByText('gitee')).toBeTruthy() })
     fireEvent.click(screen.getByRole('button', { name: /main/ }))
     await waitFor(() => { expect(screen.getAllByRole('menuitemradio')).toHaveLength(3) })
     fireEvent.click(screen.getByRole('button', { name: '创建并检出新分支…' }))
@@ -354,7 +373,7 @@ describe('RepoEnvAction dismissal', () => {
 
   it('drops the submenu state when the menu closes', async () => {
     const view = openMenu()
-    await waitFor(() => { expect(screen.getByText('origin · gitee')).toBeTruthy() })
+    await waitFor(() => { expect(screen.getByText('gitee')).toBeTruthy() })
     fireEvent.click(screen.getByRole('button', { name: /main/ }))
     await waitFor(() => { expect(screen.getByRole('menu', { name: '切换分支' })).toBeTruthy() })
     fireEvent.keyDown(window, { key: 'Escape' })

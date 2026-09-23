@@ -57,7 +57,7 @@ kind: "package-reference"
 |---|---|
 | [`src/client/index.ts`](src/client/index.ts) | 插件主体：字典与携带 `guiRepo` 线上面的头部工具条目 |
 | [`src/client/RepoEnvAction.tsx`](src/client/RepoEnvAction.tsx) | 触发按钮、气泡、环境行、分支子菜单、轮询循环与变更处理器 |
-| [`src/client/glyphs.tsx`](src/client/glyphs.tsx) | 以 currentColor 绘制的分支字形，用于触发按钮与分支行 |
+| [`src/client/glyphs.tsx`](src/client/glyphs.tsx) | 触发按钮上的 currentColor 环境标记与分支行上的分支标记 |
 | [`src/client/locales.ts`](src/client/locales.ts) | `repo-panel` zh/en 字典；中文键集是权威来源 |
 
 </details>

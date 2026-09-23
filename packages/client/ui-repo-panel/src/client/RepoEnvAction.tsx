@@ -15,6 +15,7 @@ import {
   IconChevronDownOutline14,
   IconPlusOutline16,
   IconSearchOutline16,
+  Tooltip,
   useAnchoredPosition,
   useDismissOnOutsidePointer,
 } from '@deepseek-ai/dsh-client-ui-primitives'
@@ -29,7 +30,7 @@ import type {
   GuiRepoStatusValue,
 } from '@deepseek-ai/dsh-api-gui-repo/types'
 import type {} from './locales.ts'
-import { RepoGlyph } from './glyphs.tsx'
+import { EnvGlyph, RepoGlyph } from './glyphs.tsx'
 import css from './RepoEnvAction.module.css'
 
 /** Refresh interval for the open menu's git facts. */
@@ -190,17 +191,19 @@ export function RepoEnvAction({
   const divergence = status !== null && status.repo ? divergenceText(status, t) : undefined
   return (
     <>
-      <button
-        ref={anchorRef}
-        type="button"
-        className={css.trigger}
-        aria-label={t('action.aria')}
-        aria-haspopup="menu"
-        aria-expanded={open}
-        onClick={() => { setOpen(value => !value) }}
-      >
-        <RepoGlyph size={16} />
-      </button>
+      <Tooltip label={t('action.tooltip')} side="bottom">
+        <button
+          ref={anchorRef}
+          type="button"
+          className={css.trigger}
+          aria-label={t('action.aria')}
+          aria-haspopup="menu"
+          aria-expanded={open}
+          onClick={() => { setOpen(value => !value) }}
+        >
+          <EnvGlyph size={16} />
+        </button>
+      </Tooltip>
       {open && createPortal(
         <div ref={panelRef} className={css.popover} role="menu" aria-label={t('menu.title')} style={position ?? undefined}>
           <div className={css.caption}>{t('menu.title')}</div>
@@ -232,11 +235,20 @@ export function RepoEnvAction({
                       {divergence !== undefined && <span className={css.rowValue}>{divergence}</span>}
                       <IconChevronDownOutline14 />
                     </button>
-                    <div className={css.row}>
+                    <div className={css.sources}>
                       <span className={css.rowLabel}>{t('row.sources')}</span>
-                      <span className={css.rowValue}>
-                        {status.sources.length === 0 ? t('sources.none') : status.sources.map(source => source.name).join(' · ')}
-                      </span>
+                      {status.sources.length === 0
+                        ? <span className={css.sourcesEmpty}>{t('sources.none')}</span>
+                        : (
+                          <ul className={css.sourceList}>
+                            {status.sources.map(source => (
+                              <li key={`${source.name}\u0000${source.url}`} className={css.sourceItem}>
+                                <span className={css.sourceName}>{source.name}</span>
+                                <span className={css.sourceUrl}>{source.url}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
                     </div>
                   </>
                 )}

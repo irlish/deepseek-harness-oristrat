@@ -1,9 +1,27 @@
 /**
- * The repo type's own glyph: a two-node branch mark drawn on currentColor,
- * sized like the neighboring tab icons.
+ * The menu's own glyphs, drawn on currentColor and sized like the neighboring
+ * header icons: the environment mark on the trigger and the branch mark on
+ * the branch row.
  */
 import type { ReactNode } from 'react'
 import type { IconProps } from '@deepseek-ai/dsh-client-ui-primitives'
+
+/**
+ * Draw the environment mark: two list rows, each a hollow node with a short
+ * bar, the shape the neighboring clients use for repository details.
+ * @param props - size and class of the mark.
+ * @returns the inline svg.
+ */
+export function EnvGlyph({ size = 16, className }: IconProps): ReactNode {
+  return (
+    <svg width={size} height={size} className={className} viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <circle cx="3.75" cy="4.75" r="1.9" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M8.5 4.75h4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <circle cx="3.75" cy="11.25" r="1.9" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M8.5 11.25h4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  )
+}
 
 /**
  * Draw the branch glyph.

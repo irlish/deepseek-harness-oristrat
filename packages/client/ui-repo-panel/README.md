@@ -57,7 +57,7 @@ The plugin body registers two things under effects: the `repo-panel` locale dict
 |---|---|
 | [`src/client/index.ts`](src/client/index.ts) | Plugin body: dictionaries and the header utilities entry with the `guiRepo` wire face |
 | [`src/client/RepoEnvAction.tsx`](src/client/RepoEnvAction.tsx) | Trigger, popover, environment rows, branch submenu, poll loop, and mutation handlers |
-| [`src/client/glyphs.tsx`](src/client/glyphs.tsx) | The branch glyph drawn on currentColor for the trigger and the branch row |
+| [`src/client/glyphs.tsx`](src/client/glyphs.tsx) | The currentColor environment mark on the trigger and the branch mark on the branch row |
 | [`src/client/locales.ts`](src/client/locales.ts) | `repo-panel` zh/en dictionaries; the Chinese key set is the source of truth |
 
 </details>

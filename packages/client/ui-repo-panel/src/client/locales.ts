@@ -6,6 +6,7 @@ export const NS = 'repo-panel'
 /** Simplified Chinese dictionary (the key-set source of truth). */
 const zh = {
   'action.aria': '仓库环境',
+  'action.tooltip': '仓库环境与分支',
   'menu.title': '环境信息',
   'row.branch': '分支',
   'row.changes': '变更',
@@ -33,6 +34,7 @@ const zh = {
 /** English dictionary, keyed by the Chinese key set. */
 const en: Record<keyof typeof zh, string> = {
   'action.aria': 'Repository environment',
+  'action.tooltip': 'Repository environment and branches',
   'menu.title': 'Environment',
   'row.branch': 'Branch',
   'row.changes': 'Changes',

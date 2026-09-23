@@ -87,6 +87,44 @@
   color: var(--dsw-alias-label-caption);
 }
 
+.sources {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px 8px;
+}
+
+.sourcesEmpty {
+  color: var(--dsw-alias-label-caption);
+}
+
+.sourceList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sourceItem {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.sourceName {
+  color: var(--dsw-alias-label-primary);
+}
+
+.sourceUrl {
+  color: var(--dsw-alias-label-caption);
+  font-size: 12px;
+  line-height: 16px;
+  overflow-wrap: anywhere;
+}
+
 .rowButton svg:last-child {
   flex: 0 0 auto;
   margin-left: auto;

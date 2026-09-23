@@ -22,7 +22,7 @@ Status: implemented
 
 ### 头部环境菜单
 
-- `ui-repo-panel` 删除其侧栏标签注册（`definition.tsx`、`RepoTabBody.tsx`、`RepoTitle.tsx`、`RepoPanel.tsx`），改为注册一个 `conversation.session.header.utilities` 条目（id `repo-env`、order 0），渲染 `RepoEnvAction`：currentColor 分支字形触发按钮、由 `useAnchoredPosition` 定位并经 `useDismissOnOutsidePointer` 与 Escape 关闭的 portal 气泡、环境行（变更合计、主机、分支及分歧、来源），以及带子串搜索过滤的分支子菜单——`menuitemradio` 行标记当前分支、点选即检出、内联草稿表单创建并检出。状态在打开期间每 4 秒轮询；分支仅在子菜单打开期间轮询。变更操作有防重入守卫，成功时关闭气泡，失败时在子菜单内显示 git 的拒绝消息。
+- `ui-repo-panel` 删除其侧栏标签注册（`definition.tsx`、`RepoTabBody.tsx`、`RepoTitle.tsx`、`RepoPanel.tsx`），改为注册一个 `conversation.session.header.utilities` 条目（id `repo-env`、order 0），渲染 `RepoEnvAction`：带悬浮/聚焦提示的 currentColor 环境标记触发按钮、由 `useAnchoredPosition` 定位并经 `useDismissOnOutsidePointer` 与 Escape 关闭的 portal 气泡、环境行（变更合计、主机、分支及分歧，以及每个远端一行、携带名称与完整 URL 的来源区），以及带子串搜索过滤的分支子菜单——`menuitemradio` 行标记当前分支、点选即检出、内联草稿表单创建并检出。状态在打开期间每 4 秒轮询；分支仅在子菜单打开期间轮询。变更操作有防重入守卫，成功时关闭气泡，失败时在子菜单内显示 git 的拒绝消息。
 
 ### 浏览器视图复用
 
