@@ -3,6 +3,8 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { DesktopHostProcess } from '../src/host-process.ts'
+import { DesktopBrowserCdpError } from '../src/browser-cdp.ts'
+import { DESKTOP_HOST_PROTOCOL_VERSION } from '../src/host-protocol.ts'
 
 const roots: string[] = []
 
@@ -70,6 +72,56 @@ function projectWithHost(source: string): string {
   return project
 }
 
+/**
+ * Child Host that raises one brokered browser command for every request and
+ * answers that request with the replies it received, so the test observes the
+ * exact bytes the application process sent back.
+ */
+function browserCdpProject(): string {
+  return projectWithHost(`
+const replies = []
+let waiting
+process.send({ type: 'ready', protocolVersion: ${String(DESKTOP_HOST_PROTOCOL_VERSION)}, dshVersion: 'browser-cdp' })
+process.on('message', message => {
+  if (message.type === 'shutdown' || waiting === undefined) return
+  replies.push(message)
+  const streamId = waiting
+  waiting = undefined
+  responseStart(streamId, { headers: [['content-type', 'application/json']] })
+  responseData(streamId, JSON.stringify(replies.splice(0)))
+  responseEnd(streamId)
+})
+function onRequestFrame(frame) {
+  if (frame.type !== 1) return
+  const method = new URL(JSON.parse(frame.payload).url).searchParams.get('method')
+  process.send({ type: 'browser/cdp', requestId: 41, method, params: { url: 'https://example.com' } })
+  waiting = frame.streamId
+}
+`)
+}
+
+/** Child Host that raises one brokered browser command and answers the request immediately. */
+function browserCdpRaiseProject(): string {
+  return projectWithHost(`
+process.send({ type: 'ready', protocolVersion: ${String(DESKTOP_HOST_PROTOCOL_VERSION)}, dshVersion: 'browser-cdp-raise' })
+function onRequestFrame(frame) {
+  if (frame.type !== 1) return
+  const method = new URL(JSON.parse(frame.payload).url).searchParams.get('method')
+  process.send({ type: 'browser/cdp', requestId: 7, method, params: {} })
+  responseStart(frame.streamId, { headers: [['content-type', 'application/json']] })
+  responseData(frame.streamId, JSON.stringify({ raised: method }))
+  responseEnd(frame.streamId)
+}
+`)
+}
+
+/** One manually settled promise. */
+function deferred<T>(): { promise: Promise<T>; resolve(value: T): void } {
+  let resolve!: (value: T) => void
+  const promise = new Promise<T>((accept) => { resolve = accept })
+  return { promise, resolve }
+}
+
 afterEach(() => {
   for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true })
 })
@@ -77,7 +129,7 @@ afterEach(() => {
 describe('desktop host process', () => {
   it('reports a fatal event after readiness once and stops the child', async () => {
     const runtime = projectWithHost(`
-process.send({ type: 'ready', protocolVersion: 3, dshVersion: '1.0.0' })
+process.send({ type: 'ready', protocolVersion: ${String(DESKTOP_HOST_PROTOCOL_VERSION)}, dshVersion: '1.0.0' })
 function onRequestFrame(frame) {
   if (frame.type === 1) process.send({ type: 'fatal', message: 'plugin unavailable' })
 }
@@ -101,7 +153,7 @@ function onRequestFrame(frame) {
 
   it('loads the resource entry with a separate profile and scrubs Node resolution overrides', async () => {
     const runtime = projectWithHost(`
-process.send({ type: 'ready', protocolVersion: 3, dshVersion: 'split-runtime' })
+process.send({ type: 'ready', protocolVersion: ${String(DESKTOP_HOST_PROTOCOL_VERSION)}, dshVersion: 'split-runtime' })
 function onRequestFrame(frame) {
   if (frame.type !== 1) return
   responseStart(frame.streamId)
@@ -123,7 +175,7 @@ function onRequestFrame(frame) {
   it('carries raw request and response bytes and shuts the child down cleanly', async () => {
     const project = projectWithHost(`
 const bodies = new Map()
-process.send({ type: 'ready', protocolVersion: 3, dshVersion: process.env.NODE_OPTIONS ?? 'clean' })
+process.send({ type: 'ready', protocolVersion: ${String(DESKTOP_HOST_PROTOCOL_VERSION)}, dshVersion: process.env.NODE_OPTIONS ?? 'clean' })
 function onRequestFrame(frame) {
   if (frame.type === 1) {
     const request = JSON.parse(frame.payload)
@@ -160,7 +212,7 @@ function answer(streamId) {
   it('streams a large binary response in bounded raw frames', async () => {
     const size = 2 * 1024 * 1024
     const project = projectWithHost(`
-process.send({ type: 'ready', protocolVersion: 3, dshVersion: 'large-response' })
+process.send({ type: 'ready', protocolVersion: ${String(DESKTOP_HOST_PROTOCOL_VERSION)}, dshVersion: 'large-response' })
 function onRequestFrame(frame) {
   if (frame.type !== 1) return
   responseStart(frame.streamId)
@@ -183,7 +235,7 @@ function onRequestFrame(frame) {
 
   it('stops an unfinished upload when the Host completes its response early', async () => {
     const project = projectWithHost(`
-process.send({ type: 'ready', protocolVersion: 3, dshVersion: 'early-response' })
+process.send({ type: 'ready', protocolVersion: ${String(DESKTOP_HOST_PROTOCOL_VERSION)}, dshVersion: 'early-response' })
 function onRequestFrame(frame) {
   if (frame.type !== 2) return
   responseStart(frame.streamId)
@@ -213,7 +265,7 @@ function onRequestFrame(frame) {
 
   it('ignores a response end that arrives after the renderer cancels its stream', async () => {
     const project = projectWithHost(`
-process.send({ type: 'ready', protocolVersion: 3, dshVersion: 'cancel-race' })
+process.send({ type: 'ready', protocolVersion: ${String(DESKTOP_HOST_PROTOCOL_VERSION)}, dshVersion: 'cancel-race' })
 const urls = new Map()
 function onRequestFrame(frame) {
   if (frame.type === 1) {
@@ -243,7 +295,7 @@ function onRequestFrame(frame) {
 
   it('rejects invalid response framing and a clean exit before readiness', async () => {
     const invalid = new DesktopHostProcess(process.execPath, projectWithHost(`
-process.send({ type: 'ready', protocolVersion: 3, dshVersion: 'invalid-frame' })
+process.send({ type: 'ready', protocolVersion: ${String(DESKTOP_HOST_PROTOCOL_VERSION)}, dshVersion: 'invalid-frame' })
 function onRequestFrame(frame) {
   if (frame.type === 1) responsePipe.write(Buffer.alloc(13))
 }
@@ -257,5 +309,141 @@ function onRequestFrame() {}
 process.exit(0)
 `), projectWithHost(''))
     await expect(earlyExit.start()).rejects.toThrow(/response pipe ended/u)
+  })
+})
+
+describe('desktop host process browser commands', () => {
+  it('runs a brokered command and returns its result to the Host', async () => {
+    const project = browserCdpProject()
+    const host = new DesktopHostProcess(process.execPath, project, project)
+    host.setBrowserCdpHandler(async (method, params) => ({ method, params, frameId: 'F1' }))
+    try {
+      const response = await host.fetch(new Request('dsh-app://app/browser?method=Page.navigate'))
+
+      expect(await response.json()).toEqual([{
+        type: 'browser/cdp-result',
+        requestId: 41,
+        result: { method: 'Page.navigate', params: { url: 'https://example.com' }, frameId: 'F1' },
+      }])
+    } finally {
+      await host.stop().catch(() => undefined)
+    }
+  })
+
+  it('reports a handler failure with the code the browser provider routes on', async () => {
+    const project = browserCdpProject()
+    const host = new DesktopHostProcess(process.execPath, project, project)
+    host.setBrowserCdpHandler(async (method) => {
+      if (method === 'Page.navigate') {
+        throw new DesktopBrowserCdpError('method-not-allowed', 'dsh desktop: browser method Page.navigate is not available to automation')
+      }
+      if (method === 'Runtime.evaluate') throw new Error('the pane closed its debugging session')
+      throw 'pane gone'
+    })
+    try {
+      const refused = await host.fetch(new Request('dsh-app://app/browser?method=Page.navigate'))
+      expect(await refused.json()).toEqual([{
+        type: 'browser/cdp-error',
+        requestId: 41,
+        code: 'method-not-allowed',
+        message: 'dsh desktop: browser method Page.navigate is not available to automation',
+      }])
+
+      const failed = await host.fetch(new Request('dsh-app://app/browser?method=Runtime.evaluate'))
+      expect(await failed.json()).toEqual([{
+        type: 'browser/cdp-error',
+        requestId: 41,
+        code: 'protocol-error',
+        message: 'the pane closed its debugging session',
+      }])
+
+      const described = await host.fetch(new Request('dsh-app://app/browser?method=Page.reload'))
+      expect(await described.json()).toEqual([{
+        type: 'browser/cdp-error',
+        requestId: 41,
+        code: 'protocol-error',
+        message: 'pane gone',
+      }])
+    } finally {
+      await host.stop().catch(() => undefined)
+    }
+  })
+
+  it('answers a brokered command with closed when no handler is installed', async () => {
+    const project = browserCdpProject()
+    const host = new DesktopHostProcess(process.execPath, project, project)
+    try {
+      const response = await host.fetch(new Request('dsh-app://app/browser?method=Page.enable'))
+
+      expect(await response.json()).toEqual([{
+        type: 'browser/cdp-error',
+        requestId: 41,
+        code: 'closed',
+        message: 'dsh desktop: this application serves no browser pane',
+      }])
+    } finally {
+      await host.stop().catch(() => undefined)
+    }
+  })
+
+  it('drops a brokered command that settles after the child went away', async () => {
+    const project = browserCdpRaiseProject()
+    const failure = vi.fn()
+    const host = new DesktopHostProcess(process.execPath, project, project, undefined, process.env, failure)
+    const started = deferred<undefined>()
+    const gate = deferred<unknown>()
+    host.setBrowserCdpHandler(async () => {
+      started.resolve(undefined)
+      return await gate.promise
+    })
+    try {
+      const response = await host.fetch(new Request('dsh-app://app/browser?method=Page.enable'))
+      expect(await response.json()).toEqual({ raised: 'Page.enable' })
+      await started.promise
+      await host.stop()
+
+      // The child is gone by now, so answering this command has no reader and
+      // must not raise: an attempt would reject serveBrowserCdp unhandled.
+      gate.resolve({ frameId: 'F1' })
+      await new Promise(resolve => setTimeout(resolve, 25))
+      expect(failure).toHaveBeenCalledTimes(1)
+      const reported = failure.mock.calls[0]?.[0] as Error
+      expect(reported).toBeInstanceOf(Error)
+      expect(reported.message).toMatch(/dsh desktop host (?:stopped|response pipe ended)/u)
+    } finally {
+      await host.stop().catch(() => undefined)
+    }
+  })
+
+  it('refuses a Host that reports another protocol version', async () => {
+    const project = projectWithHost(`
+process.send({ type: 'ready', protocolVersion: 3, dshVersion: '1.0.0' })
+function onRequestFrame() {}
+`)
+    const host = new DesktopHostProcess(process.execPath, project, project)
+    try {
+      await expect(host.start()).rejects.toThrow(/invalid IPC event/u)
+    } finally {
+      await host.stop().catch(() => undefined)
+    }
+  })
+
+  it('refuses a brokered browser event that carries no request id', async () => {
+    const project = projectWithHost(`
+process.send({ type: 'ready', protocolVersion: ${String(DESKTOP_HOST_PROTOCOL_VERSION)}, dshVersion: 'malformed-cdp' })
+process.send({ type: 'browser/cdp', requestId: 'first', method: 'Page.enable' })
+function onRequestFrame() {}
+`)
+    const failure = vi.fn()
+    const host = new DesktopHostProcess(process.execPath, project, project, undefined, process.env, failure)
+    try {
+      await host.start()
+
+      await expect.poll(() => failure.mock.calls.length).toBe(1)
+      const reported = failure.mock.calls[0]?.[0] as Error
+      expect(reported.message).toBe('dsh desktop host sent an invalid IPC event')
+    } finally {
+      await host.stop().catch(() => undefined)
+    }
   })
 })

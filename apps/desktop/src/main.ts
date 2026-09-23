@@ -22,6 +22,7 @@ import { DesktopHostProcess } from './host-process.ts'
 import { DesktopBackendController, type DesktopBackendState } from './backend-controller.ts'
 import { DESKTOP_IPC, type DesktopUpdateState } from './ipc.ts'
 import { DesktopBrowserViewController, sanitizeBounds } from './browser-view.ts'
+import { BROWSER_REVEAL_TIMEOUT_MS, DesktopBrowserCdpBroker, DesktopBrowserCdpError } from './browser-cdp.ts'
 import { formatDesktopMessage, resolveDesktopLocale } from './locale.ts'
 import { claimDesktopSingleInstance } from './single-instance.ts'
 import { DesktopUpdateCoordinator } from './update-coordinator.ts'
@@ -286,6 +287,7 @@ async function main(): Promise<void> {
       window.webContents.send(DESKTOP_IPC.backendState, state)
     }
   }
+  let browserCdp: DesktopBrowserCdpBroker | undefined
   const backend = new DesktopBackendController((onFailure) => {
     if (development === undefined) manager.assertProfileRuntime(activeProject)
     const hostInspectPort = developmentHostInspectPort(development !== undefined)
@@ -294,6 +296,15 @@ async function main(): Promise<void> {
     const hostEnv = development === undefined ? { ...process.env, DSH_HOME: paths.home } : process.env
     const host = new DesktopHostProcess(resources.node, development ?? resources.dsh, activeProject,
       hostInspectPort, hostEnv, onFailure)
+    // The Host drives the pane through this broker, which owns the debugging
+    // session, the method allowlist, and the single-command-at-a-time rule.
+    host.setBrowserCdpHandler(async (method, params) => {
+      const broker = browserCdp
+      if (broker === undefined) {
+        throw new DesktopBrowserCdpError('not-open', 'dsh desktop: the browser pane is not available in this window')
+      }
+      return await broker.dispatch(method, params)
+    })
     return {
       start: () => host.start(),
       stop: () => host.stop(),
@@ -372,7 +383,7 @@ async function main(): Promise<void> {
   protocol.handle(SCHEME, (request) => {
     const url = new URL(request.url)
     if (url.hostname === 'shell') return serveShellAsset(request).then((response) => {
-      if (response.status >= 400 && ['/startup.html', '/startup.js', '/startup.css'].includes(url.pathname)) {
+      if (response.status >= 400 && ['/startup.html', '/locales.js', '/startup.js', '/startup.css'].includes(url.pathname)) {
         void showEmergencyError(new Error(`Desktop recovery resource could not be loaded: ${url.pathname} (HTTP ${response.status})`))
           .catch((error: unknown) => { console.error(error) })
       }
@@ -520,6 +531,27 @@ async function main(): Promise<void> {
     return browserController?.getState() ?? { url: '', title: '', canGoBack: false, canGoForward: false, loading: false }
   })
 
+  // Automation drives the same pane the user sees. Showing it asks the
+  // renderer to open the browser tab and waits for the resulting `open`, so a
+  // pane that automation needs appears in the sidebar instead of being driven
+  // invisibly; the window itself is never focused or activated.
+  const publishBrowserActivity = (method: string, active: boolean): void => {
+    const window = mainWindow
+    if (window === undefined || window.isDestroyed()) return
+    window.webContents.send(DESKTOP_IPC.browserActivity, {
+      active,
+      method: active ? method : '',
+      since: active ? Date.now() : 0,
+    })
+  }
+  const revealBrowserPane = async (): Promise<boolean> => {
+    const window = mainWindow
+    if (window === undefined || window.isDestroyed()) return false
+    window.webContents.send(DESKTOP_IPC.browserReveal)
+    return await browserFor().waitForAttach(BROWSER_REVEAL_TIMEOUT_MS)
+  }
+  browserCdp = new DesktopBrowserCdpBroker(browserFor, revealBrowserPane, publishBrowserActivity)
+
   const checkAndPrompt = async (manual: boolean): Promise<void> => {
     const state = await updates.check()
     if (state.phase === 'error') {
@@ -658,6 +690,8 @@ async function main(): Promise<void> {
       if (mainWindow === window) mainWindow = undefined
       // The embedded view dies with its host window; drop the stale owner.
       if (browserHost === window) {
+        browserCdp?.dispose()
+        browserCdp = undefined
         browserController = undefined
         browserHost = undefined
       }

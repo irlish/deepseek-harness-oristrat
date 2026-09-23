@@ -71,6 +71,7 @@ function localeOwner(file: string): boolean {
   const base = normalized.slice(normalized.lastIndexOf('/') + 1)
   return base === 'locale.ts'
     || base === 'locales.ts'
+    || base === 'locales.js'
     || normalized.includes('/locales/')
 }
 

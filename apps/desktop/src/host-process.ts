@@ -18,6 +18,7 @@ import {
   type DesktopHostEvent,
   type DesktopHostResponseFrame,
 } from './host-protocol.ts'
+import { DesktopBrowserCdpError } from './browser-cdp.ts'
 
 interface PendingResponse {
   readonly resolve: (response: Response) => void
@@ -37,10 +38,20 @@ function isDesktopHostEvent(message: unknown): message is DesktopHostEvent {
       return candidate.protocolVersion === DESKTOP_HOST_PROTOCOL_VERSION && typeof candidate.dshVersion === 'string'
     case 'fatal':
       return typeof candidate.message === 'string'
+    case 'browser/cdp':
+      return Number.isInteger(candidate.requestId) && typeof candidate.method === 'string'
     default:
       return false
   }
 }
+
+/**
+ * Handler that runs one brokered browser protocol command.
+ *
+ * It rejects with {@link DesktopBrowserCdpError} to hand the Host a failure code
+ * the browser provider routes on.
+ */
+export type DesktopHostBrowserCdpHandler = (method: string, params: unknown) => Promise<unknown>
 
 function errorOf(reason: unknown, fallback: string): Error {
   return reason instanceof Error ? reason : new Error(fallback)
@@ -84,6 +95,7 @@ export class DesktopHostProcess {
   private exitPromise: Promise<void> | undefined
   private stderr = ''
   private failureReported = false
+  private browserCdpHandler: DesktopHostBrowserCdpHandler | undefined
 
   /**
    * @param node - absolute bundled upstream Node.js executable.
@@ -101,6 +113,14 @@ export class DesktopHostProcess {
     private readonly environment: NodeJS.ProcessEnv = process.env,
     private readonly onFailure?: (error: Error) => void,
   ) {}
+
+  /**
+   * Install the handler that serves brokered browser commands.
+   * @param handler - runs one browser protocol command against the pane.
+   */
+  setBrowserCdpHandler(handler: DesktopHostBrowserCdpHandler): void {
+    this.browserCdpHandler = handler
+  }
 
   /** Start the child once and resolve only after its complete composition is active. */
   async start(): Promise<DesktopHostReady> {
@@ -401,9 +421,49 @@ export class DesktopHostProcess {
       case 'fatal':
         this.fail(new Error(message.message))
         return
+      case 'browser/cdp':
+        void this.serveBrowserCdp(message)
+        return
       default:
         message satisfies never
     }
+  }
+
+  /**
+   * Run one brokered browser command and answer it.
+   * @param request - the command the Host issued.
+   */
+  private async serveBrowserCdp(request: { readonly requestId: number; readonly method: string; readonly params: unknown }): Promise<void> {
+    const handler = this.browserCdpHandler
+    if (handler === undefined) {
+      this.replyBrowserCdp({
+        type: 'browser/cdp-error',
+        requestId: request.requestId,
+        code: 'closed',
+        message: 'dsh desktop: this application serves no browser pane',
+      })
+      return
+    }
+    try {
+      const result = await handler(request.method, request.params)
+      this.replyBrowserCdp({ type: 'browser/cdp-result', requestId: request.requestId, result })
+    } catch (error: unknown) {
+      const code = error instanceof DesktopBrowserCdpError ? error.code : 'protocol-error'
+      const message = error instanceof Error ? error.message : String(error)
+      this.replyBrowserCdp({ type: 'browser/cdp-error', requestId: request.requestId, code, message })
+    }
+  }
+
+  /**
+   * Answer one browser command.
+   * @param reply - result or failure for the issuing request.
+   */
+  private replyBrowserCdp(reply: Extract<DesktopHostCommand, { type: 'browser/cdp-result' | 'browser/cdp-error' }>): void {
+    const child = this.child
+    // A browser command that settles after the child went away has no reader:
+    // the Host's channel already failed those requests with `closed`.
+    if (child === undefined || !child.connected) return
+    child.send(reply, (error) => { if (error !== null) this.fail(error) })
   }
 
   private fail(error: Error): void {

@@ -23,9 +23,13 @@
 
 Electron 拥有 `$DSH_HOME/profiles/desktop`。其 `dependencies` 只包含已安装外部插件的精确版本；`dsh.profile.bundles` 包含内置 bundle，后接已启用插件。签名应用从 `resources/dsh` 提供 dsh、私有 Desktop Host 及其生产依赖。共享包链接解析到这些实际目录。宿主与插件在同一个内置上游 Node 进程中执行，使用正常的 realpath 解析；Desktop 不启用 `--preserve-symlinks`。CLI 不能启动或修改此 profile。
 
+Desktop 使用 DashScope WebSearch MCP 工具供模型发起搜索。在 `$DSH_HOME/.env` 中设置 `DASHSCOPE_API_KEY`；Desktop Host 连接 MCP 服务器时解析该密钥。该 MCP 条目注入 `credentials`，因此只会在该提供方存在后才激活：过早读取密钥会让该条目的首次连接失败，而从未连接成功的客户端不会上报关闭，重连监管器随后会停止整个进程的后续重试。Desktop 会屏蔽从 preset 继承的 `web_search` 工具并禁用 DeepSeek 搜索提供方，`web_fetch` 仍可使用。如果缺少密钥或 MCP 服务器离线，Desktop 仍会启动，但在 MCP 连接成功前不会提供默认搜索工具。[WebSearch MCP 决策](../../.agents/notes/implemented/feature/2026-09-22-oristrat-thinking-slider-websearch-mcp-repo-browser-panels.zh.md)记录了这一部署选择。
+
 本地启动页提供启动状态和可用恢复操作；加载后的 dsh 渲染进程仅接收桌面协议标记。独立插件窗口接收结构化的列表、安装、删除、更新和更新检查操作；两个渲染进程都无法访问文件系统、原始 Electron IPC、shell 或任意 pnpm 参数。
 
-Electron 根据应用 locale 选择类型化的英文或中文桌面壳文案，并以英文作为 fallback。菜单、原生对话框、启动页与插件管理渲染进程使用同一 locale 数据；仓库的 Client UI i18n gate 会检查这些桌面源文件。
+右侧边栏为每个窗口嵌入一个用于人工浏览的 `WebContentsView`，agent 自动化驱动的正是同一个视图。dsh Host 子进程通过 shell 控制通道（`DESKTOP_HOST_PROTOCOL_VERSION` 为 4）发送浏览器调试协议命令，主进程对每条命令按固定的方法白名单进行代理，在第一条命令时附加调试器，并在附加期间禁用后台节流。任何命令都不会合成操作系统输入，也不会让视图获得焦点，因此用户在应用里打字时，整轮自动化期间仍在应用里打字。面板按需通过 `dsh-desktop:browser-reveal` 显示，并通过 `dsh-desktop:browser-activity` 上报它正在做什么。[侧边栏浏览器自动化 Agent Note](../../.agents/notes/implemented/feature/2026-09-24-oristrat-sidebar-browser-agent-automation.zh.md) 记录了该 seam、它的边界以及仅限桌面端的范围。
+
+Electron 根据应用 locale 选择类型化的英文或中文桌面壳文案，并以英文作为 fallback。菜单、原生对话框、启动页与插件管理渲染进程使用同一 locale 数据；仓库的 Client UI i18n gate 会检查这些桌面源文件。启动页在没有 preload 的普通浏览器预览中加载 `renderer/locales.js`；打包应用仍从桌面壳的 locale 数据读取文案。
 
 ### 运行时与插件激活
 

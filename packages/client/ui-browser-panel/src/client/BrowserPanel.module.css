@@ -84,3 +84,36 @@
   flex: 0 0 auto;
   color: var(--dsw-alias-label-secondary);
 }
+
+.activity {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--dsw-alias-border-l1);
+  background: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-label-secondary);
+  font-size: 12px;
+}
+
+.activityDot {
+  flex: 0 0 auto;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--dsw-alias-label-primary);
+}
+
+.activityLabel {
+  flex: 0 0 auto;
+  color: var(--dsw-alias-label-primary);
+}
+
+.activityMethod {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}

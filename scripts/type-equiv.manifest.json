@@ -1417,6 +1417,36 @@
       "source": "packages/subagent/subagent/src/types.ts"
     },
     {
+      "doc": "docs/subsystems/browser.md",
+      "symbol": "BrowserRef",
+      "source": "packages/browser/browser/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/browser.md",
+      "symbol": "BrowserOwner",
+      "source": "packages/browser/browser/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/browser.md",
+      "symbol": "BrowserElementTarget",
+      "source": "packages/browser/browser/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/browser.md",
+      "symbol": "BrowserObservation",
+      "source": "packages/browser/browser/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/browser.md",
+      "symbol": "BrowserScreenshot",
+      "source": "packages/browser/browser/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/browser.md",
+      "symbol": "BrowserTransport",
+      "source": "packages/browser/browser/src/index.ts"
+    },
+    {
       "doc": "docs/subsystems/web.md",
       "symbol": "WebSearchRequest",
       "source": "packages/web/web/src/types.ts"

@@ -273,3 +273,13 @@
 
 - id: present
   name: '@deepseek-ai/dsh-tool-present'
+
+# ── browser automation ──────────────────────────────────────────────────────
+
+# The `browser` capability provider stays in the host composition: the desktop
+# shell mounts `browser-desktop` because only it owns the embedded pane and the
+# command channel to it. This row is the model-facing consumer, and it waits for
+# `ctx.browser` — so a profile with no provider registers no `browser_*` tool at
+# all rather than a tool that fails at call time.
+- id: tool-browser
+  name: '@deepseek-ai/dsh-tool-browser'

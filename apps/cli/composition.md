@@ -32,6 +32,10 @@ flowchart LR
   cfg --> plugin_dsh_base_session_title_llm
   plugin_dsh_base_user_questions["user-questions<br/>@deepseek-ai/dsh-user-questions"]
   cfg --> plugin_dsh_base_user_questions
+  plugin_dsh_base_oristrat_msce_norms["oristrat-msce-norms<br/>@deepseek-ai/dsh-context-oristrat-msce-norms"]
+  cfg --> plugin_dsh_base_oristrat_msce_norms
+  plugin_dsh_base_msce_gate["msce-gate<br/>@deepseek-ai/dsh-guard-msce-gate"]
+  cfg --> plugin_dsh_base_msce_gate
   plugin_dsh_base_agent["agent<br/>@deepseek-ai/dsh-agent"]
   cfg --> plugin_dsh_base_agent
   plugin_dsh_base_plugin_package_inventory_deepseek["plugin-package-inventory-deepseek<br/>@deepseek-ai/dsh-plugin-package-inventory-deepseek"]
@@ -192,6 +196,8 @@ flowchart LR
 | `session-title` | `@deepseek-ai/dsh-session-title` |
 | `session-title-llm` | `@deepseek-ai/dsh-session-title-first-prompt-llm` |
 | `user-questions` | `@deepseek-ai/dsh-user-questions` |
+| `oristrat-msce-norms` | `@deepseek-ai/dsh-context-oristrat-msce-norms` |
+| `msce-gate` | `@deepseek-ai/dsh-guard-msce-gate` |
 | `agent` | `@deepseek-ai/dsh-agent` |
 | `plugin-package-inventory-deepseek` | `@deepseek-ai/dsh-plugin-package-inventory-deepseek` |
 | `agent-default-model` | `@deepseek-ai/dsh-agent-default-model` |

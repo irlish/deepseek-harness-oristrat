@@ -10,7 +10,7 @@
 import type { Context as ClientContext } from '@deepseek-ai/cordis'
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 import type {} from '@deepseek-ai/dsh-client-ui-sidebar-right/client'
-import { BROWSER_ID, browserDefinition } from './definition.tsx'
+import { BROWSER_ID, BROWSER_KIND, browserDefinition } from './definition.tsx'
 import { en, NS, zh } from './locales.ts'
 import { desktopBrowser } from './bridge.ts'
 import { BrowserTabBody, type BrowserTabBodyInjected } from './BrowserTabBody.tsx'
@@ -22,16 +22,23 @@ export type { BrowserPanelInjected, BrowserPanelProps } from './BrowserPanel.tsx
 export type { BrowserBounds, BrowserState, DesktopBrowserBridge } from './bridge.ts'
 
 /** Required browser services: the tab registry and the keyed seats. */
-export const inject = ['slots', 'locale', 'sidebarRightTabs']
+export const inject = ['slots', 'locale', 'sidebarRightTabs', 'sidebarRight']
 
 /**
  * Client plugin body: register the type, its dictionaries, its body, and its
- * chip title.
- * @param ctx - client root context carrying the registry and the slots.
+ * chip title, and show the pane when automation needs it.
+ * @param ctx - client root context carrying the registry, the slots, and the right-Sidebar navigator.
  */
 export function apply(ctx: ClientContext): void {
   const t = ctx.locale.bind(NS)
   const bridge = desktopBrowser()
+
+  // Automation drives the pane the user sees, and the pane must be on screen
+  // for that to be observable. The main process asks; this side opens the
+  // browser tab, and the main process waits for the resulting `open`.
+  if (bridge !== undefined) {
+    ctx.effect(() => bridge.subscribeReveal(() => { ctx.sidebarRight.openTab(BROWSER_KIND) }), 'ui-browser-panel: reveal request')
+  }
   ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'ui-browser-panel: dictionaries')
   ctx.effect(() => ctx.sidebarRightTabs.register(browserDefinition(t)), 'ui-browser-panel: browser type')
 

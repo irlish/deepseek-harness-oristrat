@@ -38,9 +38,17 @@ function fakeCtx() {
       inject: vi.fn((name: string, factory: () => unknown) => { seats.push(name); factory(); return () => {} }),
       register: vi.fn((definition: never, component: unknown) => { registered.push({ definition, component }); return () => {} }),
     },
+    sidebarRight: { openTab: vi.fn() },
     effect: (fn: () => unknown) => { fn() },
   }
-  return { ctx: ctx as never, registered, seats, tabs: ctx.sidebarRightTabs.register, dictionaries: ctx.locale.register }
+  return {
+    ctx: ctx as never,
+    registered,
+    seats,
+    tabs: ctx.sidebarRightTabs.register,
+    dictionaries: ctx.locale.register,
+    openTab: ctx.sidebarRight.openTab,
+  }
 }
 
 /** Every member typed as a vi.fn property so specs can reference the mocks directly. */
@@ -57,13 +65,15 @@ function fakeBridge(): DesktopBrowserBridge & BridgeMocks {
     setBounds: vi.fn().mockResolvedValue(undefined),
     state: vi.fn().mockResolvedValue({ url: '', title: '', canGoBack: false, canGoForward: false, loading: false }),
     subscribe: vi.fn(() => () => {}),
+    subscribeReveal: vi.fn(() => () => {}),
+    subscribeActivity: vi.fn(() => () => {}),
   }
 }
 
 describe('plugin registration', () => {
   it('exposes the empty node half and the declared browser services', () => {
     expect(() => { nodeApply() }).not.toThrow()
-    expect(inject).toEqual(['slots', 'locale', 'sidebarRightTabs'])
+    expect(inject).toEqual(['slots', 'locale', 'sidebarRightTabs', 'sidebarRight'])
   })
 
   it('registers dictionaries, the browser type, and both keyed seats without a bridge', () => {
@@ -86,6 +96,26 @@ describe('plugin registration', () => {
     apply(fake.ctx)
     const face = fake.registered[0]?.definition.inject?.()
     expect(face?.bridge).toBe(bridge)
+    delete (window as { dshDesktop?: unknown }).dshDesktop
+  })
+
+  it('shows the browser tab when the shell asks for the pane, and never without a bridge', () => {
+    const plain = fakeCtx()
+    apply(plain.ctx)
+    expect(plain.openTab).not.toHaveBeenCalled()
+
+    const bridge = fakeBridge()
+    const listeners: Array<() => void> = []
+    bridge.subscribeReveal.mockImplementation((listener: () => void) => {
+      listeners.push(listener)
+      return () => {}
+    })
+    vi.stubGlobal('window', Object.assign(window, { dshDesktop: { protocolVersion: 1, browser: bridge } }))
+    const fake = fakeCtx()
+    apply(fake.ctx)
+    expect(bridge.subscribeReveal).toHaveBeenCalledOnce()
+    listeners[0]?.()
+    expect(fake.openTab).toHaveBeenCalledWith(BROWSER_KIND)
     delete (window as { dshDesktop?: unknown }).dshDesktop
   })
 })

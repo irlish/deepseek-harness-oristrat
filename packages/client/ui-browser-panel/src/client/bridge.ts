@@ -22,6 +22,20 @@ export interface BrowserState {
   readonly loading: boolean
 }
 
+/**
+ * What the agent is doing in the pane, as the desktop main process observes it.
+ * Automation sends protocol commands into the page, so the main process is the
+ * only party that knows a command is running right now.
+ */
+export interface BrowserActivity {
+  /** Whether a command is running right now. */
+  readonly active: boolean
+  /** Protocol method the last command asked for; empty while idle. */
+  readonly method: string
+  /** Epoch milliseconds when the current command started; 0 while idle. */
+  readonly since: number
+}
+
 /** The desktop bridge's embedded-browser operations. */
 export interface DesktopBrowserBridge {
   readonly open: (bounds: BrowserBounds, url?: string) => Promise<void>
@@ -34,6 +48,14 @@ export interface DesktopBrowserBridge {
   readonly setBounds: (bounds: BrowserBounds) => Promise<void>
   readonly state: () => Promise<BrowserState>
   readonly subscribe: (listener: (state: BrowserState) => void) => () => void
+  /**
+   * Subscribe to requests that the pane be shown. The main process raises one
+   * when automation needs a pane the user has not opened, and then waits for the
+   * resulting `open`, so the listener must show the browser tab.
+   */
+  readonly subscribeReveal: (listener: () => void) => () => void
+  /** Subscribe to automation-activity pushes; returns the unsubscribe. */
+  readonly subscribeActivity: (listener: (activity: BrowserActivity) => void) => () => void
 }
 
 /**

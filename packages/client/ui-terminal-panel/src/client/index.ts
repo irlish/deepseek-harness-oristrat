@@ -42,7 +42,7 @@ interface GuiTerminalWire {
 
 /** Unwrap one unary Remote envelope, turning host errors into throws. */
 function call<T>(promise: Promise<RemoteEnvelope<T>>): Promise<T> {
-  return promise.then(result => {
+  return promise.then((result) => {
     if (!result.ok) {
       throw new Error(typeof result.error === 'string' ? result.error : JSON.stringify(result.error))
     }

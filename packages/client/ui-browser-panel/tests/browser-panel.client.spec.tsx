@@ -3,7 +3,15 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-libra
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { ComponentProps } from 'react'
 import { BrowserPanel } from '../src/client/BrowserPanel.tsx'
-import { boundsFromLayout, boundsFromRect, desktopBrowser, normalizeUrlInput, type BrowserState, type DesktopBrowserBridge } from '../src/client/bridge.ts'
+import {
+  boundsFromLayout,
+  boundsFromRect,
+  desktopBrowser,
+  normalizeUrlInput,
+  type BrowserActivity,
+  type BrowserState,
+  type DesktopBrowserBridge,
+} from '../src/client/bridge.ts'
 import { zh } from '../src/client/locales.ts'
 
 const t: ComponentProps<typeof BrowserPanel>['t'] = (key, params) => {
@@ -27,6 +35,8 @@ function fakeBridge(): DesktopBrowserBridge & BridgeMocks {
     setBounds: vi.fn().mockResolvedValue(undefined),
     state: vi.fn().mockResolvedValue({ url: '', title: '', canGoBack: false, canGoForward: false, loading: false }),
     subscribe: vi.fn(() => () => {}),
+    subscribeReveal: vi.fn(() => () => {}),
+    subscribeActivity: vi.fn(() => () => {}),
   }
 }
 
@@ -102,7 +112,7 @@ describe('BrowserPanel', () => {
   it('opens the view over the surface, follows state pushes, and hides on unmount', async () => {
     // jsdom never fires animation frames; the stub lets the frame push run.
     vi.stubGlobal('requestAnimationFrame', (callback: () => void) => setTimeout(callback, 0))
-    vi.stubGlobal('cancelAnimationFrame', (handle: number) => clearTimeout(handle))
+    vi.stubGlobal('cancelAnimationFrame', (handle: number) =>{  clearTimeout(handle) })
     const bridge = fakeBridge()
     const unsubscribe = vi.fn()
     bridge.subscribe.mockReturnValue(unsubscribe)
@@ -175,6 +185,25 @@ describe('BrowserPanel', () => {
     await waitFor(() => {
       expect(screen.queryByText(/打开失败/)).toBeNull()
     })
+  })
+
+  it('shows the automation strip only while a command runs, and unsubscribes on unmount', async () => {
+    const bridge = fakeBridge()
+    const unsubscribeActivity = vi.fn()
+    bridge.subscribeActivity.mockReturnValue(unsubscribeActivity)
+    const { unmount } = render(<BrowserPanel t={t} bridge={bridge} />)
+    await waitFor(() => {
+      expect(bridge.subscribeActivity).toHaveBeenCalled()
+    })
+    const push = bridge.subscribeActivity.mock.calls[0]?.[0] as (activity: BrowserActivity) => void
+    expect(screen.queryByText('Agent 正在控制浏览器')).toBeNull()
+    act(() => { push({ active: true, method: 'Input.dispatchMouseEvent', since: 10 }) })
+    expect(screen.getByText('Agent 正在控制浏览器')).toBeTruthy()
+    expect(screen.getByText('操作：Input.dispatchMouseEvent')).toBeTruthy()
+    act(() => { push({ active: false, method: '', since: 0 }) })
+    expect(screen.queryByText('Agent 正在控制浏览器')).toBeNull()
+    unmount()
+    expect(unsubscribeActivity).toHaveBeenCalled()
   })
 
   it('observes surface resizes when the host provides ResizeObserver', async () => {

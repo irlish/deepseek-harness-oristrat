@@ -41,6 +41,7 @@ This table connects model-visible tool names to the plugin package and service s
 | `@deepseek-ai/dsh-tool-todo` | `todo_write` | `ctx.tools`, `owning Agent session` | `tool/call`, `todo/write`, `tool/result` | - | todo_write is session-owned state; UIs render the latest todo/write event as a checklist. `allowParallelInProgress` is required with no default, so the catalog states its choice: `true`, whose description invites several `in_progress` items. A deployment choosing `false` receives the same tool with a description asking for exactly one active task. |
 | `@deepseek-ai/dsh-tool-workflow` | `workflow` | `ctx.tools`, `ctx.workflowEngine`, `ctx.systemPrompt`, `a calling Agent (exec.agent parents the script children)` | `tool/call`, `tool/result` | - | - |
 | `@deepseek-ai/dsh-tool-web` | `web_fetch`, `web_search` | `ctx.tools`, `ctx.web`, `ctx.systemPrompt` | `tool/call`, `tool/result` | - | web_search and web_fetch keep provider selection behind ctx.web so model-visible schemas stay stable across backend swaps. |
+| `@deepseek-ai/dsh-tool-browser` | `browser_act`, `browser_console`, `browser_eval`, `browser_navigate`, `browser_observe`, `browser_screenshot`, `browser_state` | `ctx.tools`, `ctx.browser`, `ctx.attachments (browser_screenshot storage)`, `ctx.llm + an image-capable route (browser_screenshot execution)` | `tool/call`, `tool/result`, `durable attachment (browser_screenshot)` | - | The browser tools wait for `ctx.browser`: a deployment whose composition mounts no browser provider registers none of them, and the desktop composition mounts one because only the shell owns the embedded pane. Every action reports the page state it produced, and screenshots return an image block, so a step is verified by the operation that made it. |
 
 <a id="deepseek-aidsh-tool-ask-user"></a>
 
@@ -2267,3 +2268,246 @@ Search the web for current information. Provide 1–4 queries in the required qu
 Source: [`packages/web/tool-web/src/index.ts`](../packages/web/tool-web/src/index.ts)
 
 web_search and web_fetch keep provider selection behind ctx.web so model-visible schemas stay stable across backend swaps.
+
+<a id="deepseek-aidsh-tool-browser"></a>
+
+## `@deepseek-ai/dsh-tool-browser`
+
+### `browser_act`
+
+Drive the page: click, hover, fill, type, press a key, choose an option, scroll, or focus. Input is sent to the page itself, so the user keeps typing in the application while this runs. Every call returns the page state it produced, which is the verification step — check it instead of assuming the action landed.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "action": {
+      "type": "string",
+      "description": "The interaction to perform.",
+      "enum": [
+        "click",
+        "hover",
+        "fill",
+        "type",
+        "press",
+        "select",
+        "scroll",
+        "focus"
+      ]
+    },
+    "ref": {
+      "type": "string",
+      "description": "Element reference from browser_observe, for example @e12."
+    },
+    "selector": {
+      "type": "string",
+      "description": "CSS selector, when no reference is available."
+    },
+    "x": {
+      "type": "number",
+      "description": "Viewport x coordinate, with y, for a point target."
+    },
+    "y": {
+      "type": "number",
+      "description": "Viewport y coordinate, with x, for a point target."
+    },
+    "value": {
+      "type": "string",
+      "description": "Text for fill and type, option value or label for select."
+    },
+    "key": {
+      "type": "string",
+      "description": "Key name for press, for example Enter, Tab, or ArrowDown."
+    },
+    "deltaY": {
+      "type": "number",
+      "description": "Pixels to scroll; defaults to one viewport."
+    },
+    "button": {
+      "type": "string",
+      "description": "Mouse button for click.",
+      "enum": [
+        "left",
+        "middle",
+        "right"
+      ]
+    },
+    "clickCount": {
+      "type": "number",
+      "description": "Click count for click; 2 double-clicks."
+    }
+  },
+  "required": [
+    "action"
+  ]
+}
+```
+
+Source: [`packages/browser/tool-browser/src/index.ts`](../packages/browser/tool-browser/src/index.ts)
+
+### `browser_console`
+
+Read recent console output and page errors from the browser pane. Use it to diagnose why a page misbehaved, and to see page dialogs the pane neutralized instead of blocking on.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "since": {
+      "type": "number",
+      "description": "Only entries after this cursor; pass the cursor a previous call returned."
+    },
+    "levels": {
+      "type": "array",
+      "description": "Only these levels.",
+      "items": {
+        "type": "string",
+        "enum": [
+          "debug",
+          "info",
+          "log",
+          "warn",
+          "error"
+        ]
+      }
+    },
+    "limit": {
+      "type": "number",
+      "description": "Maximum entries, newest last."
+    }
+  }
+}
+```
+
+Source: [`packages/browser/tool-browser/src/index.ts`](../packages/browser/tool-browser/src/index.ts)
+
+### `browser_eval`
+
+Evaluate one expression inside the page and return its value as text. This reads facts the accessibility tree does not carry, such as a computed style or a storage entry. It runs real script in the page, so prefer the structured tools and use this only when they cannot answer the question.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "expression": {
+      "type": "string",
+      "description": "JavaScript expression evaluated in the page."
+    }
+  },
+  "required": [
+    "expression"
+  ]
+}
+```
+
+Source: [`packages/browser/tool-browser/src/index.ts`](../packages/browser/tool-browser/src/index.ts)
+
+### `browser_navigate`
+
+Move the browser pane to a URL, or walk its history. This drives the browser the user sees in the sidebar, so the user watches the navigation happen. Returns the state reached; a navigation that did not finish loading reports so instead of failing.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "action": {
+      "type": "string",
+      "description": "goto requires url; back, forward, and reload use the pane history.",
+      "enum": [
+        "goto",
+        "back",
+        "forward",
+        "reload"
+      ]
+    },
+    "url": {
+      "type": "string",
+      "description": "Absolute http(s) URL; required for goto."
+    }
+  },
+  "required": [
+    "action"
+  ]
+}
+```
+
+Source: [`packages/browser/tool-browser/src/index.ts`](../packages/browser/tool-browser/src/index.ts)
+
+### `browser_observe`
+
+Read the current page as a tree of accessibility nodes, each actionable node carrying a reference like @e12. This is how to find elements to act on: read the tree, then pass a reference to browser_act. References stay resolvable for the next call; re-observe after a navigation or a large DOM change. Output is bounded, and a truncated reading reports a cursor to continue from.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "cursor": {
+      "type": "string",
+      "description": "Continuation cursor from a truncated observation."
+    },
+    "maxNodes": {
+      "type": "number",
+      "description": "Maximum element lines to render."
+    },
+    "maxDepth": {
+      "type": "number",
+      "description": "Deepest accessibility level to render."
+    }
+  }
+}
+```
+
+Source: [`packages/browser/tool-browser/src/index.ts`](../packages/browser/tool-browser/src/index.ts)
+
+### `browser_screenshot`
+
+Capture the browser pane as an image and return it, so layout, styling, and rendering can be judged directly. Capture the viewport, the whole document with full_page, or one element by reference. Requires the current model to accept image input.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "full_page": {
+      "type": "boolean",
+      "description": "Capture the whole document instead of the viewport."
+    },
+    "ref": {
+      "type": "string",
+      "description": "Element reference to capture exactly one element."
+    },
+    "selector": {
+      "type": "string",
+      "description": "CSS selector to capture exactly one element."
+    },
+    "format": {
+      "type": "string",
+      "description": "Image format; defaults to the deployment setting.",
+      "enum": [
+        "png",
+        "jpeg"
+      ]
+    },
+    "quality": {
+      "type": "number",
+      "description": "JPEG quality from 1 to 100."
+    }
+  }
+}
+```
+
+Source: [`packages/browser/tool-browser/src/index.ts`](../packages/browser/tool-browser/src/index.ts)
+
+### `browser_state`
+
+Read what the browser pane currently shows: URL, title, loading status, history availability, and viewport size. This is the cheap check between steps when the structure of the page does not matter.
+
+```json
+{
+  "type": "object",
+  "properties": {}
+}
+```
+
+Source: [`packages/browser/tool-browser/src/index.ts`](../packages/browser/tool-browser/src/index.ts)
+
+The browser tools wait for `ctx.browser`: a deployment whose composition mounts no browser provider registers none of them, and the desktop composition mounts one because only the shell owns the embedded pane. Every action reports the page state it produced, and screenshots return an image block, so a step is verified by the operation that made it.

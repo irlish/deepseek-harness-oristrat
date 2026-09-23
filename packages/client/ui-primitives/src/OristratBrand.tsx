@@ -2,6 +2,8 @@ import { OristratMark } from './OristratMark.tsx'
 
 /** Display options for the composed Oristrat brand identity. */
 export interface OristratBrandProps {
+  /** Locale-owned full name, visible wordmark, and badge text. */
+  labels: { readonly fullName: string; readonly wordmark: string; readonly badge: string }
   /** Mark width in px (default 24; height keeps the mark ratio). */
   size?: number
   /** Extra class for layout placement. */
@@ -16,17 +18,18 @@ export interface OristratBrandProps {
  * primary ink token as its fill with the inverted label token as its text,
  * the same pair the sidebar version capsule used, so light and dark themes
  * both read as a solid emphasis chip.
+ * @param props.labels - localized name, visible wordmark, and badge text.
  * @param props.size - mark width in px (default 24).
  * @param props.className - extra class for layout placement.
  * @param props.includeMark - whether to include the leading mark.
  * @returns the brand row (aria-label carries the full name; inner art is decorative).
  */
-export function OristratBrand({ size = 24, className, includeMark = true }: OristratBrandProps) {
+export function OristratBrand({ labels, size = 24, className, includeMark = true }: OristratBrandProps) {
   return (
     <span
       className={className}
       style={{ display: 'inline-flex', alignItems: 'center', gap: Math.max(6, Math.round(size * 0.28)) }}
-      aria-label="Oristrat AI STEM"
+      aria-label={labels.fullName}
     >
       {includeMark ? <OristratMark size={size} /> : null}
       <span
@@ -37,7 +40,7 @@ export function OristratBrand({ size = 24, className, includeMark = true }: Oris
           lineHeight: 1,
           whiteSpace: 'nowrap',
         }}
-      >Oristrat AI</span>
+      >{labels.wordmark}</span>
       <span
         style={{
           display: 'inline-flex',
@@ -53,7 +56,7 @@ export function OristratBrand({ size = 24, className, includeMark = true }: Oris
           whiteSpace: 'nowrap',
         }}
         aria-hidden="true"
-      >STEM</span>
+      >{labels.badge}</span>
     </span>
   )
 }

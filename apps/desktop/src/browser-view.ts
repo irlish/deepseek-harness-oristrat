@@ -82,6 +82,7 @@ export class DesktopBrowserViewController {
   private view: WebContentsView | undefined
   private attached = false
   private state: DesktopBrowserState = { url: '', title: '', canGoBack: false, canGoForward: false, loading: false }
+  private attachWaiters: (() => void)[] = []
 
   /** @param window - application window whose contentView hosts the view. */
   constructor(private readonly window: BrowserWindow) {}
@@ -89,6 +90,48 @@ export class DesktopBrowserViewController {
   /** Latest published navigation snapshot. */
   getState(): DesktopBrowserState {
     return this.state
+  }
+
+  /** Whether the view is currently attached to the window. */
+  isAttached(): boolean {
+    return this.attached && this.view !== undefined
+  }
+
+  /**
+   * The attached view's webContents.
+   * @returns the webContents, or undefined while no view exists.
+   */
+  contents(): WebContents | undefined {
+    const contents = this.view?.webContents
+    return contents === undefined || contents.isDestroyed() ? undefined : contents
+  }
+
+  /**
+   * Wait for the renderer to attach the view, which is how the main process
+   * asks a pane that automation needs and the user has not opened yet.
+   * @param ms - longest time to wait.
+   * @returns whether the view became attached within the deadline.
+   */
+  async waitForAttach(ms: number): Promise<boolean> {
+    if (this.isAttached()) return true
+    return await new Promise<boolean>((resolvePromise) => {
+      const timer = setTimeout(() => {
+        this.attachWaiters = this.attachWaiters.filter(waiter => waiter !== onAttach)
+        resolvePromise(false)
+      }, ms)
+      const onAttach = (): void => {
+        clearTimeout(timer)
+        resolvePromise(true)
+      }
+      this.attachWaiters.push(onAttach)
+    })
+  }
+
+  /** Resolve every pending {@link waitForAttach} because the view attached. */
+  private noteAttached(): void {
+    const waiting = this.attachWaiters
+    this.attachWaiters = []
+    for (const waiter of waiting) waiter()
   }
 
   /**
@@ -105,6 +148,7 @@ export class DesktopBrowserViewController {
     this.attached = true
     this.setBounds(bounds)
     if (url !== undefined && isBrowsableUrl(url)) void view.webContents.loadURL(url)
+    this.noteAttached()
     this.publish()
   }
 
@@ -126,6 +170,7 @@ export class DesktopBrowserViewController {
     if (view === undefined) return
     this.view = undefined
     this.attached = false
+    this.attachWaiters = []
     this.state = { url: '', title: '', canGoBack: false, canGoForward: false, loading: false }
     if (!this.window.isDestroyed()) this.window.contentView.removeChildView(view)
     view.webContents.close()

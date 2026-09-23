@@ -8,23 +8,8 @@ for (const ring of document.querySelectorAll('#logo .ring')) {
   })
 }
 
-// Plain-browser preview (no preload): static fallback copy so the loading
-// animation renders outside Electron for visual review and screenshots.
-const preview = navigator.language.startsWith('zh')
-const FALLBACK = {
-  id: preview ? 'zh' : 'en',
-  messages: {
-    startupLoading: preview ? '加载中...' : 'Loading…',
-    startupLoadingDescription: '',
-    startupFailed: preview ? '启动失败' : 'Startup failed',
-    startupErrorDescription: preview ? '启动过程中出现错误。' : 'Something went wrong while starting.',
-    startupConfigurationAdvice: '',
-    startupReinstallAdvice: '',
-    restartApplication: preview ? '重启' : 'Restart',
-    disableThirdPartyPlugins: preview ? '禁用第三方插件' : 'Disable third-party plugins',
-    resetConfiguration: preview ? '重置配置' : 'Reset configuration',
-  },
-}
+// The preview has no preload; its locale dictionary is loaded before this script.
+const FALLBACK = window.dshStartupFallbackLocales[navigator.language.startsWith('zh') ? 'zh' : 'en']
 
 async function main() {
   const { id, messages } = api === undefined ? FALLBACK : await api.locale()

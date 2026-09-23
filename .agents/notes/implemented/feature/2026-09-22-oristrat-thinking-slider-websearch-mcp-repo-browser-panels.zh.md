@@ -26,6 +26,7 @@ fork 的产品负责人在一轮内要求四项用户可见能力：
 
 - `StreamableHttpConfig` 新增 `authorizationEnv`：一个凭据引用，每次连接尝试时通过 credentials 服务解析并合并为 `Authorization: Bearer <value>`；凭据缺失或 credentials 服务缺失时严格启动即大声失败，重连自动采用轮换后的密钥而无需重启。
 - desktop-host patch 挂载 `dashscope-websearch`（streamable-http，`failOnStartupError: false`），工具以 `mcp__dashscope-websearch__bailian_web_search` 出现。密钥只存在于 `$DSH_HOME/.env` 的 `DASHSCOPE_API_KEY`；配置文件只携带引用，永不携带机密。
+- Desktop 禁用宿主的 `web-search-deepseek` 提供方，并在 agent 创建时及每次模型步骤前屏蔽从 preset 继承的 `web_search`。该限制从提示词组装和执行中移除原生搜索，同时保留 `web_fetch` 与 DashScope MCP 工具。MCP 缺少密钥或离线时，搜索不可用，不会转而调用 DeepSeek 提供方；用户在 agent 本地注册的搜索工具仍可见。
 
 ### 仓库环境面板（F3）
 
@@ -47,6 +48,7 @@ fork 的产品负责人在一轮内要求四项用户可见能力：
 
 - 推理强度选择：保留 effort 二级面板（多一层菜单、无拖动交互），或原生 `<input type="range">`（无法渲染档位圆点、填充轨道与空心未设定圆点，且与菜单样式冲突）。自定义档位滑块经未改动的 `directory.select` 路径提交，宿主侧选择语义零变化。
 - MCP 鉴权：`headers: { Authorization: !!js ... }` 会把机密写进可提交的配置文件且轮换需重启；在配置解析时一次性展开环境变量则失去逐次解析。`authorizationEnv` 改为每次连接尝试都经 credentials 服务解析。
+- Desktop 搜索路由：仅禁用 `web-search-deepseek` 仍会让 preset 的 `web_search` 可见，并产生提供方错误；只覆盖宿主层的 `tool-web` 也触达不了 preset 的常驻作用域。逐 agent 的工具限制会从 schema 和执行中移除继承的搜索，且不改变 Web 与 CLI 的 preset。
 - 仓库事实来源：`git status --porcelain` 只有文件清单没有 +/- 合计；`diff --numstat HEAD` 直接给出合计。推送通道（fs watch 或 git hooks）对只读面板过重被否决；选择 4 秒轮询并把最多滞后一次轮询写入文档。
 - 内嵌浏览器：`<webview>` 标签需要开启 `webviewTag` 并引入弃用标签的 sandbox 面；iframe 会被多数站点的 `X-Frame-Options`/CSP `frame-ancestors` 拒绝，也无法携带隔离的持久分区；`BrowserView` 已弃用。主进程 `WebContentsView` 加渲染进程推送边界，保持 sandbox 默认值与单一所有权点。
 
@@ -55,3 +57,4 @@ fork 的产品负责人在一轮内要求四项用户可见能力：
 - 每个新源文件保持逐文件 100% 覆盖率；确实不可达的防御分支带有说明理由的 `v8 ignore` 注释（detached HEAD 后的短 sha 回退、show-toplevel 之后的 remote 列表失败、rev-list 列守卫、stdout 收集器回退、effect 时点的 ref 守卫）。
 - fork 既有红灯保持原样并记录在案：`apps/desktop/renderer/startup.js` 与 `OristratBrand.tsx` 的 `verify-client-ui-i18n` 命中、基线 HEAD 上即超时的 `main-startup.spec.ts`、`test:gui` 漂移（ui-layout/ui-settings-models/ui-settings-general/ui-chat/ui-deliverables），以及仅存在于 fork 文件的其余全仓 oxlint 错误。
 - 内嵌浏览器仅桌面端可用；Web 宿主得到提示面板。每窗口单视图意味着第二个浏览器标签复用同一视图，隐藏标签保持浏览状态存活；状态仅随窗口销毁。
+- Desktop 搜索策略的 Host 测试固定提示词 schema、执行拒绝、MCP 工具后续注册以及最终 patch 组合。无密钥录制会话回放通过已交付的 headless profile 挂载同一策略与确定性 MCP 工具，固定完整的模型提示词和工具目录。真实 DashScope tools/list 与搜索调用确认了 `bailian_web_search` 和带 URL 的结果；该快照不启动 Electron 通信层。该条目的激活顺序由[凭据顺序笔记](2026-09-24-oristrat-desktop-search-credentials-ordering.zh.md)负责，它加入被注入的凭据服务以及保证工具保持注册的接线测试。

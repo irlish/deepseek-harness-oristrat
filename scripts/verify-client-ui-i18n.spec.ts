@@ -61,6 +61,14 @@ describe('Client UI i18n source check', () => {
       'packages/client/ui-example/src/client/locales.ts',
       'export const en = { title: "Hard-coded by design" }',
     )).toEqual([])
+    expect(findUiI18nViolations(
+      'apps/desktop/renderer/locales.js',
+      'window.dshStartupFallbackLocales = { en: { startupFailed: "Startup failed" } }',
+    )).toEqual([])
+    expect(findUiI18nViolations(
+      'apps/desktop/renderer/startup.js',
+      'const messages = { startupFailed: "Startup failed" }',
+    ).map(row => row.text)).toEqual(['Startup failed'])
   })
 
   it('rejects Electron dialog, title, prompt, and DOM copy outside locale owners', () => {

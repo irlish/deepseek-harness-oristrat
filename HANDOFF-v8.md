@@ -1,0 +1,30 @@
+# Oristrat AI Stem v8 handoff — sidebar browser as an agent automation surface
+
+This round adds a capability seam that lets the agent drive the **sidebar browser pane** over the Chrome DevTools Protocol through Electron's `webContents.debugger`, so a test run is visible in the pane while it happens and can be inspected with text observations and screenshots — without stealing the user's mouse, keyboard, or window focus.
+
+Release artifact: `apps/desktop/.desktop-build/targets/mac-arm64/unsigned-artifacts/` (`Oristrat AI Stem.app` under `mac-arm64/`, plus zip/dmg) — zip SHA256 `756c4b5f027817fed961dd0f038b1c1d7a2fcd585053181682031483382e55a6` (240,962,325 bytes), dmg SHA256 `55736c718bc3ab2ab956399389dd6a01c10baa8a9137612f547bcb75a4138723` (231,857,481 bytes), built 2026-09-24 02:37 from this working tree, `app.asar` SHA256 `50488820d381d0ea9cc909099f2aabc9e0094f11fc21b4abe40ea54a11bd3531`. Installed over `/Applications/Oristrat AI Stem.app` with `ditto` after the round-4 build moved to `~/Library/Application Support/oristrat-stem-backups/Oristrat AI Stem-v7.app`. Launched and verified: the host subprocess runs from the installed bundle and `~/.oristrat/profiles/desktop/node_modules/@deepseek-ai/` carries `dsh-browser`, `dsh-browser-desktop`, `dsh-client-ui-browser-panel`, and `dsh-tool-browser`; window captured in `.artifacts/v8-app.png`.
+
+Packaging environment, both required on this host: run the package scripts with a real Node 22 (`PATH="/Users/irlish/.hermes/node/bin:$PATH"`) because the default `node` resolves into the DSH Desktop app's Electron binary and `build:native-system` then fails on missing Node-API headers; and set `DSH_DESKTOP_APP_ID=ai.oristrat.stem`, which even the unsigned path requires. Launch the built app from this harness with `env -u ELECTRON_RUN_AS_NODE open -n "/Applications/Oristrat AI Stem.app"` — the harness exports `ELECTRON_RUN_AS_NODE=1` to tool subprocesses, which makes any Electron app start as plain Node and exit silently.
+
+## What shipped (round 5)
+
+1. **Capability seam `packages/browser/`** — `browser` (Service Definition: branded `BrowserRef`/`BrowserOwner`, ten closed `BROWSER_*` codes, `BrowserTransport`, abstract `BrowserAutomation` with seven operations), `browser-desktop` (Provider over the brokered transport: accessibility-tree observation, CDP `Input.*` interaction, capture, per-origin policy, single-owner lease), `tool-browser` (Consumer: `browser_state`, `browser_navigate`, `browser_observe`, `browser_act`, `browser_screenshot`, `browser_console`, `browser_eval`).
+2. **Command channel** — `apps/desktop` brokers CDP commands for the pane's `WebContents` behind an 18-method allowlist; `apps/desktop-host` forwards them over the existing child-process IPC as `DesktopBrowserChannel` (`browser/cdp` out, `browser/cdp-result`/`browser-cdp-error` back). `DESKTOP_HOST_PROTOCOL_VERSION` is now `4`.
+3. **Visible automation** — the pane auto-reveals when automation starts (`browser/reveal`), and the right-sidebar tab shows a live activity strip (running / idle / current method, zh + en). Screenshots returned by `browser_screenshot` appear in the tool card through the existing image attachment path.
+4. **No OS input, ever** — all interaction is `Input.dispatchMouseEvent`/`dispatchKeyEvent` over CDP. The broker never calls `webContents.focus()`, `activate()`, or `setAlwaysOnTop`, and the view keeps `sandbox: true`, `contextIsolation: true`, and no preload. Phase-0 evidence (window blurred, `isFocused() === false`): `Input.insertText`, click, and wheel scroll all landed and focus never returned.
+
+## Verification performed
+
+- Focused suites: `npx vitest run packages/browser/{browser,browser-desktop,tool-browser}` → 234 tests green; per-file coverage 100% on all `src` files. Desktop surface: `browser-cdp` (20), `browser-view` (18), `host-process` (14), `browser-channel` (9), `host-protocol` (6), `preload-app` (5) — 76 tests green. Client pane: 22 green.
+- `pnpm run typecheck` clean (host and client faces). `npx tsc -b tsconfig.host.json` clean.
+- Documentation gates: `pnpm run test:docs` 16/16; `verify-translation-pairing` 825/825 pairs; `verify-cordis-catalog` 99 regions; `verify-config-catalog`; `verify-agent-note-format` 348.
+- `pnpm run hygiene`: 15/16 — the only red is the pre-existing `verify-client-ui-i18n` drift (`apps/desktop/renderer/startup.js` and `packages/client/ui-primitives/src/OristratBrand.tsx`), zero findings in the new pane.
+- `pnpm run lint` cannot run on this host: oxlint 1.76.0 dies with SIGTRAP (exit 133) whenever a `jsPlugins` entry loads. A probe using the committed config minus the two JS-plugin blocks reported 0 errors / 5 pre-existing warnings over every touched directory.
+- Known pre-existing reds, unchanged and unrelated to this round: `test:gui` 89 failures at exact baseline parity; `test:snapshot` 104 failures caused by the fork's resident MSCE prompt injection (the failing diffs contain no `browser` text); `apps/desktop` `main-startup`/`macos-signature`/`package-target`/`startup-renderer` at baseline. `test:coverage` cannot boot on this host: `build:native-system` needs Node-API headers and the runtime here is the app's Electron binary.
+
+## Notes for the next round
+
+- The Agent Note records four deviations from the approved plan: inline base64 screenshots with a hard cap instead of a temp-file handoff; no `visibility` config (main always asks the renderer to reveal); a main→renderer `browserActivity` IPC push instead of a Typert Remote activity face ("stop" is the session interrupt); and no bundled skill.
+- `browser_act`'s output and render now carry the reference with its `@` sigil, matching what the model writes and what `browser_observe` prints.
+- The broker's 18-method allowlist is the channel's entire capability and is asserted equal to the provider's command set by `apps/desktop/tests/host-protocol.spec.ts`.
+- `docs/subsystems/browser.md` owns the seam's contract; `docs/tool-catalog.md` owns the seven tool schemas; the package READMEs own config tables and model-visible text.

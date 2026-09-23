@@ -231,4 +231,78 @@ describe('DesktopBrowserViewController', () => {
     // The retained snapshot survives a dead view.
     expect(controller.getState().url).toBe('https://example.com/')
   })
+
+  it('reports attachment and the contents automation drives', () => {
+    expect(controller.isAttached()).toBe(false)
+    expect(controller.contents()).toBeUndefined()
+
+    controller.open({ x: 0, y: 0, width: 10, height: 10 })
+    expect(controller.isAttached()).toBe(true)
+    expect(controller.contents()).toBe(view().webContents as never)
+
+    // Hiding keeps the view and its contents; closing drops the contents.
+    controller.hide()
+    expect(controller.isAttached()).toBe(false)
+    expect(controller.contents()).toBe(view().webContents as never)
+    controller.open({ x: 0, y: 0, width: 10, height: 10 })
+    expect(controller.isAttached()).toBe(true)
+
+    controller.close()
+    expect(controller.isAttached()).toBe(false)
+    expect(controller.contents()).toBeUndefined()
+  })
+
+  it('reports no contents once the view contents were destroyed', () => {
+    controller.open({ x: 0, y: 0, width: 10, height: 10 })
+    expect(controller.contents()).toBeDefined()
+    view().webContents.isDestroyed.mockReturnValue(true)
+    expect(controller.contents()).toBeUndefined()
+  })
+
+  it('resolves an attach wait immediately for a pane that is already attached', async () => {
+    controller.open({ x: 0, y: 0, width: 10, height: 10 })
+    await expect(controller.waitForAttach(5_000)).resolves.toBe(true)
+  })
+
+  it('resolves an attach wait as soon as the renderer opens the pane', async () => {
+    const waiting = controller.waitForAttach(5_000)
+    expect(controller.isAttached()).toBe(false)
+    controller.open({ x: 0, y: 0, width: 10, height: 10 })
+    await expect(waiting).resolves.toBe(true)
+  })
+
+  it('resolves an attach wait that reached its deadline without an open', async () => {
+    vi.useFakeTimers()
+    try {
+      const waiting = controller.waitForAttach(250)
+      let settled: boolean | undefined
+      void waiting.then((value) => { settled = value })
+      await vi.advanceTimersByTimeAsync(249)
+      expect(settled).toBeUndefined()
+      await vi.advanceTimersByTimeAsync(1)
+      expect(settled).toBe(false)
+      await expect(waiting).resolves.toBe(false)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('drops attach waiters when the pane closes, so a later open cannot settle them', async () => {
+    vi.useFakeTimers()
+    try {
+      controller.open({ x: 0, y: 0, width: 10, height: 10 })
+      controller.hide()
+      const waiting = controller.waitForAttach(500)
+      let settled: boolean | undefined
+      void waiting.then((value) => { settled = value })
+      controller.close()
+      controller.open({ x: 0, y: 0, width: 10, height: 10 })
+      await vi.advanceTimersByTimeAsync(1)
+      expect(settled).toBeUndefined()
+      await vi.advanceTimersByTimeAsync(500)
+      await expect(waiting).resolves.toBe(false)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
 })

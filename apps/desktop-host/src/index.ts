@@ -20,6 +20,9 @@ import {
   loadOverlayPatches,
 } from '@deepseek-ai/dsh-app-boot'
 import { provideCmdline } from '@deepseek-ai/dsh-cmdline'
+import { BROWSER_TRANSPORT_ERROR_CODES } from '@deepseek-ai/dsh-browser'
+import { DESKTOP_BROWSER_TRANSPORT_KEY } from '@deepseek-ai/dsh-browser-desktop'
+import { DesktopBrowserChannel } from './browser-channel.ts'
 import { DSH_LAUNCH_ENVIRONMENT_KEY } from '@deepseek-ai/dsh-launch-environment'
 import type {} from '@deepseek-ai/dsh-api-gateway'
 import type { ConnectionFetchHandler } from '@deepseek-ai/dsh-client-connection'
@@ -38,6 +41,7 @@ import {
   type DesktopHostRequestFrame,
 } from './wire.ts'
 import type { DesktopPipeWebServer } from './pipe-webserver.ts'
+import { installDesktopSearchPolicy } from './search-policy.ts'
 
 export { apply, inject, name } from './pipe-webserver.ts'
 export { DESKTOP_HOST_PROTOCOL_VERSION } from './wire.ts'
@@ -57,7 +61,29 @@ export type DesktopHostCommand = {
   readonly type: 'shutdown'
 }
 
-/** Events emitted by the desktop child process. */
+/**
+ * Failure codes a brokered CDP command reports back to the Host. The browser
+ * capability owns this vocabulary; the desktop protocol re-exports it so the
+ * shell and the Host cannot drift apart on what a code means.
+ */
+export const DESKTOP_BROWSER_CDP_ERROR_CODES = BROWSER_TRANSPORT_ERROR_CODES
+
+/** One failure code carried by a rejected brokered CDP command. */
+export type DesktopBrowserCdpErrorCode = typeof DESKTOP_BROWSER_CDP_ERROR_CODES[number]
+
+/** CDP replies the shell returns for requests this Host issued. */
+export type DesktopBrowserCdpReply = {
+  readonly type: 'browser/cdp-result'
+  readonly requestId: number
+  readonly result: unknown
+} | {
+  readonly type: 'browser/cdp-error'
+  readonly requestId: number
+  readonly code: DesktopBrowserCdpErrorCode
+  readonly message: string
+}
+
+/** Events and brokered requests emitted by the desktop child process. */
 export type DesktopHostEvent = {
   readonly type: 'ready'
   readonly protocolVersion: typeof DESKTOP_HOST_PROTOCOL_VERSION
@@ -65,6 +91,11 @@ export type DesktopHostEvent = {
 } | {
   readonly type: 'fatal'
   readonly message: string
+} | {
+  readonly type: 'browser/cdp'
+  readonly requestId: number
+  readonly method: string
+  readonly params: unknown
 }
 
 /** Controller returned to tests and the self-executing process entry. */
@@ -77,6 +108,8 @@ export interface DesktopHostController {
   cancel(streamId: number): void
   /** Stop accepting messages and await complete host teardown. */
   dispose(): Promise<void>
+  /** Settle the brokered browser command one shell reply belongs to. */
+  settleBrowserCdp(reply: DesktopBrowserCdpReply): void
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -86,6 +119,24 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function isDesktopHostCommand(message: unknown): message is DesktopHostCommand {
   return typeof message === 'object' && message !== null && 'type' in message
     && (message as Record<string, unknown>).type === 'shutdown'
+}
+
+function isBrowserCdpErrorCode(value: unknown): value is DesktopBrowserCdpErrorCode {
+  return typeof value === 'string' && (DESKTOP_BROWSER_CDP_ERROR_CODES as readonly string[]).includes(value)
+}
+
+function isBrowserCdpReply(message: unknown): message is DesktopBrowserCdpReply {
+  if (typeof message !== 'object' || message === null || !('type' in message)) return false
+  const candidate = message as Record<string, unknown>
+  if (!Number.isInteger(candidate.requestId) || (candidate.requestId as number) < 1) return false
+  switch (candidate.type) {
+    case 'browser/cdp-result':
+      return 'result' in candidate
+    case 'browser/cdp-error':
+      return isBrowserCdpErrorCode(candidate.code) && typeof candidate.message === 'string'
+    default:
+      return false
+  }
 }
 
 interface PackageManifest {
@@ -275,20 +326,23 @@ interface NodeRequestInit extends RequestInit {
  * @param runtimeDir - immutable dsh packages supplied by the Electron application.
  * @param projectDir - active or staged Electron-owned desktop profile.
  * @param writeResponse - serialized response-pipe writer that applies byte backpressure.
- * @param options - development-only allowance for workspace-linked bundle packages.
+ * @param options - development-only allowance for workspace-linked bundle packages,
+ *   plus the event sender the application entry owns.
  * @returns controller after every Host and client-manifest row is active.
  */
 export async function runDesktopHost(
   runtimeDir: string,
   projectDir: string,
   writeResponse: (frame: Buffer) => Promise<void>,
-  options: { allowLinkedPackages?: boolean } = {},
+  options: { allowLinkedPackages?: boolean; post?: (event: DesktopHostEvent) => void } = {},
 ): Promise<DesktopHostController> {
   const absoluteProject = resolve(projectDir)
   mkdirSync(absoluteProject, { recursive: true })
   const rootConfig = join(absoluteProject, ROOT_CONFIG_FILENAME)
   writeFileSync(rootConfig, ROOT_CONFIG)
   const environment = loadLayeredEnv('dsh desktop')
+  const post = options.post ?? ((event: DesktopHostEvent): void => { process.send?.(event) })
+  const browserChannel = new DesktopBrowserChannel(post)
   let current: Context | undefined
   const ctx = await boot('dsh desktop', rootConfig, structuredClone(desktopPatches(
     resolve(runtimeDir),
@@ -297,7 +351,9 @@ export async function runDesktopHost(
   )), (hostCtx) => {
     current = hostCtx
     hostCtx.provide(DSH_LAUNCH_ENVIRONMENT_KEY, environment)
+    hostCtx.provide(DESKTOP_BROWSER_TRANSPORT_KEY, browserChannel)
     provideCmdline(hostCtx, { args: [], exit: () => {} })
+    installDesktopSearchPolicy(hostCtx)
   })
   current = ctx
   const connection = ctx.get('connection')
@@ -318,6 +374,7 @@ export async function runDesktopHost(
 
   const dispose = async (): Promise<void> => {
     disposing ??= (async () => {
+      browserChannel.fail('closed', 'the desktop Host is stopping')
       for (const controller of requests.values()) controller.abort()
       requests.clear()
       await current?.fiber.dispose()
@@ -330,6 +387,9 @@ export async function runDesktopHost(
     dshVersion: dshVersion(resolve(runtimeDir)),
     cancel(streamId) {
       requests.get(streamId)?.abort()
+    },
+    settleBrowserCdp(reply) {
+      browserChannel.settle(reply)
     },
     async fetch(command, body) {
       if (disposing !== undefined) throw new Error('dsh desktop: host is disposing')
@@ -416,7 +476,10 @@ async function main(): Promise<void> {
       if ((error as NodeJS.ErrnoException).code !== 'ERR_IPC_CHANNEL_CLOSED') throw error
     }
   }
-  const controller = await runDesktopHost(runtimeDir, projectDir, writeResponse, { allowLinkedPackages: option !== undefined })
+  const controller = await runDesktopHost(runtimeDir, projectDir, writeResponse, {
+    allowLinkedPackages: option !== undefined,
+    post: send,
+  })
   send({
     type: 'ready',
     protocolVersion: DESKTOP_HOST_PROTOCOL_VERSION,
@@ -578,6 +641,10 @@ async function main(): Promise<void> {
   requestPipe.once('error', failTransport)
   responsePipe.once('error', failTransport)
   process.on('message', (message: unknown) => {
+    if (isBrowserCdpReply(message)) {
+      controller.settleBrowserCdp(message)
+      return
+    }
     if (!isDesktopHostCommand(message)) {
       send({ type: 'fatal', message: 'dsh desktop: invalid Electron IPC command' })
       void stop(1)

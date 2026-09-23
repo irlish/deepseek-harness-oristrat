@@ -30,6 +30,7 @@ function startup(locale = 'en', status: Promise<DesktopBackendState> = Promise.r
     disablePlugins, resetConfiguration, restart,
   }
   Object.defineProperty(dom.window, 'dshDesktop', { value: api })
+  runInContext(readFileSync(new URL('../renderer/locales.js', import.meta.url), 'utf8'), dom.getInternalVMContext())
   runInContext(readFileSync(new URL('../renderer/startup.js', import.meta.url), 'utf8'), dom.getInternalVMContext())
   const document = dom.window.document
   const element = (selector: string): HTMLElement => {
@@ -53,15 +54,28 @@ function startup(locale = 'en', status: Promise<DesktopBackendState> = Promise.r
     disablePlugins, resetConfiguration, restart, unsubscribe, queried: queried.promise }
 }
 
+it.each([
+  ['en-US', 'Loading…'],
+  ['zh-CN', '加载中...'],
+])('loads the plain-browser preview dictionary for %s', async (language, loading) => {
+  const dom = new JSDOM(readFileSync(new URL('../renderer/startup.html', import.meta.url), 'utf8'), { runScripts: 'outside-only' })
+  onTestFinished(() => { dom.window.close() })
+  Object.defineProperty(dom.window.navigator, 'language', { value: language })
+  runInContext(readFileSync(new URL('../renderer/locales.js', import.meta.url), 'utf8'), dom.getInternalVMContext())
+  runInContext(readFileSync(new URL('../renderer/startup.js', import.meta.url), 'utf8'), dom.getInternalVMContext())
+  await expect.poll(() => dom.window.document.querySelector('#title')?.textContent).toBe(loading)
+  expect(dom.window.document.documentElement.lang).toBe(language.startsWith('zh') ? 'zh' : 'en')
+})
+
 it('shows English loading and recovery actions without a Host document', async () => {
   const page = startup()
-  await expect.poll(() => page.element('#title').textContent).not.toBe('')
+  await expect.poll(() => page.element('#title').textContent).toBe('Loading…')
   expect(page.copy()).toMatchInlineSnapshot(`
-    "Starting DeepSeek Harness…
-    Your workspace will open when it is ready."
+    "Loading…
+    "
   `)
   expect(page.element('main').getAttribute('aria-busy')).toBe('true')
-  expect(page.element('#spinner').hidden).toBe(false)
+  expect(page.element('#logo').hidden).toBe(false)
   expect(page.element('#actions').hidden).toBe(true)
   expect(page.button('#restart').disabled).toBe(true)
   expect(page.button('#disable-plugins').disabled).toBe(true)
@@ -77,7 +91,7 @@ it('shows English loading and recovery actions without a Host document', async (
     Reset Desktop and retry"
   `)
   expect(page.element('main').getAttribute('aria-busy')).toBe('false')
-  expect(page.element('#spinner').hidden).toBe(true)
+  expect(page.element('#logo').hidden).toBe(true)
   page.button('#restart').click()
   expect(page.restart).toHaveBeenCalledOnce()
   expect(page.element('#actions').hidden).toBe(true)
@@ -87,11 +101,11 @@ it('shows English loading and recovery actions without a Host document', async (
 
 it('shows Chinese loading and recovery copy', async () => {
   const page = startup('zh-CN')
-  await expect.poll(() => page.element('#title').textContent).not.toBe('')
+  await expect.poll(() => page.element('#title').textContent).toBe('加载中...')
   expect(page.document.documentElement.lang).toBe('zh-CN')
   expect(page.copy()).toMatchInlineSnapshot(`
-    "正在启动 DeepSeek Harness…
-    准备就绪后将自动打开工作区。"
+    "加载中...
+    "
   `)
   page.publish({ phase: 'error', profileRecovery: true, message: '插件加载失败' })
   expect(page.copy()).toMatchInlineSnapshot(`

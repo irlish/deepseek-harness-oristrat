@@ -1,7 +1,7 @@
 /** Versioned control messages and framed byte transport for the Desktop Host child. */
 
 /** Protocol version implemented by the Electron shell and installed dsh Host. */
-export const DESKTOP_HOST_PROTOCOL_VERSION = 3 as const
+export const DESKTOP_HOST_PROTOCOL_VERSION = 4 as const
 
 /** Child descriptor Electron writes request frames to. */
 export const DESKTOP_REQUEST_PIPE_FD = 3
@@ -39,12 +39,37 @@ export interface DesktopHostRequestStart {
   readonly hasBody: boolean
 }
 
+/** Failure codes a brokered CDP command reports back to the Host. */
+export const DESKTOP_BROWSER_CDP_ERROR_CODES = [
+  'not-open',
+  'devtools-open',
+  'method-not-allowed',
+  'attach-failed',
+  'payload-too-large',
+  'timeout',
+  'aborted',
+  'closed',
+  'protocol-error',
+] as const
+
+/** One failure code carried by a rejected brokered CDP command. */
+export type DesktopBrowserCdpErrorCode = typeof DESKTOP_BROWSER_CDP_ERROR_CODES[number]
+
 /** Commands retained on Node IPC because they do not carry Fetch payload bytes. */
 export type DesktopHostCommand = {
   readonly type: 'shutdown'
+} | {
+  readonly type: 'browser/cdp-result'
+  readonly requestId: number
+  readonly result: unknown
+} | {
+  readonly type: 'browser/cdp-error'
+  readonly requestId: number
+  readonly code: DesktopBrowserCdpErrorCode
+  readonly message: string
 }
 
-/** Lifecycle events retained on Node IPC. */
+/** Lifecycle events and brokered requests retained on Node IPC. */
 export type DesktopHostEvent = {
   readonly type: 'ready'
   readonly protocolVersion: typeof DESKTOP_HOST_PROTOCOL_VERSION
@@ -52,6 +77,11 @@ export type DesktopHostEvent = {
 } | {
   readonly type: 'fatal'
   readonly message: string
+} | {
+  readonly type: 'browser/cdp'
+  readonly requestId: number
+  readonly method: string
+  readonly params: unknown
 }
 
 /** One decoded response-pipe frame. */

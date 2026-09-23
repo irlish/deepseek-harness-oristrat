@@ -45,6 +45,7 @@
 | `@deepseek-ai/dsh-tool-todo` | `todo_write` | `ctx.tools`、`owning Agent session` | `tool/call`、`todo/write`、`tool/result` | - | todo_write 是会话所有的状态；UI 将最新的 todo/write 事件渲染为检查清单。`allowParallelInProgress` 是没有默认值的必填项，因此本目录明确选择 `true`，对应描述允许同时存在多个 `in_progress` 项。选择 `false` 的部署会获得同一工具，但描述会要求只能有 1 个活动任务。 |
 | `@deepseek-ai/dsh-tool-workflow` | `workflow` | `ctx.tools`、`ctx.workflowEngine`、`ctx.systemPrompt`、`a calling Agent (exec.agent parents the script children)` | `tool/call`、`tool/result` | - | - |
 | `@deepseek-ai/dsh-tool-web` | `web_fetch`、`web_search` | `ctx.tools`、`ctx.web`、`ctx.systemPrompt` | `tool/call`、`tool/result` | - | web_search 和 web_fetch 将提供方选择置于 ctx.web 之后，使模型可见 schema 在更换后端时保持稳定。 |
+| `@deepseek-ai/dsh-tool-browser` | `browser_act`、`browser_console`、`browser_eval`、`browser_navigate`、`browser_observe`、`browser_screenshot`、`browser_state` | `ctx.tools`、`ctx.browser`、`ctx.attachments (browser_screenshot storage)`、`ctx.llm + an image-capable route (browser_screenshot execution)` | `tool/call`、`tool/result`、`durable attachment (browser_screenshot)` | - | 浏览器工具会等待 `ctx.browser`：组合中未挂载浏览器提供方的部署不会注册其中任何一个，而桌面组合会挂载一个，因为只有 shell 持有内嵌面板。每个动作都会报告它产生的页面状态，截图则返回图像块，因此一个步骤由产生它的那次操作来验证。 |
 
 <a id="deepseek-aidsh-tool-ask-user"></a>
 
@@ -2275,3 +2276,246 @@ todo_write 是会话所有的状态；UI 将最新的 todo/write 事件渲染为
 来源：[`packages/web/tool-web/src/index.ts`](../packages/web/tool-web/src/index.ts)
 
 web_search 和 web_fetch 将提供方选择置于 ctx.web 之后，使模型可见 schema 在更换后端时保持稳定。
+
+<a id="deepseek-aidsh-tool-browser"></a>
+
+## `@deepseek-ai/dsh-tool-browser`
+
+### `browser_act`
+
+驱动页面：点击、悬停、填充、输入、按键、选择选项、滚动或聚焦。输入被发送给页面本身，因此该操作运行期间用户仍可在应用中继续输入。每次调用都会返回它产生的页面状态，这就是验证步骤——请检查该状态，而不要假定动作已生效。
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "action": {
+      "type": "string",
+      "description": "The interaction to perform.",
+      "enum": [
+        "click",
+        "hover",
+        "fill",
+        "type",
+        "press",
+        "select",
+        "scroll",
+        "focus"
+      ]
+    },
+    "ref": {
+      "type": "string",
+      "description": "Element reference from browser_observe, for example @e12."
+    },
+    "selector": {
+      "type": "string",
+      "description": "CSS selector, when no reference is available."
+    },
+    "x": {
+      "type": "number",
+      "description": "Viewport x coordinate, with y, for a point target."
+    },
+    "y": {
+      "type": "number",
+      "description": "Viewport y coordinate, with x, for a point target."
+    },
+    "value": {
+      "type": "string",
+      "description": "Text for fill and type, option value or label for select."
+    },
+    "key": {
+      "type": "string",
+      "description": "Key name for press, for example Enter, Tab, or ArrowDown."
+    },
+    "deltaY": {
+      "type": "number",
+      "description": "Pixels to scroll; defaults to one viewport."
+    },
+    "button": {
+      "type": "string",
+      "description": "Mouse button for click.",
+      "enum": [
+        "left",
+        "middle",
+        "right"
+      ]
+    },
+    "clickCount": {
+      "type": "number",
+      "description": "Click count for click; 2 double-clicks."
+    }
+  },
+  "required": [
+    "action"
+  ]
+}
+```
+
+来源：[`packages/browser/tool-browser/src/index.ts`](../packages/browser/tool-browser/src/index.ts)
+
+### `browser_console`
+
+读取浏览器面板最近的控制台输出与页面错误。用它诊断页面为何行为异常，并查看面板中和而非阻塞处理的页面对话框。
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "since": {
+      "type": "number",
+      "description": "Only entries after this cursor; pass the cursor a previous call returned."
+    },
+    "levels": {
+      "type": "array",
+      "description": "Only these levels.",
+      "items": {
+        "type": "string",
+        "enum": [
+          "debug",
+          "info",
+          "log",
+          "warn",
+          "error"
+        ]
+      }
+    },
+    "limit": {
+      "type": "number",
+      "description": "Maximum entries, newest last."
+    }
+  }
+}
+```
+
+来源：[`packages/browser/tool-browser/src/index.ts`](../packages/browser/tool-browser/src/index.ts)
+
+### `browser_eval`
+
+在页面中求值一个表达式，并以文本形式返回其值。它读取无障碍树不携带的事实，例如计算样式或存储条目。它会在页面中运行真实脚本，因此优先使用结构化工具，仅当它们无法回答问题时才使用本工具。
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "expression": {
+      "type": "string",
+      "description": "JavaScript expression evaluated in the page."
+    }
+  },
+  "required": [
+    "expression"
+  ]
+}
+```
+
+来源：[`packages/browser/tool-browser/src/index.ts`](../packages/browser/tool-browser/src/index.ts)
+
+### `browser_navigate`
+
+把浏览器面板移动到某个 URL，或在其历史记录中前进后退。它驱动用户在侧边栏中看到的浏览器，因此用户会看到导航发生。返回到达的状态；未完成加载的导航会如实报告，而不是失败。
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "action": {
+      "type": "string",
+      "description": "goto requires url; back, forward, and reload use the pane history.",
+      "enum": [
+        "goto",
+        "back",
+        "forward",
+        "reload"
+      ]
+    },
+    "url": {
+      "type": "string",
+      "description": "Absolute http(s) URL; required for goto."
+    }
+  },
+  "required": [
+    "action"
+  ]
+}
+```
+
+来源：[`packages/browser/tool-browser/src/index.ts`](../packages/browser/tool-browser/src/index.ts)
+
+### `browser_observe`
+
+以无障碍节点树的形式读取当前页面，其中每个可操作的节点都携带 `@e12` 这类引用。这是查找待操作元素的方式：先读取该树，再把引用传给 browser_act。引用在下一次调用时仍可解析；导航或 DOM 大幅变动后请重新观察。输出有上限，被截断的阅读会报告可继续读取的游标。
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "cursor": {
+      "type": "string",
+      "description": "Continuation cursor from a truncated observation."
+    },
+    "maxNodes": {
+      "type": "number",
+      "description": "Maximum element lines to render."
+    },
+    "maxDepth": {
+      "type": "number",
+      "description": "Deepest accessibility level to render."
+    }
+  }
+}
+```
+
+来源：[`packages/browser/tool-browser/src/index.ts`](../packages/browser/tool-browser/src/index.ts)
+
+### `browser_screenshot`
+
+把浏览器面板截取为图像并返回，以便直接判断布局、样式与渲染。可以截取视口、用 full_page 截取整个文档，或按引用截取单个元素。要求当前模型接受图像输入。
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "full_page": {
+      "type": "boolean",
+      "description": "Capture the whole document instead of the viewport."
+    },
+    "ref": {
+      "type": "string",
+      "description": "Element reference to capture exactly one element."
+    },
+    "selector": {
+      "type": "string",
+      "description": "CSS selector to capture exactly one element."
+    },
+    "format": {
+      "type": "string",
+      "description": "Image format; defaults to the deployment setting.",
+      "enum": [
+        "png",
+        "jpeg"
+      ]
+    },
+    "quality": {
+      "type": "number",
+      "description": "JPEG quality from 1 to 100."
+    }
+  }
+}
+```
+
+来源：[`packages/browser/tool-browser/src/index.ts`](../packages/browser/tool-browser/src/index.ts)
+
+### `browser_state`
+
+读取浏览器面板当前展示的内容：URL、标题、加载状态、历史记录可用性与视口尺寸。当页面结构无关紧要时，这是步骤之间的低成本检查。
+
+```json
+{
+  "type": "object",
+  "properties": {}
+}
+```
+
+来源：[`packages/browser/tool-browser/src/index.ts`](../packages/browser/tool-browser/src/index.ts)
+
+浏览器工具会等待 `ctx.browser`：组合中未挂载浏览器提供方的部署不会注册其中任何一个，而桌面组合会挂载一个，因为只有 shell 持有内嵌面板。每个动作都会报告它产生的页面状态，截图则返回图像块，因此一个步骤由产生它的那次操作来验证。

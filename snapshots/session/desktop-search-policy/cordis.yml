@@ -1,0 +1,8 @@
+# The Desktop Host policy and a deterministic MCP tool use the shipped
+# headless preset composition for the recorded tool-catalogue regression.
+- id: web-search-deepseek
+  disabled: true
+
+- insert:
+    - id: desktop-search-snapshot
+      name: '../../../apps/desktop-host/tests/fixtures/desktop-search-snapshot.ts'

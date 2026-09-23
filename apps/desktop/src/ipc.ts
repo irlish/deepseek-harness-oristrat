@@ -30,6 +30,8 @@ export const DESKTOP_IPC = {
   browserSetBounds: 'dsh-desktop:browser-set-bounds',
   browserGetState: 'dsh-desktop:browser-get-state',
   browserState: 'dsh-desktop:browser-state',
+  browserReveal: 'dsh-desktop:browser-reveal',
+  browserActivity: 'dsh-desktop:browser-activity',
 } as const
 
 /** Desktop release update state rendered by desktop-owned UI. */
@@ -56,6 +58,21 @@ export interface DesktopBrowserState {
   readonly loading: boolean
 }
 
+/**
+ * What the agent is doing in the embedded browser pane, as the main process
+ * observes it. This is presentation state for the pane's activity strip: the
+ * pane is driven by protocol commands, so the main process is the only place
+ * that knows a command is running right now.
+ */
+export interface DesktopBrowserActivity {
+  /** Whether a command is running right now. */
+  readonly active: boolean
+  /** Protocol method the last command asked for; empty while idle. */
+  readonly method: string
+  /** Epoch milliseconds when the current command started; 0 while idle. */
+  readonly since: number
+}
+
 /** Embedded-browser controls of the desktop bridge. */
 export interface DesktopBrowserApi {
   /** Attach (or re-attach) the view at one placement and optionally load a URL. */
@@ -73,6 +90,14 @@ export interface DesktopBrowserApi {
   state(): Promise<DesktopBrowserState>
   /** Subscribe to navigation snapshot pushes; returns the unsubscribe. */
   subscribe(listener: (state: DesktopBrowserState) => void): () => void
+  /**
+   * Subscribe to requests that the pane be shown, which the main process raises
+   * when automation needs a pane the user has not opened. The listener shows the
+   * browser tab; the main process waits for the resulting `open`.
+   */
+  subscribeReveal(listener: () => void): () => void
+  /** Subscribe to automation-activity pushes; returns the unsubscribe. */
+  subscribeActivity(listener: (activity: DesktopBrowserActivity) => void): () => void
 }
 
 /** Narrow bridge exposed through context isolation. */

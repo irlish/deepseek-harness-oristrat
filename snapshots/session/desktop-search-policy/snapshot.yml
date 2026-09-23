@@ -1,0 +1,8 @@
+version: 1
+scenario: desktop-search-policy
+profile: headless
+composition: desktop-search-policy
+recording: authored
+header:
+  class: desktop-search-policy
+  pin: true

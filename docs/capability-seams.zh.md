@@ -193,6 +193,16 @@ flowchart LR
   svc_jobs["ctx.jobs<br/>Background job registry"]
   pkg_jobs_local["jobs-local"]
   pkg_tool_jobs["tool-jobs"]
+  pkg_browser["browser"]
+  svc_browser["ctx.browser<br/>Browser automation"]
+  pkg_browser_desktop["browser-desktop"]
+  pkg_tool_browser["tool-browser"]
+  pkg_api_gui_repo["api-gui-repo"]
+  svc_guiRepoController["ctx.guiRepoController<br/>Repository environment Remote namespace"]
+  pkg_client_ui_repo_panel["client-ui-repo-panel"]
+  pkg_api_gui_terminal["api-gui-terminal"]
+  svc_guiTerminalController["ctx.guiTerminalController<br/>GUI terminal Remote namespace"]
+  pkg_client_ui_terminal_panel["client-ui-terminal-panel"]
   pkg_web["web"]
   svc_web["ctx.web<br/>Web access provider registry"]
   pkg_web_search_exa["web-search-exa"]
@@ -231,6 +241,8 @@ flowchart LR
   pkg_agent_loop --> svc_agentLoop
   pkg_agent_presets --> svc_agentPresets
   pkg_api_gateway --> svc_typertGateway
+  pkg_api_gui_repo --> svc_guiRepoController
+  pkg_api_gui_terminal --> svc_guiTerminalController
   pkg_api_session_controller --> svc_sessionController
   pkg_api_session_controller --> svc_sessionFileReferences
   pkg_api_session_controller --> svc_sessionSkillCatalog
@@ -244,6 +256,8 @@ flowchart LR
   pkg_authorization --> svc_authorization
   pkg_bash_local --> svc_shell
   pkg_bash_sandbox --> svc_shell
+  pkg_browser --> svc_browser
+  pkg_browser_desktop --> svc_browser
   pkg_client_file_upload --> svc_fileUploads
   pkg_client_modules --> svc_clientModules
   pkg_code_runtime --> svc_codeRuntime
@@ -362,6 +376,7 @@ flowchart LR
   svc_attachments --> pkg_llm_pi_ai
   svc_attachments --> pkg_tool_fs
   svc_authorization --> pkg_llm_pi_ai
+  svc_browser --> pkg_tool_browser
   svc_clientModules --> pkg_client_hmr
   svc_codeRuntime --> pkg_tools
   svc_compaction --> pkg_compaction_basic
@@ -377,6 +392,8 @@ flowchart LR
   svc_fileReferences --> pkg_api_session_controller
   svc_fileUploads --> pkg_api_session_controller
   svc_fs --> pkg_tool_fs
+  svc_guiRepoController --> pkg_client_ui_repo_panel
+  svc_guiTerminalController --> pkg_client_ui_terminal_panel
   svc_invariants --> pkg_agent
   svc_invariants --> pkg_agent_loop
   svc_invariants --> pkg_scope
@@ -538,6 +555,9 @@ flowchart LR
 | `ctx.agentTeams` | `core` | [`experimental-agent-team`](../packages/experimental/agent-team) | - | [`experimental-tool-agent-team`](../packages/experimental/tool-agent-team), [`experimental-client-ui-agent-team`](../packages/experimental/client-ui-agent-team) | - | 负责隐式 Root roster、持久 peer mailbox、共享任务 DAG、continuable child 生命周期与生成式 Team Remote method；tool-agent-team 提供模型控制工具，client-ui-agent-team 挂载浏览器 contribution。 |
 | `ctx.inspector` | `core` | `inspector` | - | - | - | 负责 Worker 托管的 CDP target，以及独立于传输的 Host 和 Client observation 与 Cordis tree query API。 |
 | `ctx.jobs` | `seam` | [`jobs`](../packages/jobs/jobs) | [`jobs-local`](../packages/jobs/jobs-local) | [`tool-bash`](../packages/shell/tool-bash), [`tool-terminal`](../packages/terminal/tool-terminal), [`tool-subagent`](../packages/subagent/tool-subagent), [`tool-jobs`](../packages/jobs/tool-jobs) | - | 生产方（后台 bash、PTY 发送和 subagent 委派）登记正在运行的工作；tool-jobs 是面向模型的控制器，用于读取、列出和终止这些工作；jobs-local 是进程本地注册表。 |
+| `ctx.browser` | `seam` | [`browser`](../packages/browser/browser) | [`browser-desktop`](../packages/browser/browser-desktop) | [`tool-browser`](../packages/browser/tool-browser) | - | 由唯一的提供方持有真实浏览器视图及其命令通道；tool-browser 负责面向模型的 observe-act-verify 循环，未挂载提供方的组合不会注册这些工具。 |
+| `ctx.guiRepoController` | `core` | [`api-gui-repo`](../packages/api/gui-repo) | - | [`client-ui-repo-panel`](../packages/client/ui-repo-panel) | - | 通过一次性的本地 git 调用读取某个目录的 git 环境，并回答分支列表、切换与创建并切换；Host 将其挂载在 Typert Gateway 旁。 |
+| `ctx.guiTerminalController` | `core` | [`api-gui-terminal`](../packages/api/gui-terminal) | - | [`client-ui-terminal-panel`](../packages/client/ui-terminal-panel) | - | 通过 Typert Gateway 将持久终端会话送到 Web GUI，每个会话一个 owner，输出读取有界。 |
 | `ctx.web` | `seam` | [`web`](../packages/web/web) | [`web-search-exa`](../packages/web/web-search-exa), [`web-search-perplexity`](../packages/web/web-search-perplexity), [`web-search-deepseek`](../packages/web/web-search-deepseek), [`web-fetch-http`](../packages/web/web-fetch-http) | [`tool-web`](../packages/web/tool-web) | - | 搜索和抓取提供方注册到同一个 ctx.web seam；tool-web 负责稳定的面向模型名称。 |
 | `ctx.spillStore` | `seam` | [`spill`](../packages/spill/spill) | [`spill-local`](../packages/spill/spill-local) | [`spill-policy`](../packages/spill/spill-policy) | - | 后端保存过大的工具文本，并返回面向模型的定位信息和取回提示；spill-policy 是 tools/post-execute 消费方，负责决定何时 spill。 |
 | `ctx.directoryPicker` | `seam` | [`host-directory-picker`](../packages/host/directory-picker) | [`host-directory-picker-native`](../packages/host/directory-picker-native), [`host-directory-picker-browse`](../packages/host/directory-picker-browse) | [`api-workspace-controller`](../packages/api/workspace-controller) | - | 带判别标记的交互能力：原生后端在 Host 显示设备上打开一个操作系统选择器，浏览后端为应用内浏览器提供列表与创建原语；双端后端通过其浏览器侧填充 ui-workspace 目录流程的 slot（不通过协议发布）。 |

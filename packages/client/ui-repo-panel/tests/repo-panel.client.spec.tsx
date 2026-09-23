@@ -155,8 +155,8 @@ describe('RepoEnvAction environment rows', () => {
 
   it('drops in-flight reads that land after unmount', async () => {
     let resolveStatus: (value: GuiRepoStatusValue) => void = () => {}
-    const repoStatus = vi.fn().mockImplementation(() => new Promise<GuiRepoStatusValue>((resolve) => { resolveStatus = resolve }))
-    const view = render(<RepoEnvAction {...props({ repoStatus })} />)
+    const readStatus = vi.fn().mockImplementation(() => new Promise<GuiRepoStatusValue>((resolve) => { resolveStatus = resolve }))
+    const view = render(<RepoEnvAction {...props({ repoStatus: readStatus })} />)
     fireEvent.click(screen.getByRole('button', { name: '仓库环境' }))
     view.unmount()
     resolveStatus(repoStatus())

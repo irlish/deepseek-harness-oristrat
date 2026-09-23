@@ -12,7 +12,7 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import type { PropsLocale } from '@deepseek-ai/dsh-client-ui-slots'
 import { IconChevronLeftOutline14, IconChevronRightOutline14, IconRefreshOutline14 } from '@deepseek-ai/dsh-client-ui-primitives'
-import type { BrowserState, DesktopBrowserBridge } from './bridge.ts'
+import type { BrowserActivity, BrowserState, DesktopBrowserBridge } from './bridge.ts'
 import { boundsFromLayout, normalizeUrlInput } from './bridge.ts'
 import type {} from './locales.ts'
 import css from './BrowserPanel.module.css'
@@ -41,6 +41,7 @@ export function BrowserPanel({ t, bridge }: BrowserPanelProps): ReactNode {
   const [state, setState] = useState<BrowserState | null>(null)
   const [draft, setDraft] = useState('')
   const [failed, setFailed] = useState<string | null>(null)
+  const [activity, setActivity] = useState<BrowserActivity | null>(null)
 
   const pushBounds = useCallback((): void => {
     const active = bridgeRef.current
@@ -57,6 +58,7 @@ export function BrowserPanel({ t, bridge }: BrowserPanelProps): ReactNode {
     /* v8 ignore next -- the surface ref is attached before the effect runs. */
     if (element === null) return
     const unsubscribe = active.subscribe(setState)
+    const unsubscribeActivity = active.subscribeActivity(setActivity)
     active.open(boundsFromLayout(element)).catch(ignoreBridgeError)
     // The pane's open animation transforms the painted position without
     // resizing the surface; a delayed push lands the view at the settled
@@ -70,6 +72,7 @@ export function BrowserPanel({ t, bridge }: BrowserPanelProps): ReactNode {
     window.addEventListener('scroll', pushBounds, true)
     return () => {
       unsubscribe()
+      unsubscribeActivity()
       clearTimeout(settle)
       observer?.disconnect()
       window.removeEventListener('resize', pushBounds)
@@ -122,6 +125,13 @@ export function BrowserPanel({ t, bridge }: BrowserPanelProps): ReactNode {
           />
         </form>
       </div>
+      {activity?.active === true && (
+        <div className={css.activity} role="status">
+          <span className={css.activityDot} aria-hidden="true" />
+          <span className={css.activityLabel}>{t('activity.running')}</span>
+          <span className={css.activityMethod}>{t('activity.method', { method: activity.method })}</span>
+        </div>
+      )}
       {failed !== null && <div className={css.error}>{t('state.error', { message: failed })}</div>}
       <div ref={surfaceRef} className={css.surface}>
         {state?.url === '' && <div className={css.notice}>{t('state.blank')}</div>}

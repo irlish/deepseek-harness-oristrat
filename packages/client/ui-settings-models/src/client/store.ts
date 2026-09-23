@@ -22,7 +22,6 @@ import type { SettingsSchemaOperations } from './schema-operations.ts'
  */
 const PROBE_ROUTE = '\u0000probe'
 
-/** One provider row after joining the configurable directory with live routes. */
 /** Fork brand: the official provider presents under the Oristrat name. */
 export const ORISTRAT_OFFICIAL_NAME = 'Oristrat - official'
 
@@ -34,6 +33,7 @@ function displayNameOf(provider: string, stored: string): string {
   return OFFICIAL_PROVIDER_IDS.includes(provider) ? ORISTRAT_OFFICIAL_NAME : stored
 }
 
+/** One provider row after joining the configurable directory with live routes. */
 export interface ProviderDirectoryEntry {
   readonly provider: string
   readonly displayName: string

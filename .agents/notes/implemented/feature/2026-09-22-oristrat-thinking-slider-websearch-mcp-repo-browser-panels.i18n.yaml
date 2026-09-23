@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/feature/2026-09-22-oristrat-thinking-slider-websearch-mcp-repo-browser-panels.md
-2026-09-22-oristrat-thinking-slider-websearch-mcp-repo-browser-panels.md: 64d0d196cf5745793406e2a9087e89f036dd3652
-2026-09-22-oristrat-thinking-slider-websearch-mcp-repo-browser-panels.zh.md: a0529c3ed181be8e793e7dba45400368d403b1c6
+2026-09-22-oristrat-thinking-slider-websearch-mcp-repo-browser-panels.md: 6279bb01e5023db68d224530b40db70bd4c2bec1
+2026-09-22-oristrat-thinking-slider-websearch-mcp-repo-browser-panels.zh.md: 61ebd2948cdce66d7928ce71739a3b41eb493286

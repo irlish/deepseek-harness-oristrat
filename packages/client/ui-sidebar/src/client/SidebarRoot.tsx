@@ -237,7 +237,9 @@ export function SidebarRoot({
               </span>
               <span className={css.brandName}>
                 {renderSlot('sidebar.brand.name', {}, {
-                  fallback: <OristratBrand size={22} includeMark={false} />,
+                  fallback: <OristratBrand size={22} includeMark={false} labels={{
+                    fullName: t('brand.fullName'), wordmark: t('brand.wordmark'), badge: t('brand.badge'),
+                  }} />,
                 })}
               </span>
             </span>

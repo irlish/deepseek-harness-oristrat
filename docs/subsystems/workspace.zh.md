@@ -183,6 +183,48 @@ Host service backing the generated `ctx.remote.directoryPicker` namespace. The s
 
 Source: [`packages/api/workspace-controller/src/directory-picker.ts`](../../packages/api/workspace-controller/src/directory-picker.ts)
 
+<a id="ctxguirepocontroller--guirepocontroller"></a>
+
+### `ctx.guiRepoController` — `GuiRepoController`
+
+Host service backing the generated `ctx.remote.guiRepo` namespace.
+
+```ts cordis-catalog
+/**
+ * Snapshot the repository environment of one directory.
+ * @param request - optional absolute directory; the server cwd when absent.
+ * @returns branch, divergence, change totals, sources, and the host name;
+ * git facts absent while the directory is not inside a worktree.
+ */
+@Remote('status') async status(request: GuiRepoStatusRequest): Promise<GuiRepoStatusValue>
+
+/**
+ * List the local branches of one directory's worktree.
+ * @param request - optional absolute directory; the server cwd when absent.
+ * @returns the branch names in ref order and the current one; empty
+ * listing while the directory is not inside a worktree.
+ */
+@Remote('branches') async branches(request: GuiRepoBranchesRequest): Promise<GuiRepoBranchesValue>
+
+/**
+ * Switch one worktree to an existing local branch.
+ * @param request - worktree directory and branch name.
+ * @returns the git outcome; a dirty-tree refusal reports `ok: false` with
+ * git's own message.
+ */
+@Remote('checkout') async checkout(request: GuiRepoCheckoutRequest): Promise<GuiRepoBranchMutationValue>
+
+/**
+ * Create one new local branch off HEAD and switch the worktree to it.
+ * @param request - worktree directory and new branch name.
+ * @returns the git outcome; a name git rejects reports `ok: false` without
+ * running git at all.
+ */
+@Remote('createBranch') async createBranch(request: GuiRepoCreateBranchRequest): Promise<GuiRepoBranchMutationValue>
+```
+
+Source: [`packages/api/gui-repo/src/index.ts`](../../packages/api/gui-repo/src/index.ts)
+
 <a id="ctxworkspacecontroller--workspacecontroller"></a>
 
 ### `ctx.workspaceController` — `WorkspaceController`

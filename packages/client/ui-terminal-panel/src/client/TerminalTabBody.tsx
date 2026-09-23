@@ -23,10 +23,12 @@ export type TerminalTabBodyProps =
  * @param props - pane runtime share, injected host callbacks, and localized copy.
  * @returns the pane-filling screen.
  */
-export function TerminalTabBody({ t, sessionId, useSessions, openTerminal, writeTerminal, readTerminal, closeTerminal }: TerminalTabBodyProps): ReactNode {
+export function TerminalTabBody({
+  t, sessionId, useSessions, openTerminal, writeTerminal, readTerminal, closeTerminal,
+}: TerminalTabBodyProps): ReactNode {
   // The terminal starts where the session works: the workspace root the
   // sessions mirror carries per session, undefined until the mirror knows it.
-  const cwd = useSessions(sessions => (sessionId === undefined ? undefined : sessions.byId[sessionId]?.cwd))
+  const cwd = useSessions(sessions => sessions.byId[sessionId]?.cwd)
   return (
     <TerminalPane
       t={t}

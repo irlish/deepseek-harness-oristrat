@@ -68,6 +68,8 @@ import * as ToolWeb from '@deepseek-ai/dsh-tool-web'
 import VmWorkflowEngine from '@deepseek-ai/dsh-workflow-worker-thread'
 import * as ToolRalph from '@deepseek-ai/dsh-tool-ralph'
 import * as ToolWorkflow from '@deepseek-ai/dsh-tool-workflow'
+import * as ToolBrowser from '@deepseek-ai/dsh-tool-browser'
+import DesktopBrowserAutomation, { DESKTOP_BROWSER_TRANSPORT_KEY } from '@deepseek-ai/dsh-browser-desktop'
 import { githubSlug } from './verify-md-links.ts'
 
 /** Attachment seam marker that makes the attachments-conditional `read_image` schema harvestable. */
@@ -602,6 +604,26 @@ const TOOL_PACKAGES: ToolPackage[] = [
     },
     note:
       'web_search and web_fetch keep provider selection behind ctx.web so model-visible schemas stay stable across backend swaps.',
+  },
+  {
+    pkg: '@deepseek-ai/dsh-tool-browser',
+    dir: 'tool-browser',
+    source: 'packages/browser/tool-browser/src/index.ts',
+    requires: ['ctx.tools', 'ctx.browser', 'ctx.attachments (browser_screenshot storage)', 'ctx.llm + an image-capable route (browser_screenshot execution)'],
+    writes: ['tool/call', 'tool/result', 'durable attachment (browser_screenshot)'],
+    async mount(ctx) {
+      // The provider needs a command channel to a browser pane. Commands are
+      // unreachable during schema harvest, so a stub channel is enough to make
+      // the capability present and let the tools register.
+      ctx.provide(DESKTOP_BROWSER_TRANSPORT_KEY, {
+        send: () => Promise.reject(new Error('gen-tool-catalog: browser commands are unreachable during schema harvest')),
+      })
+      await ctx.plugin(DesktopBrowserAutomation)
+      await ctx.plugin(CatalogAttachmentStore)
+      await ctx.plugin(ToolBrowser)
+    },
+    note:
+      'The browser tools wait for `ctx.browser`: a deployment whose composition mounts no browser provider registers none of them, and the desktop composition mounts one because only the shell owns the embedded pane. Every action reports the page state it produced, and screenshots return an image block, so a step is verified by the operation that made it.',
   },
 ]
 

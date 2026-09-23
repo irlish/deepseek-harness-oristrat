@@ -191,6 +191,16 @@ flowchart LR
   svc_jobs["ctx.jobs<br/>Background job registry"]
   pkg_jobs_local["jobs-local"]
   pkg_tool_jobs["tool-jobs"]
+  pkg_browser["browser"]
+  svc_browser["ctx.browser<br/>Browser automation"]
+  pkg_browser_desktop["browser-desktop"]
+  pkg_tool_browser["tool-browser"]
+  pkg_api_gui_repo["api-gui-repo"]
+  svc_guiRepoController["ctx.guiRepoController<br/>Repository environment Remote namespace"]
+  pkg_client_ui_repo_panel["client-ui-repo-panel"]
+  pkg_api_gui_terminal["api-gui-terminal"]
+  svc_guiTerminalController["ctx.guiTerminalController<br/>GUI terminal Remote namespace"]
+  pkg_client_ui_terminal_panel["client-ui-terminal-panel"]
   pkg_web["web"]
   svc_web["ctx.web<br/>Web access provider registry"]
   pkg_web_search_exa["web-search-exa"]
@@ -229,6 +239,8 @@ flowchart LR
   pkg_agent_loop --> svc_agentLoop
   pkg_agent_presets --> svc_agentPresets
   pkg_api_gateway --> svc_typertGateway
+  pkg_api_gui_repo --> svc_guiRepoController
+  pkg_api_gui_terminal --> svc_guiTerminalController
   pkg_api_session_controller --> svc_sessionController
   pkg_api_session_controller --> svc_sessionFileReferences
   pkg_api_session_controller --> svc_sessionSkillCatalog
@@ -242,6 +254,8 @@ flowchart LR
   pkg_authorization --> svc_authorization
   pkg_bash_local --> svc_shell
   pkg_bash_sandbox --> svc_shell
+  pkg_browser --> svc_browser
+  pkg_browser_desktop --> svc_browser
   pkg_client_file_upload --> svc_fileUploads
   pkg_client_modules --> svc_clientModules
   pkg_code_runtime --> svc_codeRuntime
@@ -360,6 +374,7 @@ flowchart LR
   svc_attachments --> pkg_llm_pi_ai
   svc_attachments --> pkg_tool_fs
   svc_authorization --> pkg_llm_pi_ai
+  svc_browser --> pkg_tool_browser
   svc_clientModules --> pkg_client_hmr
   svc_codeRuntime --> pkg_tools
   svc_compaction --> pkg_compaction_basic
@@ -375,6 +390,8 @@ flowchart LR
   svc_fileReferences --> pkg_api_session_controller
   svc_fileUploads --> pkg_api_session_controller
   svc_fs --> pkg_tool_fs
+  svc_guiRepoController --> pkg_client_ui_repo_panel
+  svc_guiTerminalController --> pkg_client_ui_terminal_panel
   svc_invariants --> pkg_agent
   svc_invariants --> pkg_agent_loop
   svc_invariants --> pkg_scope
@@ -536,6 +553,9 @@ flowchart LR
 | `ctx.agentTeams` | `core` | [`experimental-agent-team`](../packages/experimental/agent-team) | - | [`experimental-tool-agent-team`](../packages/experimental/tool-agent-team), [`experimental-client-ui-agent-team`](../packages/experimental/client-ui-agent-team) | - | Owns the implicit-root roster, durable peer mailbox, shared task DAG, continuable-child lifecycle, and generated Team Remote methods; tool-agent-team contributes model controls and client-ui-agent-team mounts the browser contribution. |
 | `ctx.inspector` | `core` | `inspector` | - | - | - | Owns the Worker-hosted CDP target and the transport-independent Host and Client observation and Cordis-tree query API. |
 | `ctx.jobs` | `seam` | [`jobs`](../packages/jobs/jobs) | [`jobs-local`](../packages/jobs/jobs-local) | [`tool-bash`](../packages/shell/tool-bash), [`tool-terminal`](../packages/terminal/tool-terminal), [`tool-subagent`](../packages/subagent/tool-subagent), [`tool-jobs`](../packages/jobs/tool-jobs) | - | Producers (background bash, PTY sends, and subagent delegations) register running work; tool-jobs is the model-facing controller that reads, lists, and kills it; jobs-local is the process-local registry. |
+| `ctx.browser` | `seam` | [`browser`](../packages/browser/browser) | [`browser-desktop`](../packages/browser/browser-desktop) | [`tool-browser`](../packages/browser/tool-browser) | - | One provider owns a real browser view and its command channel; tool-browser owns the model-facing observe-act-verify loop, and a composition without a provider registers none of those tools. |
+| `ctx.guiRepoController` | `core` | [`api-gui-repo`](../packages/api/gui-repo) | - | [`client-ui-repo-panel`](../packages/client/ui-repo-panel) | - | Reads one directory's git environment through one-shot local git invocations and answers branch listing, checkout, and create-and-checkout; the Host mounts it beside the Typert Gateway. |
+| `ctx.guiTerminalController` | `core` | [`api-gui-terminal`](../packages/api/gui-terminal) | - | [`client-ui-terminal-panel`](../packages/client/ui-terminal-panel) | - | Carries persistent terminal sessions to the Web GUI over the Typert Gateway, with one owner per session and bounded output reads. |
 | `ctx.web` | `seam` | [`web`](../packages/web/web) | [`web-search-exa`](../packages/web/web-search-exa), [`web-search-perplexity`](../packages/web/web-search-perplexity), [`web-search-deepseek`](../packages/web/web-search-deepseek), [`web-fetch-http`](../packages/web/web-fetch-http) | [`tool-web`](../packages/web/tool-web) | - | Search and fetch providers register into one ctx.web seam; tool-web owns the stable model-facing names. |
 | `ctx.spillStore` | `seam` | [`spill`](../packages/spill/spill) | [`spill-local`](../packages/spill/spill-local) | [`spill-policy`](../packages/spill/spill-policy) | - | The backend saves oversized tool text and returns a model-facing locator plus retrieval hint; spill-policy is the tools/post-execute consumer that decides when to spill. |
 | `ctx.directoryPicker` | `seam` | [`host-directory-picker`](../packages/host/directory-picker) | [`host-directory-picker-native`](../packages/host/directory-picker-native), [`host-directory-picker-browse`](../packages/host/directory-picker-browse) | [`api-workspace-controller`](../packages/api/workspace-controller) | - | Discriminated interaction capability: the native backend opens one OS chooser on the host display, the browse backend serves listing/creation primitives for the in-app browser; dual-face backends fill ui-workspace directory-flow slots from their browser halves (no wire advertisement). |

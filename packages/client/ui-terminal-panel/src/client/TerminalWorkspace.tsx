@@ -67,23 +67,19 @@ export function TerminalPane({ openTerminal, writeTerminal, readTerminal, closeT
     const host = hostRef.current
     if (host === null) return undefined
     installXtermCss()
-    let disposed = false
+    const lifetime = { disposed: false }
     let term: Terminal | undefined
     let timer: ReturnType<typeof setInterval> | undefined
     let observer: ResizeObserver | undefined
     void (async () => {
       const opened = await openTerminal({ ...cwd === undefined ? {} : { cwd } })
-      // Wire boundary: the gateway result must carry the retained frame page.
-      if (opened === null || typeof opened !== 'object' || !Array.isArray(opened.scrollback)) {
-        throw new Error(`unexpected open result: ${JSON.stringify(opened).slice(0, 200)}`)
-      }
       sessionRef.current = opened.id
-      if (disposed) {
+      if (lifetime.disposed) {
         void closeTerminal({ id: opened.id })
         return
       }
       const styles = getComputedStyle(host)
-      term = new Terminal({
+      const activeTerm = new Terminal({
         fontSize: 13,
         fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
         cursorBlink: true,
@@ -92,9 +88,10 @@ export function TerminalPane({ openTerminal, writeTerminal, readTerminal, closeT
           foreground: styles.getPropertyValue('--term-fg').trim() || '#111111',
         },
       })
-      term.open(host)
+      term = activeTerm
+      activeTerm.open(host)
       const fit = new FitAddon()
-      term.loadAddon(fit)
+      activeTerm.loadAddon(fit)
       const refit = (): void => {
         try {
           fit.fit()
@@ -107,35 +104,35 @@ export function TerminalPane({ openTerminal, writeTerminal, readTerminal, closeT
       // Pane width moves with the sidebar drag, which fires no window resize.
       observer = new ResizeObserver(() => { refit() })
       observer.observe(host)
-      term.onData(data => {
+      activeTerm.onData((data) => {
         void writeTerminal({ id: opened.id, data })
       })
-      for (const frame of opened.scrollback) term.write(frame.data)
+      for (const frame of opened.scrollback) activeTerm.write(frame.data)
       let cursor = opened.cursor
       setStatus('live')
       timer = setInterval(() => {
-        readTerminal({ id: opened.id, cursor }).then(result => {
-          if (disposed || term === undefined) return
-          for (const frame of result.frames) term.write(frame.data)
+        readTerminal({ id: opened.id, cursor }).then((result) => {
+          if (lifetime.disposed) return
+          for (const frame of result.frames) activeTerm.write(frame.data)
           cursor = result.cursor
           if (!result.alive && result.frames.length === 0) {
             if (timer !== undefined) clearInterval(timer)
             setStatus('dead')
           }
         }, (error: unknown) => {
-          if (disposed) return
+          if (lifetime.disposed) return
           if (timer !== undefined) clearInterval(timer)
           setDetail(String(error))
           setStatus('error')
         })
       }, 60)
     })().catch((error: unknown) => {
-      if (disposed) return
+      if (lifetime.disposed) return
       setDetail(String(error))
       setStatus('error')
     })
     return () => {
-      disposed = true
+      lifetime.disposed = true
       if (timer !== undefined) clearInterval(timer)
       if (observer !== undefined) observer.disconnect()
       fitRef.current = undefined
@@ -144,7 +141,6 @@ export function TerminalPane({ openTerminal, writeTerminal, readTerminal, closeT
       if (id !== undefined) void closeTerminal({ id })
     }
     // The pane mounts once per Sidebar tab; the PTY dies with the tab.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   useEffect(() => {

@@ -594,6 +594,55 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
     ],
   },
   {
+    key: 'browser',
+    summary: 'Abstract browser automation backend.',
+    description: 'Abstract browser automation backend. Implementations own one browser view, arbitrate which caller may drive it, and report page state after every mutation so a caller can verify an action instead of assuming it landed.\n\nElement references are minted by one observation and are valid until a navigation or an observation that drops the node; a stale reference is a `BROWSER_REF_STALE` failure, never a silent action on another element.',
+    methods: [
+      {
+        signature: 'abstract state(owner: BrowserOwner, signal?: AbortSignal): Promise<BrowserPageState>',
+        description: 'Read the current page state.',
+        parameters: [{ name: 'owner', description: 'calling identity, used for lease arbitration.' }, { name: 'signal', description: 'optional cancellation.' }],
+        returns: 'the observable state of the browser view.',
+      },
+      {
+        signature: 'abstract navigate(request: BrowserNavigateRequest, signal?: AbortSignal): Promise<BrowserNavigation>',
+        description: 'Navigate the browser view and wait for the resulting document to settle.',
+        parameters: [{ name: 'request', description: 'navigation verb, optional target URL, and timeout.' }, { name: 'signal', description: 'optional cancellation.' }],
+        returns: 'the settled state, with `reached` false when the wait timed out.',
+      },
+      {
+        signature: 'abstract observe(request: BrowserObserveRequest, signal?: AbortSignal): Promise<BrowserObservation>',
+        description: 'Observe the page as reference-bearing text for the model.',
+        parameters: [{ name: 'request', description: 'owner, optional continuation cursor, and output bounds.' }, { name: 'signal', description: 'optional cancellation.' }],
+        returns: 'one observation generation, bounded by the requested limits.',
+      },
+      {
+        signature: 'abstract act(request: BrowserActRequest, signal?: AbortSignal): Promise<BrowserActOutcome>',
+        description: 'Perform one action on an element or the page.',
+        parameters: [{ name: 'request', description: 'action verb, target, and verb-specific value.' }, { name: 'signal', description: 'optional cancellation.' }],
+        returns: 'the action outcome and the page state that followed it.',
+      },
+      {
+        signature: 'abstract screenshot(request: BrowserScreenshotRequest, signal?: AbortSignal): Promise<BrowserScreenshot>',
+        description: 'Capture the page, or one element, as image bytes.',
+        parameters: [{ name: 'request', description: 'owner, optional full-page or element framing, and format.' }, { name: 'signal', description: 'optional cancellation.' }],
+        returns: 'the captured image; the caller owns storage of its bytes.',
+      },
+      {
+        signature: 'abstract console(request: BrowserConsoleRequest, signal?: AbortSignal): Promise<BrowserConsolePage>',
+        description: 'Read buffered console output and uncaught page errors.',
+        parameters: [{ name: 'request', description: 'owner, optional lower sequence bound, and entry limits.' }, { name: 'signal', description: 'optional cancellation.' }],
+        returns: 'a bounded, ordered page of entries.',
+      },
+      {
+        signature: 'abstract evaluate(request: BrowserEvaluateRequest, signal?: AbortSignal): Promise<BrowserEvaluateResult>',
+        description: 'Evaluate one expression in the page\'s main frame.',
+        parameters: [{ name: 'request', description: 'owner, expression source, and promise-awaiting option.' }, { name: 'signal', description: 'optional cancellation.' }],
+        returns: 'the serialized value plus its text projection for the model.',
+      },
+    ],
+  },
+  {
     key: 'clientModules',
     summary: 'The web plugin table service: incremental `dsh.client` scan + wire composition + bundle route + index injection rows.',
     description: 'The web plugin table service: incremental `dsh.client` scan + wire composition + bundle route + index injection rows. Construction runs the activation scan synchronously — a malformed declaration or missing bundle among the already-loaded entries aggregates into one loud throw (FAILED fiber; the boot activation audit reports it).',
@@ -1105,6 +1154,37 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         description: 'Create one Goal through the remote boundary.',
         parameters: [{ name: 'agent', description: 'exact live Agent resolved from the wire identity.' }, { name: 'request', description: 'objective and optional round cap.' }],
         returns: 'the created Goal identity.',
+      },
+    ],
+  },
+  {
+    key: 'guiRepoController',
+    summary: 'Host service backing the generated `ctx.remote.guiRepo` namespace.',
+    description: 'Host service backing the generated `ctx.remote.guiRepo` namespace.',
+    methods: [
+      {
+        signature: '@Remote(\'status\') async status(request: GuiRepoStatusRequest): Promise<GuiRepoStatusValue>',
+        description: 'Snapshot the repository environment of one directory.',
+        parameters: [{ name: 'request', description: 'optional absolute directory; the server cwd when absent.' }],
+        returns: 'branch, divergence, change totals, sources, and the host name; git facts absent while the directory is not inside a worktree.',
+      },
+      {
+        signature: '@Remote(\'branches\') async branches(request: GuiRepoBranchesRequest): Promise<GuiRepoBranchesValue>',
+        description: 'List the local branches of one directory\'s worktree.',
+        parameters: [{ name: 'request', description: 'optional absolute directory; the server cwd when absent.' }],
+        returns: 'the branch names in ref order and the current one; empty listing while the directory is not inside a worktree.',
+      },
+      {
+        signature: '@Remote(\'checkout\') async checkout(request: GuiRepoCheckoutRequest): Promise<GuiRepoBranchMutationValue>',
+        description: 'Switch one worktree to an existing local branch.',
+        parameters: [{ name: 'request', description: 'worktree directory and branch name.' }],
+        returns: 'the git outcome; a dirty-tree refusal reports `ok: false` with git\'s own message.',
+      },
+      {
+        signature: '@Remote(\'createBranch\') async createBranch(request: GuiRepoCreateBranchRequest): Promise<GuiRepoBranchMutationValue>',
+        description: 'Create one new local branch off HEAD and switch the worktree to it.',
+        parameters: [{ name: 'request', description: 'worktree directory and new branch name.' }],
+        returns: 'the git outcome; a name git rejects reports `ok: false` without running git at all.',
       },
     ],
   },
@@ -3852,6 +3932,94 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export type BrandedNumber<B extends string> = number & {\n    readonly [BRAND]: B;\n};',
   },
   {
+    name: 'BrowserActionName',
+    declaration: 'export type BrowserActionName = \'click\' | \'hover\' | \'focus\' | \'fill\' | \'type\' | \'press\' | \'select\' | \'scroll\';',
+  },
+  {
+    name: 'BrowserActOutcome',
+    declaration: 'export interface BrowserActOutcome extends BrowserPageState {\n    readonly action: BrowserActionName;\n    readonly ref?: BrowserRef;\n}',
+  },
+  {
+    name: 'BrowserActRequest',
+    declaration: 'export interface BrowserActRequest {\n    readonly owner: BrowserOwner;\n    readonly action: BrowserActionName;\n    readonly target?: BrowserElementTarget;\n    readonly value?: string;\n    readonly key?: string;\n    readonly button?: \'left\' | \'middle\' | \'right\';\n    readonly clickCount?: number;\n    readonly deltaY?: number;\n    readonly timeoutMs?: number;\n}',
+  },
+  {
+    name: 'BrowserConsoleEntry',
+    declaration: 'export interface BrowserConsoleEntry {\n    readonly seq: number;\n    readonly level: \'log\' | \'debug\' | \'info\' | \'warn\' | \'error\';\n    readonly text: string;\n    readonly source?: string;\n}',
+  },
+  {
+    name: 'BrowserConsolePage',
+    declaration: 'export interface BrowserConsolePage {\n    readonly entries: readonly BrowserConsoleEntry[];\n    readonly dropped: number;\n    readonly cursor: number;\n}',
+  },
+  {
+    name: 'BrowserConsoleRequest',
+    declaration: 'export interface BrowserConsoleRequest {\n    readonly owner: BrowserOwner;\n    readonly since?: number;\n    readonly limit?: number;\n    readonly levels?: readonly BrowserConsoleEntry[\'level\'][];\n}',
+  },
+  {
+    name: 'BrowserElementTarget',
+    declaration: 'export type BrowserElementTarget = {\n    readonly kind: \'ref\';\n    readonly ref: BrowserRef;\n} | {\n    readonly kind: \'selector\';\n    readonly selector: string;\n} | {\n    readonly kind: \'point\';\n    readonly x: number;\n    readonly y: number;\n};',
+  },
+  {
+    name: 'BrowserEvaluateRequest',
+    declaration: 'export interface BrowserEvaluateRequest {\n    readonly owner: BrowserOwner;\n    readonly expression: string;\n}',
+  },
+  {
+    name: 'BrowserEvaluateResult',
+    declaration: 'export interface BrowserEvaluateResult {\n    readonly text: string;\n}',
+  },
+  {
+    name: 'BrowserImageFormat',
+    declaration: 'export type BrowserImageFormat = \'png\' | \'jpeg\';',
+  },
+  {
+    name: 'BrowserNavigateRequest',
+    declaration: 'export interface BrowserNavigateRequest {\n    readonly owner: BrowserOwner;\n    readonly action: BrowserNavigationAction;\n    readonly url?: string;\n    readonly timeoutMs?: number;\n}',
+  },
+  {
+    name: 'BrowserNavigation',
+    declaration: 'export interface BrowserNavigation extends BrowserPageState {\n    readonly reached: boolean;\n}',
+  },
+  {
+    name: 'BrowserNavigationAction',
+    declaration: 'export type BrowserNavigationAction = \'goto\' | \'back\' | \'forward\' | \'reload\';',
+  },
+  {
+    name: 'BrowserObservation',
+    declaration: 'export interface BrowserObservation extends BrowserPageIdentity {\n    readonly text: string;\n    readonly refs: readonly BrowserRef[];\n    readonly nodeCount: number;\n    readonly truncated: boolean;\n    readonly nextCursor?: string;\n    readonly byteLength: number;\n}',
+  },
+  {
+    name: 'BrowserObserveRequest',
+    declaration: 'export interface BrowserObserveRequest {\n    readonly owner: BrowserOwner;\n    readonly cursor?: string;\n    readonly maxDepth?: number;\n    readonly maxNodes?: number;\n    readonly maxBytes?: number;\n}',
+  },
+  {
+    name: 'BrowserOwner',
+    declaration: 'export type BrowserOwner = Branded<\'BrowserOwner\'>;',
+  },
+  {
+    name: 'BrowserPageIdentity',
+    declaration: 'export interface BrowserPageIdentity {\n    readonly url: string;\n    readonly title: string;\n    readonly loading: boolean;\n    readonly viewport: BrowserViewport;\n}',
+  },
+  {
+    name: 'BrowserPageState',
+    declaration: 'export interface BrowserPageState extends BrowserPageIdentity {\n    readonly canGoBack: boolean;\n    readonly canGoForward: boolean;\n}',
+  },
+  {
+    name: 'BrowserRef',
+    declaration: 'export type BrowserRef = Branded<\'BrowserRef\'>;',
+  },
+  {
+    name: 'BrowserScreenshot',
+    declaration: 'export interface BrowserScreenshot {\n    readonly format: BrowserImageFormat;\n    readonly mediaType: \'image/png\' | \'image/jpeg\';\n    readonly bytes: Uint8Array;\n    readonly width: number;\n    readonly height: number;\n    readonly url: string;\n}',
+  },
+  {
+    name: 'BrowserScreenshotRequest',
+    declaration: 'export interface BrowserScreenshotRequest {\n    readonly owner: BrowserOwner;\n    readonly fullPage?: boolean;\n    readonly target?: BrowserElementTarget;\n    readonly format?: BrowserImageFormat;\n    readonly quality?: number;\n}',
+  },
+  {
+    name: 'BrowserViewport',
+    declaration: 'export interface BrowserViewport {\n    readonly width: number;\n    readonly height: number;\n}',
+  },
+  {
     name: 'ClientArtifactBaseline',
     declaration: 'export interface ClientArtifactBaseline {\n    readonly path: string;\n    readonly mtimeMs: number;\n    readonly size: number;\n}',
   },
@@ -4386,6 +4554,38 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'GrantRecord',
     declaration: 'export interface GrantRecord {\n    readonly kind: \'grant\';\n    readonly payload: unknown;\n}',
+  },
+  {
+    name: 'GuiRepoBranchesRequest',
+    declaration: 'export interface GuiRepoBranchesRequest {\n    cwd?: string;\n}',
+  },
+  {
+    name: 'GuiRepoBranchesValue',
+    declaration: 'export interface GuiRepoBranchesValue {\n    repo: boolean;\n    current?: string;\n    branches: string[];\n}',
+  },
+  {
+    name: 'GuiRepoBranchMutationValue',
+    declaration: 'export interface GuiRepoBranchMutationValue {\n    ok: boolean;\n    error?: string;\n}',
+  },
+  {
+    name: 'GuiRepoCheckoutRequest',
+    declaration: 'export interface GuiRepoCheckoutRequest {\n    cwd?: string;\n    branch: string;\n}',
+  },
+  {
+    name: 'GuiRepoCreateBranchRequest',
+    declaration: 'export interface GuiRepoCreateBranchRequest {\n    cwd?: string;\n    name: string;\n}',
+  },
+  {
+    name: 'GuiRepoSource',
+    declaration: 'export interface GuiRepoSource {\n    name: string;\n    url: string;\n}',
+  },
+  {
+    name: 'GuiRepoStatusRequest',
+    declaration: 'export interface GuiRepoStatusRequest {\n    cwd?: string;\n}',
+  },
+  {
+    name: 'GuiRepoStatusValue',
+    declaration: 'export interface GuiRepoStatusValue {\n    repo: boolean;\n    root?: string;\n    branch?: string;\n    ahead?: number;\n    behind?: number;\n    additions?: number;\n    deletions?: number;\n    files?: number;\n    host: string;\n    sources: GuiRepoSource[];\n}',
   },
   {
     name: 'GuiTerminalCloseRequest',

@@ -1,7 +1,14 @@
 /** Startup controls for shell documents; the embedded-browser face for application documents. */
 
 import { contextBridge, ipcRenderer } from 'electron'
-import { DESKTOP_IPC, type DesktopBrowserApi, type DesktopBrowserState, type DshDesktopAppApi, type DshDesktopStartupApi } from './ipc.ts'
+import {
+  DESKTOP_IPC,
+  type DesktopBrowserActivity,
+  type DesktopBrowserApi,
+  type DesktopBrowserState,
+  type DshDesktopAppApi,
+  type DshDesktopStartupApi,
+} from './ipc.ts'
 import type { DesktopBackendState } from './backend-controller.ts'
 
 const startup: DshDesktopStartupApi = {
@@ -33,6 +40,16 @@ const browser: DesktopBrowserApi = {
     const handle = (_event: Electron.IpcRendererEvent, state: DesktopBrowserState): void => { listener(state) }
     ipcRenderer.on(DESKTOP_IPC.browserState, handle)
     return () => { ipcRenderer.off(DESKTOP_IPC.browserState, handle) }
+  },
+  subscribeReveal(listener) {
+    const handle = (): void => { listener() }
+    ipcRenderer.on(DESKTOP_IPC.browserReveal, handle)
+    return () => { ipcRenderer.off(DESKTOP_IPC.browserReveal, handle) }
+  },
+  subscribeActivity(listener) {
+    const handle = (_event: Electron.IpcRendererEvent, activity: DesktopBrowserActivity): void => { listener(activity) }
+    ipcRenderer.on(DESKTOP_IPC.browserActivity, handle)
+    return () => { ipcRenderer.off(DESKTOP_IPC.browserActivity, handle) }
   },
 }
 
