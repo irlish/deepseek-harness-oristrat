@@ -3,6 +3,7 @@
     - button "Reference order target" [disabled]
   - button "More actions":
     - img
+  - button "Repository environment"
   - button "Open right sidebar":
     - img
   - tablist:

@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-Use this package to browse the web inside the desktop application's right Sidebar. The `browser` tab opens the main-process `WebContentsView` over its measured surface element and steers it through the `window.dshDesktop.browser` bridge: back, forward, reload, and address-bar navigation normalized to http(s). The pane re-pushes the view's bounds on element resize, capture-phase scroll, and window resize, so the native view tracks the Sidebar. The view keeps its own persistent partition, denies window opens, and restricts navigation to http(s). On the plain web host, where the bridge is absent, the pane renders a desktop-only notice instead.
+Use this package to browse the web inside the desktop application's right Sidebar. The `browser` tab opens the main-process `WebContentsView` over its surface element and steers it through the `window.dshDesktop.browser` bridge: back, forward, reload, and address-bar navigation normalized to http(s), submitted on Enter. Bounds are measured through the element's offset chain and re-pushed on element resize, capture-phase scroll, window resize, and a post-mount settle push. Unmount hides the view; the next mount re-attaches the same instance, so documents and history survive tab switches. On the plain web host the pane renders a desktop-only notice.
 
 ## Table of Contents
 
@@ -25,7 +25,7 @@ Use this package to browse the web inside the desktop application's right Sideba
 <a id="use-this-package"></a>
 ## Use this package
 
-Ship the package as a browser row of the web-app bundle; the shipped composition already inserts it. The tab appears in the right Sidebar's guide as the **Embedded browser** entry and opens through `ctx.sidebarRight.openTab('browser')`. In the desktop application the pane attaches the embedded view on mount and releases it on unmount; the toolbar and address bar drive navigation from then on.
+Ship the package as a browser row of the web-app bundle; the shipped composition already inserts it. The tab appears in the right Sidebar's guide as the **Embedded browser** entry and opens through `ctx.sidebarRight.openTab('browser')`. In the desktop application the pane attaches the embedded view on mount and hides it on unmount; the toolbar and address bar drive navigation from then on, and the address form navigates on Enter — the toolbar carries no submit button.
 
 ### When to choose it
 
@@ -49,7 +49,7 @@ The package has no configuration fields. It requires the right-Sidebar tab regis
 <details>
 <summary>Implementation internals — click to expand</summary>
 
-The plugin body registers the `browser-panel` locale dictionaries, the `browser` tab type (id `@deepseek-ai/dsh-client-ui-browser-panel`, band `builtin`, guide order 40, claiming no address), the pane body, and the chip title, and reads the desktop bridge once per apply: on the plain web host it is `undefined` and the body renders the localized desktop-only notice. With a bridge, the body subscribes to navigation state (`url`, `title`, `canGoBack`, `canGoForward`, `loading`), opens the view over the measured surface rect, and re-pushes rounded bounds from a `ResizeObserver` on the element, capture-phase `scroll`, and window `resize`; unmount unsubscribes and closes the view. The address bar normalizes input before navigating: text containing whitespace is refused, a bare host gains an `https://` prefix, and only parseable http(s) URLs navigate. The main-process owner keeps one view per application window on the persistent `persist:dsh-embedded-browser` partition, clamps renderer-supplied bounds, denies window opens, and restricts every navigation to http(s).
+The plugin body registers the `browser-panel` locale dictionaries, the `browser` tab type (id `@deepseek-ai/dsh-client-ui-browser-panel`, band `builtin`, guide order 40, claiming no address), the pane body, and the chip title, and reads the desktop bridge once per apply: on the plain web host it is `undefined` and the body renders the localized desktop-only notice. With a bridge, the body subscribes to navigation state (`url`, `title`, `canGoBack`, `canGoForward`, `loading`), opens the view over the surface's layout box — summed from the element's `offsetLeft`/`offsetTop` chain, which is final while ancestor transform animations run — and re-pushes rounded bounds from a `ResizeObserver` on the element, capture-phase `scroll`, window `resize`, and a 300ms settle timer after mount; unmount unsubscribes and hides the view. The next mount re-attaches the same view through the idempotent open verb, so the document, cookies, and history survive every tab switch without a reload. The address bar normalizes input before navigating: text containing whitespace is refused, a bare host gains an `https://` prefix, and only parseable http(s) URLs navigate. The main-process owner keeps one view per application window on the persistent `persist:dsh-embedded-browser` partition, clamps renderer-supplied bounds, denies window opens, and restricts every navigation to http(s).
 
 ### Source map
 
@@ -58,7 +58,7 @@ The plugin body registers the `browser-panel` locale dictionaries, the `browser`
 | [`src/client/index.ts`](src/client/index.ts) | Plugin body: dictionaries, tab type, keyed seats, and the once-per-apply bridge read |
 | [`src/client/definition.tsx`](src/client/definition.tsx) | The `browser` tab-type definition and its guide entry |
 | [`src/client/BrowserPanel.tsx`](src/client/BrowserPanel.tsx) | Toolbar, address bar, bounds pushing, state subscription, and the desktop-only notice |
-| [`src/client/bridge.ts`](src/client/bridge.ts) | The structural `window.dshDesktop.browser` face, rect-to-bounds rounding, and URL normalization |
+| [`src/client/bridge.ts`](src/client/bridge.ts) | The structural `window.dshDesktop.browser` face, layout-offset and rect bounds rounding, and URL normalization |
 | [`src/client/BrowserTabBody.tsx`](src/client/BrowserTabBody.tsx), [`BrowserTitle.tsx`](src/client/BrowserTitle.tsx) | Seat adapters: the injected bridge into the pane; the globe mark before the chip title |
 | [`src/client/locales.ts`](src/client/locales.ts) | `browser-panel` zh/en dictionaries; the Chinese key set is the source of truth |
 
@@ -91,7 +91,7 @@ None; this package neither assembles nor sends a provider request.
 No invariant companion is published because the pane keeps no cross-entry state; the view lives in the desktop main process, and the panel only forwards measurements and intents over the preload bridge.
 
 - Desktop-only surface: the plain web host shows the notice and cannot browse.
-- One view instance per application window: a second browser tab reuses the same view, and closing the tab destroys it, so browsing state does not survive a close.
+- One view instance per application window: a second browser tab reuses the same view, and hiding a tab keeps it alive; the view and its browsing state are destroyed only with the window.
 - Placement rides renderer measurements pushed over IPC; the native view can visually lag DOM layout by a frame while the sidebar animates.
 
 <a id="dev-note"></a>

@@ -1,0 +1,201 @@
+.trigger {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary);
+  cursor: pointer;
+}
+
+.trigger:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-label-primary);
+}
+
+.popover {
+  position: fixed;
+  z-index: 60;
+  width: 264px;
+  padding: 6px;
+  border: 1px solid var(--dsw-alias-border-l1);
+  border-radius: 10px;
+  background: var(--dsw-alias-bg-l2, #fff);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 12%);
+  color: var(--dsw-alias-label-primary);
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.caption {
+  padding: 4px 8px;
+  color: var(--dsw-alias-label-caption);
+  font-size: 12px;
+}
+
+.note {
+  padding: 8px;
+  color: var(--dsw-alias-label-caption);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 6px;
+}
+
+.rowButton {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 8px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.rowButton:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+.rowLabel {
+  flex: 0 0 auto;
+  color: var(--dsw-alias-label-secondary);
+}
+
+.rowValue {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--dsw-alias-label-primary);
+}
+
+.rowButton .rowValue {
+  flex: 0 1 auto;
+  color: var(--dsw-alias-label-caption);
+}
+
+.rowButton svg:last-child {
+  flex: 0 0 auto;
+  margin-left: auto;
+  color: var(--dsw-alias-label-caption);
+}
+
+.submenu {
+  position: absolute;
+  top: 28px;
+  right: calc(100% + 6px);
+  z-index: 61;
+  display: flex;
+  flex-direction: column;
+  width: 240px;
+  max-height: 320px;
+  border: 1px solid var(--dsw-alias-border-l1);
+  border-radius: 10px;
+  background: var(--dsw-alias-bg-l2, #fff);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 12%);
+}
+
+.searchRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 6px;
+  padding: 0 8px;
+  border: 1px solid var(--dsw-alias-border-l1);
+  border-radius: 6px;
+  color: var(--dsw-alias-label-caption);
+}
+
+.searchInput {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 26px;
+  border: none;
+  background: transparent;
+  color: var(--dsw-alias-label-primary);
+  font-size: 12px;
+  outline: none;
+}
+
+.branchList {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 6px 6px;
+}
+
+.branchRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 6px 8px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.branchRow:hover:not(:disabled) {
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+.branchRow:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.branchName {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.createRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 6px 6px;
+  padding: 6px 8px;
+  border: none;
+  border-top: 1px solid var(--dsw-alias-border-l1);
+  border-radius: 0 0 6px 6px;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.createRow:hover {
+  color: var(--dsw-alias-label-primary);
+}
+
+form.createRow {
+  padding: 0 8px;
+  cursor: default;
+}
+
+.error {
+  padding: 4px 8px 6px;
+  color: var(--dsw-alias-label-danger, #d33);
+  font-size: 12px;
+}

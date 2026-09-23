@@ -3,6 +3,7 @@
     - button "Use the read tool twice" [disabled]
   - button "More actions":
     - img
+  - button "Repository environment"
   - button "Open right sidebar":
     - img
   - tablist:

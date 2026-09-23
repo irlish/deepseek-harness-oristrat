@@ -277,17 +277,20 @@ describe('web e2e: navigation & panes over a rich seeded session', () => {
     const exportButton = page.getByRole('button', { name: 'More actions' })
     expect(await exportButton.isDisabled()).toBe(false)
     const header = exportButton.locator('xpath=ancestor::header[1]')
-    // The right Sidebar's expand button holds the header's corner; the export
-    // control sits immediately to its left.
+    // The right Sidebar's expand button holds the header's corner; the
+    // repository environment trigger sits immediately to its left, and the
+    // export control immediately to that trigger's left.
     const sidebarButton = page.getByRole('button', { name: 'Open right sidebar' })
-    const [buttonBox, sidebarBox, headerBox] = await Promise.all([
-      exportButton.boundingBox(), sidebarButton.boundingBox(), header.boundingBox(),
+    const repoEnvButton = page.getByRole('button', { name: 'Repository environment' })
+    const [buttonBox, repoEnvBox, sidebarBox, headerBox] = await Promise.all([
+      exportButton.boundingBox(), repoEnvButton.boundingBox(), sidebarButton.boundingBox(), header.boundingBox(),
     ])
-    if (buttonBox === null || sidebarBox === null || headerBox === null) {
+    if (buttonBox === null || repoEnvBox === null || sidebarBox === null || headerBox === null) {
       throw new Error('Session Header export geometry is unavailable')
     }
     expect(headerBox.x + headerBox.width - (sidebarBox.x + sidebarBox.width)).toBeLessThanOrEqual(32)
-    expect(sidebarBox.x - (buttonBox.x + buttonBox.width)).toBeLessThanOrEqual(32)
+    expect(repoEnvBox.x - (buttonBox.x + buttonBox.width)).toBeLessThanOrEqual(32)
+    expect(sidebarBox.x - (repoEnvBox.x + repoEnvBox.width)).toBeLessThanOrEqual(32)
     const responsePromise = page.waitForResponse(response =>
       response.request().method() === 'HEAD'
       && new URL(response.url()).pathname === '/api/session.export', { timeout: 30_000 })

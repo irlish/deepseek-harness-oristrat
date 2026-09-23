@@ -22,7 +22,7 @@ export const DESKTOP_IPC = {
   updatesInstall: 'dsh-desktop:updates-install',
   updatesState: 'dsh-desktop:updates-state',
   browserOpen: 'dsh-desktop:browser-open',
-  browserClose: 'dsh-desktop:browser-close',
+  browserHide: 'dsh-desktop:browser-hide',
   browserNavigate: 'dsh-desktop:browser-navigate',
   browserBack: 'dsh-desktop:browser-back',
   browserForward: 'dsh-desktop:browser-forward',
@@ -60,8 +60,8 @@ export interface DesktopBrowserState {
 export interface DesktopBrowserApi {
   /** Attach (or re-attach) the view at one placement and optionally load a URL. */
   open(bounds: DesktopBrowserBounds, url?: string): Promise<void>
-  /** Detach and destroy the view; a later `open` starts a fresh one. */
-  close(): Promise<void>
+  /** Detach the view, keeping its document and history for the next `open`. */
+  hide(): Promise<void>
   /** Load one http(s) URL in the view. */
   navigate(url: string): Promise<void>
   back(): Promise<void>

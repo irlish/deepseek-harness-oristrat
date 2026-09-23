@@ -21,6 +21,7 @@ interface FakeView {
     }
   }
   setBounds: ReturnType<typeof vi.fn>
+  setBackgroundColor: ReturnType<typeof vi.fn>
 }
 
 const electron = vi.hoisted(() => {
@@ -45,6 +46,7 @@ const electron = vi.hoisted(() => {
   class WebContentsView {
     readonly webContents = makeContents()
     readonly setBounds = vi.fn()
+    readonly setBackgroundColor = vi.fn()
     constructor() {
       instances.push(this)
     }
@@ -185,6 +187,22 @@ describe('DesktopBrowserViewController', () => {
     expect(view().webContents.reload).toHaveBeenCalledOnce()
     controller.setBounds({ x: 1, y: 2, width: 3, height: 4 })
     expect(view().setBounds).toHaveBeenLastCalledWith({ x: 1, y: 2, width: 3, height: 4 })
+  })
+
+  it('hides without destroying: the same view re-attaches with its document', () => {
+    controller.open({ x: 0, y: 0, width: 10, height: 10 })
+    const attached = view()
+    expect(attached.setBackgroundColor).toHaveBeenCalledWith('#ffffff')
+    controller.hide()
+    expect(window.contentView.removeChildView).toHaveBeenCalledWith(attached)
+    expect(attached.webContents.close).not.toHaveBeenCalled()
+    expect(controller.getState().url).toBe('https://example.com/')
+    controller.hide()
+    expect(window.contentView.removeChildView).toHaveBeenCalledTimes(1)
+    controller.open({ x: 5, y: 6, width: 7, height: 8 })
+    expect(electron.instances).toHaveLength(1)
+    expect(window.contentView.addChildView).toHaveBeenLastCalledWith(attached)
+    expect(attached.setBounds).toHaveBeenLastCalledWith({ x: 5, y: 6, width: 7, height: 8 })
   })
 
   it('detaches, destroys, and resets state on close; a closed view no longer acts', () => {

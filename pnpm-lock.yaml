@@ -3597,12 +3597,12 @@ importers:
       '@deepseek-ai/dsh-api-remotes':
         specifier: workspace:^
         version: link:../../api/remotes
-      '@deepseek-ai/dsh-client-connection':
-        specifier: workspace:^
-        version: link:../connection
       '@deepseek-ai/dsh-client-locale':
         specifier: workspace:^
         version: link:../locale
+      '@deepseek-ai/dsh-client-ui-conversation':
+        specifier: workspace:^
+        version: link:../ui-conversation
       '@deepseek-ai/dsh-client-ui-primitives':
         specifier: workspace:^
         version: link:../ui-primitives
@@ -3612,21 +3612,21 @@ importers:
       '@deepseek-ai/dsh-client-ui-session':
         specifier: workspace:^
         version: link:../ui-session
-      '@deepseek-ai/dsh-client-ui-sidebar-right':
-        specifier: workspace:^
-        version: link:../ui-sidebar-right
       '@deepseek-ai/dsh-client-ui-slots':
         specifier: workspace:^
         version: link:../ui-slots
       '@types/react':
         specifier: ~18.3.1
         version: 18.3.31
-      clsx:
-        specifier: ^2.1.1
-        version: 2.1.1
+      '@types/react-dom':
+        specifier: ~18.3.0
+        version: 18.3.7(@types/react@18.3.31)
       react:
         specifier: ^18.2.0
         version: 18.3.1
+      react-dom:
+        specifier: ^18.2.0
+        version: 18.3.1(react@18.3.1)
 
   packages/client/ui-schedule:
     devDependencies:

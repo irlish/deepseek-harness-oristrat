@@ -5,7 +5,7 @@ import { join } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { Context } from '@deepseek-ai/cordis'
 import LocalSubprocessRuntime from '@deepseek-ai/dsh-subprocess-local'
-import GuiRepoController, { parseNumstat, parseRemotes } from '../src/index.ts'
+import GuiRepoController, { isValidBranchName, parseNumstat, parseRemotes } from '../src/index.ts'
 
 const roots: Context[] = []
 const tempDirs: string[] = []
@@ -170,6 +170,146 @@ describe('GuiRepoController.status', () => {
       expect(value).toEqual({ repo: false, host: hostname(), sources: [] })
     } finally {
       process.env.PATH = savedPath
+    }
+  })
+})
+
+describe('isValidBranchName', () => {
+  it('accepts ref-name spellings git allows', () => {
+    expect(isValidBranchName('feature/x')).toBe(true)
+    expect(isValidBranchName('release_1.0')).toBe(true)
+    expect(isValidBranchName('main')).toBe(true)
+  })
+
+  it('rejects empty, overlong, and git-refused spellings', () => {
+    const refused = ['', 'x'.repeat(101), '-lead', '.lead', 'trail.', 'trail/', 'name.lock', 'a..b', 'a//b', 'a@{b', 'with space']
+    for (const name of refused) expect(isValidBranchName(name)).toBe(false)
+  })
+})
+
+describe('GuiRepoController.branches', () => {
+  it('lists local branches and the current one', async () => {
+    const { controller } = await harness()
+    const dir = gitRepo()
+    execFileSync('git', ['branch', 'feature/x'], { cwd: dir })
+    const value = await controller.branches({ cwd: dir })
+    expect(value).toEqual({ repo: true, current: 'main', branches: ['feature/x', 'main'] })
+  })
+
+  it('reports no listing outside a worktree', async () => {
+    const { controller } = await harness()
+    const value = await controller.branches({ cwd: tempDir('dsh-gui-repo-none-') })
+    expect(value).toEqual({ repo: false, branches: [] })
+  })
+})
+
+describe('GuiRepoController branch mutations', () => {
+  it('checks out an existing branch', async () => {
+    const { controller } = await harness()
+    const dir = gitRepo()
+    execFileSync('git', ['branch', 'feature/x'], { cwd: dir })
+    const value = await controller.checkout({ cwd: dir, branch: 'feature/x' })
+    expect(value).toEqual({ ok: true })
+    expect(execFileSync('git', ['rev-parse', '--abbrev-ref', 'HEAD'], { cwd: dir, encoding: 'utf8' }).trim()).toBe('feature/x')
+  })
+
+  it('reports a refused checkout with git stderr', async () => {
+    const { controller } = await harness()
+    const dir = gitRepo()
+    const value = await controller.checkout({ cwd: dir, branch: 'no-such-branch' })
+    expect(value.ok).toBe(false)
+    expect(value.error).toContain('no-such-branch')
+  })
+
+  it('creates and checks out a new branch', async () => {
+    const { controller } = await harness()
+    const dir = gitRepo()
+    const value = await controller.createBranch({ cwd: dir, name: 'feature/new' })
+    expect(value).toEqual({ ok: true })
+    expect(execFileSync('git', ['rev-parse', '--abbrev-ref', 'HEAD'], { cwd: dir, encoding: 'utf8' }).trim()).toBe('feature/new')
+  })
+
+  it('refuses an invalid new branch name without running git', async () => {
+    const { controller } = await harness()
+    const dir = gitRepo()
+    const value = await controller.createBranch({ cwd: dir, name: 'a..b' })
+    expect(value).toEqual({ ok: false, error: 'invalid branch name: a..b' })
+    expect(execFileSync('git', ['rev-parse', '--abbrev-ref', 'HEAD'], { cwd: dir, encoding: 'utf8' }).trim()).toBe('main')
+  })
+
+  it('reads a missing git executable as no answer', async () => {
+    const { controller } = await harness()
+    const savedPath = process.env.PATH
+    process.env.PATH = tempDir('dsh-gui-repo-empty-bin-')
+    try {
+      const value = await controller.branches({ cwd: tempDir('dsh-gui-repo-nogit-') })
+      expect(value).toEqual({ repo: false, branches: [] })
+    } finally {
+      process.env.PATH = savedPath
+    }
+  })
+})
+
+describe('GuiRepoController branch verb fallbacks', () => {
+  /** One fake git on PATH whose body decides per invocation. */
+  function fakeGit(body: string): string {
+    const bin = tempDir('dsh-gui-repo-bin-')
+    writeFileSync(join(bin, 'git'), `#!/bin/sh\n${body}`)
+    chmodSync(join(bin, 'git'), 0o755)
+    return bin
+  }
+
+  function withPath(dir: string, run: () => Promise<void>): Promise<void> {
+    const saved = process.env.PATH
+    process.env.PATH = `${dir}:${saved ?? ''}`
+    return run().finally(() => { process.env.PATH = saved })
+  }
+
+  it('lists no branches when for-each-ref fails behind a working toplevel probe', async () => {
+    const { controller } = await harness()
+    const bin = fakeGit(`case "$1" in
+  for-each-ref) exit 3 ;;
+  rev-parse) if [ "$2" = "--abbrev-ref" ]; then echo main; fi ;;
+esac
+exit 0
+`)
+    await withPath(bin, async () => {
+      const value = await controller.branches({ cwd: tempDir('dsh-gui-repo-fake-') })
+      expect(value).toEqual({ repo: true, current: 'main', branches: [] })
+    })
+  })
+
+  it('reports stdout as the error when a refused switch writes no stderr', async () => {
+    const { controller } = await harness()
+    const bin = fakeGit('echo "stdout only"; exit 1')
+    await withPath(bin, async () => {
+      const value = await controller.checkout({ cwd: tempDir('dsh-gui-repo-fake-'), branch: 'x' })
+      expect(value).toEqual({ ok: false, error: 'stdout only' })
+    })
+  })
+
+  it('names the failing verb when a refused switch writes nothing', async () => {
+    const { controller } = await harness()
+    const bin = fakeGit('exit 1')
+    await withPath(bin, async () => {
+      const value = await controller.checkout({ cwd: tempDir('dsh-gui-repo-fake-'), branch: 'x' })
+      expect(value).toEqual({ ok: false, error: 'git switch failed' })
+    })
+  })
+
+  it('falls back to the server cwd when a request omits it', async () => {
+    const { controller } = await harness()
+    const dir = gitRepo()
+    execFileSync('git', ['branch', 'feature/x'], { cwd: dir })
+    const cwdSpy = vi.spyOn(process, 'cwd').mockReturnValue(dir)
+    try {
+      const listing = await controller.branches({})
+      expect(listing).toEqual({ repo: true, current: 'main', branches: ['feature/x', 'main'] })
+      const switched = await controller.checkout({ branch: 'feature/x' })
+      expect(switched).toEqual({ ok: true })
+      expect(execFileSync('git', ['rev-parse', '--abbrev-ref', 'HEAD'], { cwd: dir, encoding: 'utf8' }).trim()).toBe('feature/x')
+    } finally {
+      cwdSpy.mockRestore()
     }
   })
 })

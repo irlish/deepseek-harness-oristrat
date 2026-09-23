@@ -27,13 +27,13 @@ it('exposes the embedded-browser face to application documents', async () => {
   await api.browser.reload()
   await api.browser.setBounds({ x: 1, y: 2, width: 3, height: 4 })
   await api.browser.state()
-  await api.browser.close()
+  await api.browser.hide()
   expect(electron.ipcRenderer.invoke.mock.calls).toEqual([
     [DESKTOP_IPC.browserOpen, { x: 0, y: 0, width: 10, height: 10 }, 'https://example.com'],
     [DESKTOP_IPC.browserNavigate, 'https://example.com/two'],
     [DESKTOP_IPC.browserBack], [DESKTOP_IPC.browserForward], [DESKTOP_IPC.browserReload],
     [DESKTOP_IPC.browserSetBounds, { x: 1, y: 2, width: 3, height: 4 }],
-    [DESKTOP_IPC.browserGetState], [DESKTOP_IPC.browserClose],
+    [DESKTOP_IPC.browserGetState], [DESKTOP_IPC.browserHide],
   ])
   const listener = vi.fn()
   const dispose = api.browser.subscribe(listener)

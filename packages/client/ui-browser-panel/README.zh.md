@@ -9,7 +9,7 @@ kind: "package-reference"
 
 ## 概述
 
-使用本包可在桌面应用的右侧栏内浏览网页。`browser` 标签把主进程的 `WebContentsView` 覆盖到测量得到的 surface 元素上，并通过 `window.dshDesktop.browser` 桥驱动它：后退、前进、刷新，以及归一化为 http(s) 的地址栏导航。元素 resize、捕获阶段滚动和窗口 resize 都会重新推送视图边界，让原生视图跟随 Sidebar。该视图使用独立的持久分区，拒绝弹出窗口，导航仅限 http(s)。在没有该桥的纯 Web 宿主上，面板改为显示仅桌面端可用的提示。
+使用本包可在桌面应用的右侧栏内浏览网页。`browser` 标签把主进程的 `WebContentsView` 覆盖到其 surface 元素上，并通过 `window.dshDesktop.browser` 桥驱动它：后退、前进、刷新，以及归一化为 http(s)、以回车提交的地址栏导航。边界经元素的 offset 链测量，并在元素 resize、捕获阶段滚动、窗口 resize 与挂载后的落定推送时重新推送。卸载隐藏视图；下一次挂载重新附着同一实例，文档与历史跨标签切换保留。在没有该桥的纯 Web 宿主上，面板渲染仅桌面端可用的提示。
 
 ## 目录
 
@@ -25,11 +25,11 @@ kind: "package-reference"
 <a id="use-this-package"></a>
 ## 使用本包
 
-把本包作为 web-app bundle 的一个浏览器条目发布；随附组合已经插入它。该标签以**内嵌浏览器**条目出现在右侧栏引导页中，并经 `ctx.sidebarRight.openTab('browser')` 打开。在桌面应用中，面板挂载时附着内嵌视图，卸载时释放它；此后由工具栏与地址栏驱动导航。
+把本包作为 web-app bundle 的一个浏览器条目发布；随附组合已经插入它。该标签以**内嵌浏览器**条目出现在右侧栏引导页中，并经 `ctx.sidebarRight.openTab('browser')` 打开。在桌面应用中，面板挂载时附着内嵌视图，卸载时隐藏它；此后由工具栏与地址栏驱动导航，地址表单以回车提交——工具栏不再有提交按钮。
 
 ### 何时选择
 
-当桌面用户需要在会话旁边快速就地阅读网页——文档、参考资料、预览——而不离开窗口时选择它。在纯 Web 宿主上避免它，那里面板只能显示仅桌面端可用的提示；当浏览状态必须跨标签关闭保留时也避免它：关闭标签会销毁视图及其导航状态。内嵌视图归桌面端所有；本包的浏览器半边只负责测量与驱动它。
+当桌面用户需要在会话旁边快速就地阅读网页——文档、参考资料、预览——而不离开窗口时选择它。在纯 Web 宿主上避免它，那里面板只能显示仅桌面端可用的提示；当浏览状态必须跨应用退出保留时也避免它：隐藏标签会保留视图及其文档、Cookie 与历史，但视图随窗口一同销毁。内嵌视图归桌面端所有；本包的浏览器半边只负责测量与驱动它。
 
 ### 最小配置
 
@@ -49,7 +49,7 @@ kind: "package-reference"
 <details>
 <summary>实现内幕——点击展开</summary>
 
-插件主体注册 `browser-panel` locale 字典、`browser` tab 类型（id `@deepseek-ai/dsh-client-ui-browser-panel`、band `builtin`、引导序 40、不认领地址）、面板主体与 chip 标题，并在每次 apply 读取一次桌面桥：纯 Web 宿主上桥为 `undefined`，主体渲染本地化的仅桌面端提示。有桥时，主体订阅导航状态（`url`、`title`、`canGoBack`、`canGoForward`、`loading`），把视图开到测量得到的 surface 矩形上，并由元素上的 `ResizeObserver`、捕获阶段 `scroll` 与窗口 `resize` 重新推送取整后的边界；卸载时取消订阅并关闭视图。地址栏在导航前归一化输入：含空白的文本被拒绝，裸主机名补 `https://` 前缀，只有可解析的 http(s) URL 才会导航。主进程属主在每个应用窗口上维持一个视图，使用持久分区 `persist:dsh-embedded-browser`，钳制渲染进程提供的边界，拒绝弹出窗口，并把每次导航限制在 http(s)。
+插件主体注册 `browser-panel` locale 字典、`browser` tab 类型（id `@deepseek-ai/dsh-client-ui-browser-panel`、band `builtin`、引导序 40、不认领地址）、面板主体与 chip 标题，并在每次 apply 读取一次桌面桥：纯 Web 宿主上桥为 `undefined`，主体渲染本地化的仅桌面端提示。有桥时，主体订阅导航状态（`url`、`title`、`canGoBack`、`canGoForward`、`loading`），把视图开到 surface 的布局盒上——由元素的 `offsetLeft`/`offsetTop` 链求和得到，该布局在祖先 transform 动画期间即为最终值——并由元素上的 `ResizeObserver`、捕获阶段 `scroll`、窗口 `resize` 与挂载后 300ms 的落定计时器重新推送取整后的边界；卸载时取消订阅并隐藏视图。下一次挂载经幂等的 open 动词重新附着同一视图，因此文档、Cookie 与历史跨每次标签切换保留，无需重新加载。地址栏在导航前归一化输入：含空白的文本被拒绝，裸主机名补 `https://` 前缀，只有可解析的 http(s) URL 才会导航。主进程属主在每个应用窗口上维持一个视图，使用持久分区 `persist:dsh-embedded-browser`，钳制渲染进程提供的边界，拒绝弹出窗口，并把每次导航限制在 http(s)。
 
 ### 源码地图
 
@@ -58,7 +58,7 @@ kind: "package-reference"
 | [`src/client/index.ts`](src/client/index.ts) | 插件主体：字典、tab 类型、键控座位与每次 apply 一次的桥读取 |
 | [`src/client/definition.tsx`](src/client/definition.tsx) | `browser` tab 类型定义及其引导页条目 |
 | [`src/client/BrowserPanel.tsx`](src/client/BrowserPanel.tsx) | 工具栏、地址栏、边界推送、状态订阅与仅桌面端提示 |
-| [`src/client/bridge.ts`](src/client/bridge.ts) | 结构化命名的 `window.dshDesktop.browser` 面、矩形到边界的取整与 URL 归一化 |
+| [`src/client/bridge.ts`](src/client/bridge.ts) | 结构化命名的 `window.dshDesktop.browser` 面、布局 offset 与矩形到边界的取整，以及 URL 归一化 |
 | [`src/client/BrowserTabBody.tsx`](src/client/BrowserTabBody.tsx)、[`BrowserTitle.tsx`](src/client/BrowserTitle.tsx) | 座位适配器：把注入的桥送入面板；chip 标题前的地球标记 |
 | [`src/client/locales.ts`](src/client/locales.ts) | `browser-panel` zh/en 字典；中文键集是权威来源 |
 
@@ -91,7 +91,7 @@ kind: "package-reference"
 不发布 invariant 伴生包：面板不保留跨入口状态；视图驻留在桌面主进程，面板只经 preload 桥转发测量与意图。
 
 - 仅桌面端可用：纯 Web 宿主只显示提示，无法浏览。
-- 每个应用窗口只有一个视图实例：第二个浏览器标签复用同一视图，关闭标签即销毁视图，浏览状态不跨关闭保留。
+- 每个应用窗口只有一个视图实例：第二个浏览器标签复用同一视图，隐藏标签保持其存活；视图及其浏览状态仅随窗口销毁。
 - 位置依赖渲染进程测量并经 IPC 推送；侧边栏动画期间原生视图可能比 DOM 布局慢一帧。
 
 <a id="dev-note"></a>

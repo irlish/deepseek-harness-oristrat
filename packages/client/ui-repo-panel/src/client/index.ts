@@ -1,28 +1,35 @@
 /**
- * Browser half: register `repo` as a right-Sidebar tab type.
+ * Browser half: register the repository environment menu as a Session-header
+ * utility, beside the Session's own menu button.
  *
- * The public two-stage path, unmodified: the type into `ctx.sidebarRightTabs`,
- * the body into the keyed `sidebar.right.pane.tab` seat and the chip title
- * into the keyed `sidebar.right.pane.tab.title` seat, both under the type's
- * `id`.
+ * The public two-stage path, unmodified: the contribution goes into the
+ * `conversation.session.header.utilities` list seat through `ctx.slots`,
+ * waiting on the seat's declaration and rolling back with the plugin fiber.
  */
 import type { Context as ClientContext } from '@deepseek-ai/cordis'
 import type {} from '@deepseek-ai/dsh-api-remotes/client'
+import type {} from '@deepseek-ai/dsh-client-locale/client'
+import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
-import type {} from '@deepseek-ai/dsh-client-ui-sidebar-right/client'
-import type { GuiRepoStatusRequest, GuiRepoStatusValue } from '@deepseek-ai/dsh-api-gui-repo/types'
-import { REPO_ID, repoDefinition } from './definition.tsx'
+import type {} from '@deepseek-ai/dsh-client-ui-session/client'
+import type {
+  GuiRepoBranchMutationValue,
+  GuiRepoBranchesRequest,
+  GuiRepoBranchesValue,
+  GuiRepoCheckoutRequest,
+  GuiRepoCreateBranchRequest,
+  GuiRepoStatusRequest,
+  GuiRepoStatusValue,
+} from '@deepseek-ai/dsh-api-gui-repo/types'
 import { en, NS, zh } from './locales.ts'
-import { RepoTabBody, type RepoTabBodyInjected } from './RepoTabBody.tsx'
-import { RepoTitle } from './RepoTitle.tsx'
+import { RepoEnvAction, type RepoEnvActionInjected } from './RepoEnvAction.tsx'
 
 export type { RepoPanelKey } from './locales.ts'
-export type { RepoTabBodyInjected, RepoTabBodyProps } from './RepoTabBody.tsx'
-export type { RepoPanelInjected, RepoPanelProps } from './RepoPanel.tsx'
+export type { RepoEnvActionInjected, RepoEnvActionProps } from './RepoEnvAction.tsx'
 
-/** Required browser services: the tab registry, the keyed seats, the Remote
- * carrier and its namespace, and copy. */
-export const inject = ['slots', 'locale', 'remote', 'remote.guiRepo', 'sidebarRightTabs']
+/** Required browser services: the slots, the Remote carrier and its
+ * namespace, and copy. */
+export const inject = ['slots', 'locale', 'remote', 'remote.guiRepo']
 
 /** Connection response envelope carried by every unary Remote result. */
 type RemoteEnvelope<T> = { ok: true; value: T } | { ok: false; error: unknown }
@@ -30,6 +37,9 @@ type RemoteEnvelope<T> = { ok: true; value: T } | { ok: false; error: unknown }
 /** The generated guiRepo namespace, structurally named pre-generation. */
 interface GuiRepoWire {
   status: (request: GuiRepoStatusRequest) => Promise<RemoteEnvelope<GuiRepoStatusValue>>
+  branches: (request: GuiRepoBranchesRequest) => Promise<RemoteEnvelope<GuiRepoBranchesValue>>
+  checkout: (request: GuiRepoCheckoutRequest) => Promise<RemoteEnvelope<GuiRepoBranchMutationValue>>
+  createBranch: (request: GuiRepoCreateBranchRequest) => Promise<RemoteEnvelope<GuiRepoBranchMutationValue>>
 }
 
 /** Unwrap one unary Remote envelope, turning host errors into throws. */
@@ -43,27 +53,25 @@ function call<T>(promise: Promise<RemoteEnvelope<T>>): Promise<T> {
 }
 
 /**
- * Client plugin body: register the type, its dictionaries, its body, and its
- * chip title.
- * @param ctx - client root context carrying the registry, the slots, and the Remote face.
+ * Client plugin body: register the dictionaries and the header menu.
+ * @param ctx - client root context carrying the slots, the Remote face, and the locale registry.
  */
 export function apply(ctx: ClientContext): void {
-  const t = ctx.locale.bind(NS)
   ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'ui-repo-panel: dictionaries')
-  ctx.effect(() => ctx.sidebarRightTabs.register(repoDefinition(t)), 'ui-repo-panel: repo type')
 
   const wire = (ctx.remote as unknown as { guiRepo: GuiRepoWire }).guiRepo
-  const injected = (): RepoTabBodyInjected => ({
+  const injected = (): RepoEnvActionInjected => ({
     repoStatus: request => call(wire.status(request)),
+    repoBranches: request => call(wire.branches(request)),
+    repoCheckout: request => call(wire.checkout(request)),
+    repoCreateBranch: request => call(wire.createBranch(request)),
   })
-  ctx.effect(() => ctx.slots.inject('sidebar.right.pane.tab', () => ctx.slots.register({
-    name: 'sidebar.right.pane.tab',
-    key: REPO_ID,
+  ctx.effect(() => ctx.slots.inject('conversation.session.header.utilities', () => ctx.slots.register({
+    name: 'conversation.session.header.utilities',
+    id: 'repo-env',
+    // After the open-in-app split button, before the sidebar corner toggle.
+    order: 0,
     locale: NS,
     inject: injected,
-  }, RepoTabBody)), 'ui-repo-panel: repo tab body')
-  ctx.effect(() => ctx.slots.inject('sidebar.right.pane.tab.title', () => ctx.slots.register({
-    name: 'sidebar.right.pane.tab.title',
-    key: REPO_ID,
-  }, RepoTitle)), 'ui-repo-panel: repo tab title')
+  }, RepoEnvAction)), 'ui-repo-panel: header environment menu')
 }

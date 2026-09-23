@@ -1,5 +1,5 @@
 ---
-description: "Read-only repository environment Remote BFF: branch, upstream divergence, working-tree change totals, remote sources, and the serving host name over one-shot local git invocations."
+description: "Repository environment Remote BFF: branch, upstream divergence, working-tree change totals, remote sources, and the serving host name over one-shot local git invocations, plus local-branch listing, checkout, and create-and-checkout."
 kind: "package-reference"
 ---
 
@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-Use this package to give the Web GUI a read-only view of one directory's git environment. The single `status` verb snapshots the worktree root, the branch, ahead/behind against the configured upstream, added/deleted line totals plus changed and untracked file counts, the serving machine's host name, and the deduplicated remote list — gathered with one-shot local `git` invocations through `ctx.subprocess`. No command touches the network, credential prompts are forbidden, each invocation is bounded by an 8-second wall clock, and a spawn failure or timeout reads as an absent fact instead of rejecting the caller.
+Use this package to give the Web GUI a view of one directory's git environment. The `status` verb snapshots the worktree root, branch, upstream ahead/behind, change and untracked totals, host name, and remote list through one-shot local `git` invocations via `ctx.subprocess`. Three branch verbs accompany it: `branches` lists local branches, `checkout` switches to one (`git switch -- <branch>`), and `createBranch` validates the name, then creates-and-switches. Committing and pushing have no surface by product decision. Nothing touches the network; every invocation is time-bounded, and failures read as absent facts.
 
 ## Table of Contents
 
@@ -25,7 +25,7 @@ Use this package to give the Web GUI a read-only view of one directory's git env
 <a id="use-this-package"></a>
 ## Use this package
 
-Mount the controller on the Host beside the Typert Gateway and a subprocess provider; the `dsh-web-app` bundle inserts the row for the shipped composition. Browser clients call `ctx.remote.guiRepo.status({ cwd })` — `cwd` is the absolute directory to inspect and defaults to the server process's working directory — and receive one `GuiRepoStatusValue` snapshot.
+Mount the controller on the Host beside the Typert Gateway and a subprocess provider; the `dsh-web-app` bundle inserts the row for the shipped composition. Browser clients call `ctx.remote.guiRepo.status({ cwd })` — `cwd` is the absolute directory to inspect and defaults to the server process's working directory — and receive one `GuiRepoStatusValue` snapshot. `branches({ cwd })` answers the local listing, and `checkout({ cwd, branch })` and `createBranch({ cwd, name })` answer `{ ok }` or `{ ok: false, error }` carrying git's own refusal message.
 
 | Field | Meaning |
 |---|---|
@@ -60,13 +60,13 @@ The service has no configuration fields. Typert generates the Host and Client Re
 <details>
 <summary>Implementation internals — click to expand</summary>
 
-`GuiRepoController` extends `TypertRemoteService` under the namespace `guiRepo`; the `@Remote('status')` method is the whole surface. One `status` call first resolves the worktree root with `git rev-parse --show-toplevel`; a failure returns `{ repo: false, host, sources: [] }` immediately. Inside a worktree, five invocations run concurrently: branch (`rev-parse --abbrev-ref HEAD`, falling back to `symbolic-ref --short HEAD` for an unborn branch and to the short sha when detached), upstream divergence (`rev-list --left-right --count @{upstream}...HEAD`), tracked change totals (`diff --numstat HEAD`, folded by `parseNumstat`), untracked files (`ls-files --others --exclude-standard`, counted), and remotes (`remote -v`, deduplicated by `parseRemotes`). Every invocation goes through one private `runGit` helper: `ctx.subprocess.spawn` with `GIT_TERMINAL_PROMPT=0`, stdin ignored, both output streams collected under a 1 MiB cap, a 1-second termination grace, and an 8-second abort timer. A spawn failure, a timeout, and a non-zero exit all read as "no answer" — callers branch on exit codes, never on exceptions — and a per-fact failure degrades to an absent field instead of failing the whole snapshot.
+`GuiRepoController` extends `TypertRemoteService` under the namespace `guiRepo`; four `@Remote` methods are the whole surface. One `status` call first resolves the worktree root with `git rev-parse --show-toplevel`; a failure returns `{ repo: false, host, sources: [] }` immediately. Inside a worktree, five invocations run concurrently: branch (`rev-parse --abbrev-ref HEAD`, falling back to `symbolic-ref --short HEAD` for an unborn branch and to the short sha when detached), upstream divergence (`rev-list --left-right --count @{upstream}...HEAD`), tracked change totals (`diff --numstat HEAD`, folded by `parseNumstat`), untracked files (`ls-files --others --exclude-standard`, counted), and remotes (`remote -v`, deduplicated by `parseRemotes`). Every invocation goes through one private `runGit` helper: `ctx.subprocess.spawn` with `GIT_TERMINAL_PROMPT=0`, stdin ignored, both output streams collected under a 1 MiB cap, a 1-second termination grace, and an 8-second abort timer. A spawn failure, a timeout, and a non-zero exit all read as "no answer" — callers branch on exit codes, never on exceptions — and a per-fact failure degrades to an absent field instead of failing the whole snapshot. `branches` resolves the toplevel the same way, then reads `for-each-ref refs/heads` and the current branch concurrently. The two mutation verbs share one private `mutate` helper: a zero exit answers `{ ok: true }`; anything else answers `{ ok: false, error }` with git's trimmed stderr, its stdout as fallback, then a `git <verb> failed` default. `createBranch` runs the exported `isValidBranchName` guard first — length, ref-legal characters, and the git-refused spellings (leading `-`/`.`, trailing `.`/`/`, `.lock`, `..`, `//`, `@{`) — and refuses without invoking git.
 
 ### Source map
 
 | File | Role |
 |---|---|
-| [`src/index.ts`](src/index.ts) | `GuiRepoController`: the `guiRepo` namespace, the `status` verb, `runGit`, `parseNumstat`, `parseRemotes` |
+| [`src/index.ts`](src/index.ts) | `GuiRepoController`: the `guiRepo` namespace, the four verbs, `runGit`, `mutate`, `isValidBranchName`, `parseNumstat`, `parseRemotes` |
 | [`src/types.ts`](src/types.ts) | Wire types `GuiRepoStatusRequest`, `GuiRepoStatusValue`, `GuiRepoSource`, published as `./types` for Client packages |
 | [`tests/gui-repo.host.spec.ts`](tests/gui-repo.host.spec.ts) | Host specs: snapshot composition, numstat/remote parsing, failure degradation |
 

@@ -72,11 +72,15 @@ function snapshotOf(contents: WebContents): DesktopBrowserState {
 
 /**
  * Main-process owner of the single embedded browser view of one window.
- * The view exists between `open` and `close`; every other verb is a no-op
- * while it is detached.
+ * The view exists between its first `open` and the window's teardown: `hide`
+ * detaches it from the content view without destroying it, so the loaded
+ * document and navigation history of a hidden pane survive tab switches and
+ * re-attach at the next `open`. Every verb but `open` is a no-op while no
+ * view exists.
  */
 export class DesktopBrowserViewController {
   private view: WebContentsView | undefined
+  private attached = false
   private state: DesktopBrowserState = { url: '', title: '', canGoBack: false, canGoForward: false, loading: false }
 
   /** @param window - application window whose contentView hosts the view. */
@@ -98,8 +102,21 @@ export class DesktopBrowserViewController {
     /* v8 ignore -- attach() always assigns this.view; the guard only narrows the optional field */
     if (view === undefined) return
     this.window.contentView.addChildView(view)
+    this.attached = true
     this.setBounds(bounds)
     if (url !== undefined && isBrowsableUrl(url)) void view.webContents.loadURL(url)
+    this.publish()
+  }
+
+  /**
+   * Detach the view from the content view, keeping it and its document
+   * alive; the next `open` re-attaches the same view at a new placement.
+   */
+  hide(): void {
+    const view = this.view
+    if (view === undefined || !this.attached) return
+    this.attached = false
+    if (!this.window.isDestroyed()) this.window.contentView.removeChildView(view)
     this.publish()
   }
 
@@ -108,6 +125,7 @@ export class DesktopBrowserViewController {
     const view = this.view
     if (view === undefined) return
     this.view = undefined
+    this.attached = false
     this.state = { url: '', title: '', canGoBack: false, canGoForward: false, loading: false }
     if (!this.window.isDestroyed()) this.window.contentView.removeChildView(view)
     view.webContents.close()
@@ -158,6 +176,9 @@ export class DesktopBrowserViewController {
       },
     })
     const contents = view.webContents
+    // An unpainted view must never show through as a dark rectangle while a
+    // navigation commits; the pane surface behind it is light.
+    view.setBackgroundColor('#ffffff')
     // Popups never become windows; an http(s) target loads in-view instead.
     contents.setWindowOpenHandler(({ url }) => {
       if (isBrowsableUrl(url)) void contents.loadURL(url)

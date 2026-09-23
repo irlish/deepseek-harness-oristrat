@@ -1,5 +1,5 @@
 ---
-description: "只读仓库环境 Remote BFF：通过一次性本地 git 调用暴露分支、上游分歧、工作区变更总量、远端来源与服务主机名。"
+description: "仓库环境 Remote BFF：通过一次性本地 git 调用暴露分支、上游分歧、工作区变更总量、远端来源与服务主机名，并支持本地分支列表、检出与创建并检出。"
 kind: "package-reference"
 ---
 
@@ -9,7 +9,7 @@ kind: "package-reference"
 
 ## 概述
 
-使用本包可为 Web GUI 提供一个目录 git 环境的只读视图。唯一的 `status` 动词快照工作树根、分支、相对已配置上游的领先/落后、增删行总量与变更及未跟踪文件数、服务机器的主机名，以及去重后的远端列表——全部通过 `ctx.subprocess` 的一次性本地 `git` 调用完成。所有命令均不触网，凭据提示被禁止，每次调用受 8 秒墙钟约束，spawn 失败或超时按缺失事实处理，而不是向调用方抛错。
+使用本包可为 Web GUI 提供一个目录 git 环境的视图。`status` 动词通过 `ctx.subprocess` 的一次性本地 `git` 调用，快照工作树根、分支、上游领先/落后、变更与未跟踪合计、主机名及远端列表。另有三个分支动词伴随它：`branches` 列出本地分支，`checkout` 切换到某个分支（`git switch -- <branch>`），`createBranch` 先校验名称再创建并切换。按产品决策，提交与推送没有表面。所有命令均不触网；每次调用受时间约束，失败按缺失事实处理。
 
 ## 目录
 
@@ -25,7 +25,7 @@ kind: "package-reference"
 <a id="use-this-package"></a>
 ## 使用本包
 
-把控制器与 Typert Gateway 及 subprocess 提供方一起挂载在 Host 侧；`dsh-web-app` bundle 已为随附组合插入该条目。浏览器客户端调用 `ctx.remote.guiRepo.status({ cwd })`——`cwd` 是要检查的绝对目录，缺省为服务器进程的工作目录——并得到一份 `GuiRepoStatusValue` 快照。
+把控制器与 Typert Gateway 及 subprocess 提供方一起挂载在 Host 侧；`dsh-web-app` bundle 已为随附组合插入该条目。浏览器客户端调用 `ctx.remote.guiRepo.status({ cwd })`——`cwd` 是要检查的绝对目录，缺省为服务器进程的工作目录——并得到一份 `GuiRepoStatusValue` 快照。`branches({ cwd })` 返回本地列表；`checkout({ cwd, branch })` 与 `createBranch({ cwd, name })` 返回 `{ ok }`，或携带 git 自己的拒绝消息的 `{ ok: false, error }`。
 
 | 字段 | 含义 |
 |---|---|
@@ -60,13 +60,13 @@ kind: "package-reference"
 <details>
 <summary>实现内幕——点击展开</summary>
 
-`GuiRepoController` 在命名空间 `guiRepo` 下扩展 `TypertRemoteService`；`@Remote('status')` 方法就是全部表面。一次 `status` 调用先用 `git rev-parse --show-toplevel` 解析工作树根；失败立即返回 `{ repo: false, host, sources: [] }`。工作树内五个调用并发执行：分支（`rev-parse --abbrev-ref HEAD`，unborn 分支回退到 `symbolic-ref --short HEAD`，分离头指针回退到短 sha）、上游分歧（`rev-list --left-right --count @{upstream}...HEAD`）、已跟踪变更总量（`diff --numstat HEAD`，由 `parseNumstat` 汇总）、未跟踪文件（`ls-files --others --exclude-standard`，计数）与远端（`remote -v`，由 `parseRemotes` 去重）。每次调用都经同一个私有 `runGit` 辅助：`ctx.subprocess.spawn` 携带 `GIT_TERMINAL_PROMPT=0`、忽略 stdin、两路输出流在 1 MiB 上限内收集、1 秒终止宽限与 8 秒中止定时器。spawn 失败、超时与非零退出都按「无答案」处理——调用方按退出码分支，绝不依赖异常——单项事实失败降级为缺席字段，而不是让整个快照失败。
+`GuiRepoController` 在命名空间 `guiRepo` 下扩展 `TypertRemoteService`；四个 `@Remote` 方法就是全部表面。一次 `status` 调用先用 `git rev-parse --show-toplevel` 解析工作树根；失败立即返回 `{ repo: false, host, sources: [] }`。工作树内五个调用并发执行：分支（`rev-parse --abbrev-ref HEAD`，unborn 分支回退到 `symbolic-ref --short HEAD`，分离头指针回退到短 sha）、上游分歧（`rev-list --left-right --count @{upstream}...HEAD`）、已跟踪变更总量（`diff --numstat HEAD`，由 `parseNumstat` 汇总）、未跟踪文件（`ls-files --others --exclude-standard`，计数）与远端（`remote -v`，由 `parseRemotes` 去重）。每次调用都经同一个私有 `runGit` 辅助：`ctx.subprocess.spawn` 携带 `GIT_TERMINAL_PROMPT=0`、忽略 stdin、两路输出流在 1 MiB 上限内收集、1 秒终止宽限与 8 秒中止定时器。spawn 失败、超时与非零退出都按「无答案」处理——调用方按退出码分支，绝不依赖异常——单项事实失败降级为缺席字段，而不是让整个快照失败。`branches` 以同样方式解析工作树根，然后并发读取 `for-each-ref refs/heads` 与当前分支。两个变更动词共享一个私有 `mutate` 辅助：零退出码返回 `{ ok: true }`；其余返回 `{ ok: false, error }`，error 取 git 去空白后的 stderr，其次 stdout，最后 `git <verb> failed` 默认值。`createBranch` 先运行导出的 `isValidBranchName` 守卫——长度、ref 合法字符，以及 git 拒绝的拼写（前导 `-`/`.`、结尾 `.`/`/`、`.lock`、`..`、`//`、`@{`）——不合法时不调用 git 直接拒绝。
 
 ### 源码地图
 
 | 文件 | 职责 |
 |---|---|
-| [`src/index.ts`](src/index.ts) | `GuiRepoController`：`guiRepo` 命名空间、`status` 动词、`runGit`、`parseNumstat`、`parseRemotes` |
+| [`src/index.ts`](src/index.ts) | `GuiRepoController`：`guiRepo` 命名空间、四个动词、`runGit`、`mutate`、`isValidBranchName`、`parseNumstat`、`parseRemotes` |
 | [`src/types.ts`](src/types.ts) | 线路类型 `GuiRepoStatusRequest`、`GuiRepoStatusValue`、`GuiRepoSource`，以 `./types` 发布给 Client 包 |
 | [`tests/gui-repo.host.spec.ts`](tests/gui-repo.host.spec.ts) | Host 规格：快照组合、numstat/remote 解析、失败降级 |
 

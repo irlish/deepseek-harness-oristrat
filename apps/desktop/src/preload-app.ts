@@ -22,7 +22,7 @@ const startup: DshDesktopStartupApi = {
 
 const browser: DesktopBrowserApi = {
   open: (bounds, url) => ipcRenderer.invoke(DESKTOP_IPC.browserOpen, bounds, url) as Promise<void>,
-  close: () => ipcRenderer.invoke(DESKTOP_IPC.browserClose) as Promise<void>,
+  hide: () => ipcRenderer.invoke(DESKTOP_IPC.browserHide) as Promise<void>,
   navigate: url => ipcRenderer.invoke(DESKTOP_IPC.browserNavigate, url) as Promise<void>,
   back: () => ipcRenderer.invoke(DESKTOP_IPC.browserBack) as Promise<void>,
   forward: () => ipcRenderer.invoke(DESKTOP_IPC.browserForward) as Promise<void>,

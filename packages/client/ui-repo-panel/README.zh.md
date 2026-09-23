@@ -1,5 +1,5 @@
 ---
-description: "右侧栏仓库环境标签页：只读展示会话工作区的分支、上游领先/落后、变更合计、主机名与远程来源，数据来自 gui-repo Remote 命名空间。"
+description: "会话头部仓库环境菜单：展示会话工作区的分支、上游领先/落后、变更合计、主机名与远程来源，并支持本地分支切换，数据来自 gui-repo Remote 命名空间。"
 kind: "package-reference"
 ---
 
@@ -9,7 +9,7 @@ kind: "package-reference"
 
 ## 概述
 
-使用本包可在右侧栏展示会话的仓库环境。`repo` 标签为每个会话渲染一张只读卡片：当前分支及相对已配置上游的领先/落后分歧、相对 HEAD 的工作区变更合计（`+X -Y · N 个文件`，未跟踪文件计入 N）、服务主机名，以及仓库的远程来源。数据通过 `ctx.remote.guiRepo.status` 按会话工作区根读取，面板打开期间每四秒重新轮询；手动刷新立即读取。按产品决策，面板不执行任何写操作——没有提交、推送或检出。
+使用本包可在会话头部展示会话的仓库环境。触发按钮为每个会话打开一个气泡菜单：当前分支及上游领先/落后、相对 HEAD 的工作区变更合计（`+X -Y · N 个文件`，未跟踪计入 N）、主机名与远程来源。分支行的子菜单在搜索过滤后列出本地分支，检出所选分支，并支持从草稿创建并检出新分支。数据经 `ctx.remote.guiRepo` 到达，打开期间每四秒重新轮询。按产品决策，提交与推送仍然缺席。
 
 ## 目录
 
@@ -25,21 +25,21 @@ kind: "package-reference"
 <a id="use-this-package"></a>
 ## 使用本包
 
-把本包作为 web-app bundle 的一个浏览器条目发布；随附组合已经插入它。该标签随后以**仓库环境**条目出现在右侧栏引导页中，并像其他页类型一样经 `ctx.sidebarRight.openTab('repo')` 打开。卡片检查 sessions mirror 为当前会话携带的工作区根；mirror 尚不知道该根时，Host 回退到服务器的工作目录。
+把本包作为 web-app bundle 的一个浏览器条目发布；随附组合已经插入它。触发按钮随后渲染在每个会话头部的工具簇中、会话菜单按钮旁边，点击即打开气泡菜单。菜单检查 sessions mirror 为当前会话携带的工作区根；mirror 尚不知道该根时，Host 回退到服务器的工作目录。
 
 ### 何时选择
 
-把它作为会话旁边的环境只读上下文，展示会话工作区的状态——分支、分歧、待处理变更、远端——时选择它。当用户需要对仓库执行操作时避免它：staging、提交与推送被刻意省略，agent 的 bash 工具仍是唯一的修改路径。客户端插件等待 `remote.guiRepo` 命名空间，因此 Host 上没有 [`@deepseek-ai/dsh-api-gui-repo`](../../api/gui-repo/README.zh.md) 的组合永远不会注册该标签。
+把它作为会话旁边的环境上下文，展示会话工作区的状态——分支、分歧、待处理变更、远端——并允许不离开对话就切换分支时，选择它。当用户需要发布历史时避免它：staging、提交与推送被刻意省略，agent 的 bash 工具仍是唯一的发布路径。客户端插件等待 `remote.guiRepo` 命名空间，因此 Host 上没有 [`@deepseek-ai/dsh-api-gui-repo`](../../api/gui-repo/README.zh.md) 的组合永远不会注册该菜单。
 
 ### 最小配置
 
-在 Sidebar 栈旁边添加一个浏览器条目；web-app bundle 已经携带它：
+在头部栈旁边添加一个浏览器条目；web-app bundle 已经携带它：
 
 ```yaml
 - name: '@deepseek-ai/dsh-client-ui-repo-panel'
 ```
 
-本包没有配置字段。它需要右侧栏 tab 注册表（`sidebarRightTabs`）、键控的 `sidebar.right.pane.tab` 与 `sidebar.right.pane.tab.title` 座位、locale 服务，以及 `guiRepo` Remote 命名空间。
+本包没有配置字段。它需要 `conversation.session.header.utilities` 座位、locale 服务，以及 `guiRepo` Remote 命名空间。
 
 -----
 
@@ -49,16 +49,15 @@ kind: "package-reference"
 <details>
 <summary>实现内幕——点击展开</summary>
 
-插件主体在 effect 下注册四样东西：`repo-panel` locale 字典、`repo` tab 类型（id `@deepseek-ai/dsh-client-ui-repo-panel`、band `builtin`、引导序 30、不认领地址）、键控 `sidebar.right.pane.tab` 座位下的面板主体，以及 `sidebar.right.pane.tab.title` 下的 chip 标题。主体从 sessions mirror 读取会话的 `cwd` 并交给一个轮询循环：挂载时立即 `status` 读取、固定 4 秒间隔刷新，以及手动刷新按钮。读取失败追加本地化错误行，行区保留最近一次成功快照；位于任何工作树之外的目录渲染「非仓库」状态而不是行区。分歧渲染 Host 报告的 `ahead`/`behind` 中在场的部分；未配置上游时整体省略。
+插件主体在 effect 下注册两样东西：`repo-panel` locale 字典，以及一个 `conversation.session.header.utilities` 条目（id `repo-env`、order 0）。动作组件从 sessions mirror 读取会话的 `cwd`，并在打开期间运行一个轮询循环：立即 `status` 读取、固定 4 秒间隔刷新，以及——在分支子菜单打开期间——对 `branches` 采用相同节奏。读取失败保留加载提示；没有工作区的会话与位于任何工作树之外的目录渲染各自的提示而不是行区。子菜单按子串过滤列表，用选中的单选行标记当前分支，把点选经 `checkout`（`git switch`）路由、把草稿表单经 `createBranch`（`git switch --create`）路由；被拒绝的变更在子菜单内显示 git 自己的消息。Escape 与外部指针按下关闭气泡。
 
 ### 源码地图
 
 | 文件 | 职责 |
 |---|---|
-| [`src/client/index.ts`](src/client/index.ts) | 插件主体：字典、tab 类型、键控座位与 `guiRepo` 线上面 |
-| [`src/client/definition.tsx`](src/client/definition.tsx) | `repo` tab 类型定义及其引导页条目 |
-| [`src/client/RepoPanel.tsx`](src/client/RepoPanel.tsx) | 环境卡片：轮询循环、刷新、行区、错误与非仓库状态 |
-| [`src/client/RepoTabBody.tsx`](src/client/RepoTabBody.tsx)、[`RepoTitle.tsx`](src/client/RepoTitle.tsx) | 座位适配器：把会话工作区根送入卡片；chip 标题前的分支标记 |
+| [`src/client/index.ts`](src/client/index.ts) | 插件主体：字典与携带 `guiRepo` 线上面的头部工具条目 |
+| [`src/client/RepoEnvAction.tsx`](src/client/RepoEnvAction.tsx) | 触发按钮、气泡、环境行、分支子菜单、轮询循环与变更处理器 |
+| [`src/client/glyphs.tsx`](src/client/glyphs.tsx) | 以 currentColor 绘制的分支字形，用于触发按钮与分支行 |
 | [`src/client/locales.ts`](src/client/locales.ts) | `repo-panel` zh/en 字典；中文键集是权威来源 |
 
 </details>
@@ -68,8 +67,8 @@ kind: "package-reference"
 <a id="further-exploration"></a>
 ## 进一步探索
 
-- [ui-sidebar-right](../ui-sidebar-right/README.zh.md)——本包注册进入的 tab 注册表、键控座位与导航控制器。
-- [gui-repo](../../api/gui-repo/README.zh.md)——收集卡片渲染的每一项事实的 Host 命名空间。
+- [ui-conversation](../ui-conversation/README.zh.md)——本包注册进入的会话头部及其工具座位。
+- [gui-repo](../../api/gui-repo/README.zh.md)——收集菜单渲染的每一项事实并执行其分支动词的 Host 命名空间。
 - [Remote 装配](../../api/remotes/README.zh.md)——`ctx.remote.guiRepo` 如何到达浏览器。
 
 -----
@@ -77,7 +76,7 @@ kind: "package-reference"
 <a id="model-experience"></a>
 ## 模型体验
 
-无，因为面板只读取 `guiRepo` Remote 命名空间；任何动词都不进入模型请求。
+无，因为菜单只通过 `guiRepo` Remote 命名空间读取与切换分支；任何动词都不进入模型请求。
 
 #### KV Cache 影响
 
@@ -87,12 +86,13 @@ kind: "package-reference"
 
 <a id="known-limitations-and-deferred-work"></a>
 
-不发布 invariant 伴生包：面板不保留跨入口状态；所有事实按挂载与轮询即时获取，座位生命周期由本包的规格断言。
+不发布 invariant 伴生包：菜单不保留跨入口状态；所有事实按打开与轮询即时获取，座位生命周期由本包的规格断言。
 
 - 四秒轮询、无推送通道：分歧与变更合计最多滞后实际工作树一次轮询。
 - 变更合计只统计已跟踪文件（`git diff --numstat HEAD`）；未跟踪文件只增加文件数，不贡献 `+`/`-` 行数。
 - 未配置上游时整行省略领先/落后，而不是显示为零。
-- 按产品决策只读：staging、提交与推送在这里没有界面，仍留在 agent 的 bash 工具中。
+- 按产品决策不发布历史：staging、提交与推送在这里没有界面，仍留在 agent 的 bash 工具中；分支切换是菜单唯一的修改操作。
+- 分支子菜单只列出本地分支；远程跟踪引用既不列出也不抓取。
 
 <a id="dev-note"></a>
 ### 开发备注

@@ -25,7 +25,8 @@ export interface BrowserState {
 /** The desktop bridge's embedded-browser operations. */
 export interface DesktopBrowserBridge {
   readonly open: (bounds: BrowserBounds, url?: string) => Promise<void>
-  readonly close: () => Promise<void>
+  /** Detach the view, keeping its document and history for the next `open`. */
+  readonly hide: () => Promise<void>
   readonly navigate: (url: string) => Promise<void>
   readonly back: () => Promise<void>
   readonly forward: () => Promise<void>
@@ -56,6 +57,26 @@ export function boundsFromRect(rect: { left: number; top: number; width: number;
     width: Math.round(rect?.width ?? 0),
     height: Math.round(rect?.height ?? 0),
   }
+}
+
+/**
+ * Convert one laid-out element into view placement numbers through its
+ * offset chain: layout offsets are final while an ancestor transition still
+ * transforms the painted position, so a push measured this way stays correct
+ * across the pane's open animation.
+ * @param element - laid-out surface element inside the application document.
+ * @returns rounded window-content bounds for the bridge.
+ */
+export function boundsFromLayout(element: HTMLElement): BrowserBounds {
+  let x = 0
+  let y = 0
+  let node: HTMLElement | null = element
+  while (node !== null) {
+    x += node.offsetLeft
+    y += node.offsetTop
+    node = node.offsetParent instanceof HTMLElement ? node.offsetParent : null
+  }
+  return { x: Math.round(x), y: Math.round(y), width: element.offsetWidth, height: element.offsetHeight }
 }
 
 /**

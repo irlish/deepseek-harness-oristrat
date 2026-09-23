@@ -61,18 +61,6 @@
   outline-offset: 1px;
 }
 
-.go {
-  flex: 0 0 auto;
-  height: 26px;
-  padding: 0 10px;
-  border: none;
-  border-radius: 6px;
-  background: var(--dsw-alias-brand-primary);
-  color: var(--dsw-alias-brand-primary-invert);
-  font-size: 12px;
-  cursor: pointer;
-}
-
 .error {
   flex: 0 0 auto;
   padding: 4px 8px;

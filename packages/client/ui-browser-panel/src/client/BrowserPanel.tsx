@@ -1,16 +1,19 @@
 /**
  * BrowserPanel: the embedded-browser pane. The desktop main process owns the
  * WebContentsView; this component owns its placement — it measures the
- * surface element, opens the view over it, and re-pushes bounds while the
- * pane resizes, scrolls, or the window changes. The toolbar drives history
- * and navigation through the injected bridge; on the plain web host, where no
- * bridge exists, the pane explains the desktop-only surface instead.
+ * surface element through its offset chain, opens (or re-attaches) the view
+ * over it, and re-pushes bounds while the pane resizes, scrolls, or the
+ * window changes. Unmounting hides the view instead of destroying it, so a
+ * tab switch keeps the loaded document and history for the next mount. The
+ * toolbar drives history; the address bar navigates on Enter. On the plain
+ * web host, where no bridge exists, the pane explains the desktop-only
+ * surface instead.
  */
 import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import type { PropsLocale } from '@deepseek-ai/dsh-client-ui-slots'
 import { IconChevronLeftOutline14, IconChevronRightOutline14, IconRefreshOutline14 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { BrowserState, DesktopBrowserBridge } from './bridge.ts'
-import { boundsFromRect, normalizeUrlInput } from './bridge.ts'
+import { boundsFromLayout, normalizeUrlInput } from './bridge.ts'
 import type {} from './locales.ts'
 import css from './BrowserPanel.module.css'
 
@@ -44,7 +47,7 @@ export function BrowserPanel({ t, bridge }: BrowserPanelProps): ReactNode {
     const element = surfaceRef.current
     /* v8 ignore next -- pushers only run while the bridge is attached and the surface is mounted. */
     if (active === undefined || element === null) return
-    active.setBounds(boundsFromRect(element.getBoundingClientRect())).catch(ignoreBridgeError)
+    active.setBounds(boundsFromLayout(element)).catch(ignoreBridgeError)
   }, [])
 
   useEffect(() => {
@@ -54,7 +57,11 @@ export function BrowserPanel({ t, bridge }: BrowserPanelProps): ReactNode {
     /* v8 ignore next -- the surface ref is attached before the effect runs. */
     if (element === null) return
     const unsubscribe = active.subscribe(setState)
-    active.open(boundsFromRect(element.getBoundingClientRect())).catch(ignoreBridgeError)
+    active.open(boundsFromLayout(element)).catch(ignoreBridgeError)
+    // The pane's open animation transforms the painted position without
+    // resizing the surface; a delayed push lands the view at the settled
+    // layout box even when no observer fires afterwards.
+    const settle = setTimeout(() => { pushBounds() }, 300)
     const observer = typeof ResizeObserver === 'function'
       ? new ResizeObserver(() => { pushBounds() })
       : undefined
@@ -63,10 +70,11 @@ export function BrowserPanel({ t, bridge }: BrowserPanelProps): ReactNode {
     window.addEventListener('scroll', pushBounds, true)
     return () => {
       unsubscribe()
+      clearTimeout(settle)
       observer?.disconnect()
       window.removeEventListener('resize', pushBounds)
       window.removeEventListener('scroll', pushBounds, true)
-      active.close().catch(ignoreBridgeError)
+      active.hide().catch(ignoreBridgeError)
     }
   }, [pushBounds])
 
@@ -112,7 +120,6 @@ export function BrowserPanel({ t, bridge }: BrowserPanelProps): ReactNode {
             aria-label={t('url.placeholder')}
             onChange={(event) => { setDraft(event.target.value) }}
           />
-          <button type="submit" className={css.go}>{t('action.open')}</button>
         </form>
       </div>
       {failed !== null && <div className={css.error}>{t('state.error', { message: failed })}</div>}

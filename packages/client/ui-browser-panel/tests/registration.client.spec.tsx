@@ -49,7 +49,7 @@ type BridgeMocks = Record<keyof DesktopBrowserBridge, ReturnType<typeof vi.fn>>
 function fakeBridge(): DesktopBrowserBridge & BridgeMocks {
   return {
     open: vi.fn().mockResolvedValue(undefined),
-    close: vi.fn().mockResolvedValue(undefined),
+    hide: vi.fn().mockResolvedValue(undefined),
     navigate: vi.fn().mockResolvedValue(undefined),
     back: vi.fn().mockResolvedValue(undefined),
     forward: vi.fn().mockResolvedValue(undefined),
@@ -150,7 +150,7 @@ describe('bridge failure edges', () => {
     bridge.navigate.mockRejectedValueOnce('plain string')
     render(<BrowserPanel t={t} bridge={bridge} />)
     const input = screen.getByRole('textbox')
-    const form = screen.getByRole('button', { name: '打开' }).closest('form')!
+    const form = input.closest('form')!
     fireEvent.change(input, { target: { value: 'example.com' } })
     fireEvent.submit(form)
     await waitFor(() => {

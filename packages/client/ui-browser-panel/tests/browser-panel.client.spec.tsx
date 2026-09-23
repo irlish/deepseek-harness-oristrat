@@ -3,7 +3,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-libra
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { ComponentProps } from 'react'
 import { BrowserPanel } from '../src/client/BrowserPanel.tsx'
-import { boundsFromRect, desktopBrowser, normalizeUrlInput, type BrowserState, type DesktopBrowserBridge } from '../src/client/bridge.ts'
+import { boundsFromLayout, boundsFromRect, desktopBrowser, normalizeUrlInput, type BrowserState, type DesktopBrowserBridge } from '../src/client/bridge.ts'
 import { zh } from '../src/client/locales.ts'
 
 const t: ComponentProps<typeof BrowserPanel>['t'] = (key, params) => {
@@ -19,7 +19,7 @@ type BridgeMocks = Record<keyof DesktopBrowserBridge, ReturnType<typeof vi.fn>>
 function fakeBridge(): DesktopBrowserBridge & BridgeMocks {
   return {
     open: vi.fn().mockResolvedValue(undefined),
-    close: vi.fn().mockResolvedValue(undefined),
+    hide: vi.fn().mockResolvedValue(undefined),
     navigate: vi.fn().mockResolvedValue(undefined),
     back: vi.fn().mockResolvedValue(undefined),
     forward: vi.fn().mockResolvedValue(undefined),
@@ -37,6 +37,7 @@ function stateOf(overrides: Partial<BrowserState> = {}): BrowserState {
 afterEach(() => {
   cleanup()
   vi.unstubAllGlobals()
+  vi.useRealTimers()
 })
 
 describe('normalizeUrlInput', () => {
@@ -62,6 +63,26 @@ describe('boundsFromRect', () => {
   })
 })
 
+describe('boundsFromLayout', () => {
+  /** One element whose offset chain reads through defined properties. */
+  function offsetElement(left: number, top: number, width: number, height: number, parent: HTMLElement | null): HTMLElement {
+    const element = document.createElement('div')
+    Object.defineProperty(element, 'offsetLeft', { value: left })
+    Object.defineProperty(element, 'offsetTop', { value: top })
+    Object.defineProperty(element, 'offsetWidth', { value: width })
+    Object.defineProperty(element, 'offsetHeight', { value: height })
+    Object.defineProperty(element, 'offsetParent', { value: parent })
+    return element
+  }
+
+  it('sums the offset chain so transformed ancestors cannot move the push', () => {
+    const grand = offsetElement(100, 40, 800, 600, null)
+    const parent = offsetElement(20, 8, 400, 300, grand)
+    const surface = offsetElement(4, 30, 320, 240, parent)
+    expect(boundsFromLayout(surface)).toEqual({ x: 124, y: 78, width: 320, height: 240 })
+  })
+})
+
 describe('desktopBrowser', () => {
   it('reads the bridge only from the desktop carrier', () => {
     expect(desktopBrowser()).toBeUndefined()
@@ -78,7 +99,10 @@ describe('BrowserPanel', () => {
     expect(screen.getByText('内嵌浏览器仅在桌面客户端可用')).toBeTruthy()
   })
 
-  it('opens the view over the surface, follows state pushes, and closes on unmount', async () => {
+  it('opens the view over the surface, follows state pushes, and hides on unmount', async () => {
+    // jsdom never fires animation frames; the stub lets the frame push run.
+    vi.stubGlobal('requestAnimationFrame', (callback: () => void) => setTimeout(callback, 0))
+    vi.stubGlobal('cancelAnimationFrame', (handle: number) => clearTimeout(handle))
     const bridge = fakeBridge()
     const unsubscribe = vi.fn()
     bridge.subscribe.mockReturnValue(unsubscribe)
@@ -95,9 +119,14 @@ describe('BrowserPanel', () => {
     // Window resizes re-push the measured bounds.
     fireEvent(window, new Event('resize'))
     expect(bridge.setBounds).toHaveBeenCalledWith({ x: 0, y: 0, width: 0, height: 0 })
+    // The settle push lands the view after the pane's open animation.
+    await waitFor(() => {
+      expect(bridge.setBounds.mock.calls.length).toBeGreaterThan(1)
+    })
     unmount()
     expect(unsubscribe).toHaveBeenCalled()
-    expect(bridge.close).toHaveBeenCalled()
+    expect(bridge.hide).toHaveBeenCalled()
+    expect(bridge.open).toHaveBeenCalledTimes(1)
   })
 
   it('drives the toolbar: history guards, reload, and the address form', async () => {
@@ -119,13 +148,13 @@ describe('BrowserPanel', () => {
 
     const input = screen.getByRole('textbox')
     fireEvent.change(input, { target: { value: 'example.com' } })
-    fireEvent.submit(screen.getByRole('button', { name: '打开' }).closest('form')!)
+    fireEvent.submit(input.closest('form')!)
     await waitFor(() => {
       expect(bridge.navigate).toHaveBeenCalledWith('https://example.com/')
     })
     // Spaced text names no URL and never reaches the bridge.
     fireEvent.change(input, { target: { value: 'two words' } })
-    fireEvent.submit(screen.getByRole('button', { name: '打开' }).closest('form')!)
+    fireEvent.submit(input.closest('form')!)
     expect(bridge.navigate).toHaveBeenCalledTimes(1)
   })
 
@@ -136,7 +165,7 @@ describe('BrowserPanel', () => {
       .mockResolvedValueOnce(undefined)
     render(<BrowserPanel t={t} bridge={bridge} />)
     const input = screen.getByRole('textbox')
-    const form = screen.getByRole('button', { name: '打开' }).closest('form')!
+    const form = input.closest('form')!
     fireEvent.change(input, { target: { value: 'example.com' } })
     fireEvent.submit(form)
     await waitFor(() => {

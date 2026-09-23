@@ -30,13 +30,13 @@ The fork's product owner asked for four user-visible capabilities in one round:
 ### Repo-environment panel (F3)
 
 - New `api/gui-repo` Remote BFF (gui-terminal is the template): one `status` verb runs local git (`rev-parse --show-toplevel`, `abbrev-ref HEAD` with unborn/detached fallbacks, `rev-list --left-right --count @{upstream}...HEAD`, `diff --numstat HEAD`, `ls-files --others`, `remote -v`) through `ctx.subprocess` under an 8s bound and 1MB collection caps; every failure degrades to omitted fields, and a non-repo answers `repo: false`.
-- New `ui-repo-panel` client package registers the `repo` right-sidebar tab type: branch + ahead/behind, `+X -Y · N files` (tracked totals plus untracked count), local host, remote sources; 4s polling, manual refresh, read-only by product decision.
+- The `ui-repo-panel` client package registers the `repo-env` Session-header utility: a popover with branch + ahead/behind, `+X -Y · N files` (tracked totals plus untracked count), local host, and remote sources, plus a branch submenu that searches local branches, checks out the picked one, and creates-and-checks-out a new one; 4s polling. Commit and push remain absent by product decision (the [round-3 note](2026-09-23-oristrat-header-repo-menu-browser-view-reuse.md) records the header placement and the branch verbs).
 
 ### Embedded browser (F4)
 
 - `apps/desktop/src/browser-view.ts` owns one `WebContentsView` per application window: persistent `persist:dsh-embedded-browser` partition, denied window opens (http(s) targets load in-view), http(s)-only navigation, and state pushes (url/title/canGoBack/canGoForward/loading) on every navigation event. Renderer-supplied bounds pass `sanitizeBounds` (finite, rounded, clamped).
 - `preload-app.ts` exposes a `browser` face to the `dsh-app://app` document only; new `DESKTOP_IPC.browser*` channels are gated by `assertDesktopSender(event, ['app'])`.
-- New `ui-browser-panel` client package registers the `browser` right-sidebar tab type: toolbar (back/forward/reload, address bar normalized to http(s)) above a measured surface; ResizeObserver plus capture-phase scroll and window resize re-push bounds; unmount closes the view. On the plain web host the pane renders a desktop-only notice.
+- New `ui-browser-panel` client package registers the `browser` right-sidebar tab type: toolbar (back/forward/reload, address bar normalized to http(s)) above a measured surface; ResizeObserver plus capture-phase scroll, window resize, and a settle push re-push layout-offset bounds; unmount hides the view and the next mount re-attaches the same instance without a reload, and the address form navigates on Enter with no submit button (the [round-3 note](2026-09-23-oristrat-header-repo-menu-browser-view-reuse.md) records the lifecycle). On the plain web host the pane renders a desktop-only notice.
 
 ### Gate normalization
 
@@ -54,4 +54,4 @@ The fork's product owner asked for four user-visible capabilities in one round:
 
 - Coverage stays per-file 100% for every new source file; genuinely unreachable defensive arms carry reasoned `v8 ignore` comments (git short-sha fallback after detached HEAD, remote-list failure behind show-toplevel, rev-list column guard, stdout collector fallback, effect-time ref guards).
 - Pre-existing fork reds are untouched and recorded: `verify-client-ui-i18n` findings in `apps/desktop/renderer/startup.js` and `OristratBrand.tsx`, `main-startup.spec.ts` timeouts at baseline HEAD, `test:gui` drift (ui-layout/ui-settings-models/ui-settings-general/ui-chat/ui-deliverables), and the remaining repo-wide oxlint errors in fork-only files.
-- The embedded browser is desktop-only; the web host gets the notice pane. One view per window means a second browser tab reuses the same view, and closing the tab destroys browsing state.
+- The embedded browser is desktop-only; the web host gets the notice pane. One view per window means a second browser tab reuses the same view, and hiding a tab keeps browsing state alive; it is destroyed only with the window.

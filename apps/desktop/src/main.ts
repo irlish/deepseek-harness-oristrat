@@ -488,10 +488,9 @@ async function main(): Promise<void> {
     if (placement === undefined) throw new Error('dsh desktop: browser bounds must be four finite numbers')
     browserFor().open(placement, typeof url === 'string' ? url : undefined)
   })
-  ipcMain.handle(DESKTOP_IPC.browserClose, (event) => {
+  ipcMain.handle(DESKTOP_IPC.browserHide, (event) => {
     assertDesktopSender(event, ['app'])
-    browserController?.close()
-    browserController = undefined
+    browserController?.hide()
   })
   ipcMain.handle(DESKTOP_IPC.browserNavigate, (event, url: unknown) => {
     assertDesktopSender(event, ['app'])

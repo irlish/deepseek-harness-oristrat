@@ -30,13 +30,13 @@ fork 的产品负责人在一轮内要求四项用户可见能力：
 ### 仓库环境面板（F3）
 
 - 新增 `api/gui-repo` Remote BFF（以 gui-terminal 为模板）：单个 `status` 动词经 `ctx.subprocess` 运行本地 git（`rev-parse --show-toplevel`、带 unborn/detached 回退的 `abbrev-ref HEAD`、`rev-list --left-right --count @{upstream}...HEAD`、`diff --numstat HEAD`、`ls-files --others`、`remote -v`），8 秒超时、1MB 收集上限；每项失败都降级为省略字段，非仓库目录返回 `repo: false`。
-- 新增 `ui-repo-panel` 客户端包，注册右侧栏 `repo` 标签类型：分支 + 领先/落后、`+X -Y · N 个文件`（已跟踪合计加未跟踪计数）、本机主机名、远程来源；4 秒轮询、手动刷新，按产品决策只读。
+- `ui-repo-panel` 客户端包注册 `repo-env` 会话头部工具：气泡内含分支 + 领先/落后、`+X -Y · N 个文件`（已跟踪合计加未跟踪计数）、本机主机名与远程来源，外加可搜索本地分支、检出所选分支并创建检出新分支的分支子菜单；4 秒轮询。按产品决策，提交与推送仍然缺席（[第三轮 note](2026-09-23-oristrat-header-repo-menu-browser-view-reuse.zh.md) 记录头部位置与分支动词）。
 
 ### 内嵌浏览器（F4）
 
 - `apps/desktop/src/browser-view.ts` 为每个应用窗口持有一个 `WebContentsView`：持久分区 `persist:dsh-embedded-browser`、拒绝弹出窗口（http(s) 目标改为视图内加载）、导航仅限 http(s)，并在每个导航事件推送状态（url/title/canGoBack/canGoForward/loading）。渲染进程提供的边界经 `sanitizeBounds`（有限、取整、钳制）。
 - `preload-app.ts` 仅对 `dsh-app://app` 文档暴露 `browser` 面；新增 `DESKTOP_IPC.browser*` 通道由 `assertDesktopSender(event, ['app'])` 把守。
-- 新增 `ui-browser-panel` 客户端包，注册右侧栏 `browser` 标签类型：工具栏（后退/前进/刷新、归一化为 http(s) 的地址栏）位于测量 surface 之上；ResizeObserver 加捕获阶段滚动与窗口 resize 重新推送边界；卸载即关闭视图。纯 Web 宿主上面板渲染仅桌面端可用的提示。
+- 新增 `ui-browser-panel` 客户端包，注册右侧栏 `browser` 标签类型：工具栏（后退/前进/刷新、归一化为 http(s) 的地址栏）位于测量 surface 之上；ResizeObserver 加捕获阶段滚动、窗口 resize 与一次落定推送重新推送布局 offset 边界；卸载隐藏视图，下一次挂载重新附着同一实例且不重新加载，地址表单以回车导航、没有提交按钮（[第三轮 note](2026-09-23-oristrat-header-repo-menu-browser-view-reuse.zh.md) 记录该生命周期）。纯 Web 宿主上面板渲染仅桌面端可用的提示。
 
 ### 门禁规范化
 
@@ -54,4 +54,4 @@ fork 的产品负责人在一轮内要求四项用户可见能力：
 
 - 每个新源文件保持逐文件 100% 覆盖率；确实不可达的防御分支带有说明理由的 `v8 ignore` 注释（detached HEAD 后的短 sha 回退、show-toplevel 之后的 remote 列表失败、rev-list 列守卫、stdout 收集器回退、effect 时点的 ref 守卫）。
 - fork 既有红灯保持原样并记录在案：`apps/desktop/renderer/startup.js` 与 `OristratBrand.tsx` 的 `verify-client-ui-i18n` 命中、基线 HEAD 上即超时的 `main-startup.spec.ts`、`test:gui` 漂移（ui-layout/ui-settings-models/ui-settings-general/ui-chat/ui-deliverables），以及仅存在于 fork 文件的其余全仓 oxlint 错误。
-- 内嵌浏览器仅桌面端可用；Web 宿主得到提示面板。每窗口单视图意味着第二个浏览器标签复用同一视图，关闭标签即销毁浏览状态。
+- 内嵌浏览器仅桌面端可用；Web 宿主得到提示面板。每窗口单视图意味着第二个浏览器标签复用同一视图，隐藏标签保持浏览状态存活；状态仅随窗口销毁。
