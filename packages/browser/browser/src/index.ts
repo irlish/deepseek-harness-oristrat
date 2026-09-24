@@ -77,8 +77,8 @@ declare module '@deepseek-ai/cordis' {
 /**
  * Command channel to one browser view, shaped like the browser's own debugging
  * protocol. A provider receives one of these from its composition and never
- * learns how it is carried; the desktop shell brokers it over the app's control
- * channel, and an in-process or remote backend may implement it differently.
+ * learns how it is carried. A shell, in-process backend, or remote backend may
+ * implement it, provided the composition supplies the channel.
  *
  * Implementations reject with {@link BrowserTransportError} and must settle
  * every call: neither a reply nor a rejection may be dropped.
@@ -160,10 +160,11 @@ export abstract class BrowserAutomation extends Service {
   abstract console(request: BrowserConsoleRequest, signal?: AbortSignal): Promise<BrowserConsolePage>
 
   /**
-   * Evaluate one expression in the page's main frame.
-   * @param request - owner, expression source, and promise-awaiting option.
+   * Evaluate one expression in the page's main frame, awaiting a promise it
+   * returns, and project the result to the text the model reads.
+   * @param request - owner and expression; the caller decides whether model-authored expressions may run.
    * @param signal - optional cancellation.
-   * @returns the serialized value plus its text projection for the model.
+   * @returns the text projection of the evaluated value.
    */
   abstract evaluate(request: BrowserEvaluateRequest, signal?: AbortSignal): Promise<BrowserEvaluateResult>
 }

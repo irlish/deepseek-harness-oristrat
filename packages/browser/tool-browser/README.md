@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-`dsh-tool-browser` gives an agent seven tools for the browser pane the user watches: `browser_navigate`, `browser_observe`, `browser_act`, `browser_screenshot`, `browser_console`, `browser_state`, and `browser_eval`. The loop is observe, act, verify: `browser_observe` reads the page as text whose actionable nodes carry references such as `@e12`, `browser_act` drives one of them, and every action returns the page state it produced. These tools exist only while a browser provider is mounted, which today means the desktop app; screenshots also need an attachment store and a model route that accepts images.
+`dsh-tool-browser` gives an agent seven tools for a provider-owned browser pane: `browser_navigate`, `browser_observe`, `browser_act`, `browser_screenshot`, `browser_console`, `browser_state`, and `browser_eval`. The loop is observe, act, verify: `browser_observe` reads the page as text whose actionable nodes carry references such as `@e12`, `browser_act` drives one of them, and every action returns the page state it produced. These tools exist only while a browser provider is mounted; the current Desktop profile has no compatible provider for its upstream webview guest. Screenshots also need an attachment store and a model route that accepts images.
 
 ## Table of Contents
 
@@ -142,7 +142,7 @@ Append-only: results add content after the reusable request prefix, and none of 
 
 These limits define when the tool set is a poor fit. They are current package constraints, not a task backlog.
 
-- **Absent outside a provider composition** — the tools register only while `ctx.browser` is mounted, so a profile without the desktop provider exposes no `browser_*` tool at all; no other package in the repository provides one.
+- **Absent outside a provider composition** — the tools register only while `ctx.browser` is mounted. The current Desktop profile exposes no `browser_*` tool because it does not mount a compatible provider.
 - **One pane, one session at a time** — the calling session owns the pane while it works, a second session is refused until the first has been idle, and there is no queue, no hand-off, and no way to share the pane between two agents.
 - **Screenshots are inline images with a size cap** — a capture is returned as an image block from a stored attachment, so it must fit both the attachment store's image limits and the pane channel's forwarded-capture limit; an oversized capture fails with guidance instead of being downscaled.
 - **A running call is stopped by the turn, not by the pane** — the pane's activity strip only reports that a command is running and carries no per-action cancel, so interrupting the session turn is the stop path, and that abort reaches the provider as an aborted command.

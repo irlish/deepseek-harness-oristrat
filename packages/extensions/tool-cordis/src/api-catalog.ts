@@ -585,9 +585,9 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
       },
       {
         signature: 'abstract evaluate(request: BrowserEvaluateRequest, signal?: AbortSignal): Promise<BrowserEvaluateResult>',
-        description: 'Evaluate one expression in the page\'s main frame.',
-        parameters: [{ name: 'request', description: 'owner, expression source, and promise-awaiting option.' }, { name: 'signal', description: 'optional cancellation.' }],
-        returns: 'the serialized value plus its text projection for the model.',
+        description: 'Evaluate one expression in the page\'s main frame, awaiting a promise it returns, and project the result to the text the model reads.',
+        parameters: [{ name: 'request', description: 'owner and expression; the caller decides whether model-authored expressions may run.' }, { name: 'signal', description: 'optional cancellation.' }],
+        returns: 'the text projection of the evaluated value.',
       },
     ],
   },

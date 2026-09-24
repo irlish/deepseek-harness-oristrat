@@ -236,6 +236,7 @@ export interface BrowserObservation extends BrowserPageIdentity {
   readonly nodeCount: number
   readonly truncated: boolean
   readonly nextCursor?: string
+  /** UTF-8 byte length of `text` as emitted, including its page header. */
   readonly byteLength: number
 }
 

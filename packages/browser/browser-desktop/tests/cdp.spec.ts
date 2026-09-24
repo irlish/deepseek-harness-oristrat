@@ -103,6 +103,35 @@ describe('CdpSession command transport', () => {
     )
   })
 
+  it('reports the abort the desktop transport raises on the deadline as BROWSER_TIMEOUT', async () => {
+    const transport = fakeTransport(t => t.on('Page.reload', (_params, signal) => new Promise((_resolve, reject) => {
+      if (signal === undefined) {
+        reject(new Error('no deadline signal was attached'))
+        return
+      }
+      signal.addEventListener('abort', () => { reject(new BrowserTransportError('browser command aborted by the deadline', 'aborted')) }, { once: true })
+    })))
+    const session = new CdpSession(transport, 5)
+
+    await expect(session.send('Page.reload')).rejects.toThrow(expect.objectContaining({
+      code: 'BROWSER_TIMEOUT',
+      message: 'browser command Page.reload exceeded 5ms',
+    }))
+  })
+
+  it('reports the caller abort when the deadline passed after the caller gave up', async () => {
+    const transport = fakeTransport(t => t.on('Page.reload', () => new Promise((_resolve, reject) => {
+      setTimeout(() => { reject(new BrowserTransportError('view closed', 'aborted')) }, 50)
+    })))
+    const session = new CdpSession(transport, 5)
+    const controller = new AbortController()
+    const pending = session.send('Page.reload', {}, controller.signal)
+
+    controller.abort()
+
+    await expect(pending).rejects.toThrow(expect.objectContaining({ code: 'BROWSER_ABORTED', message: 'view closed' }))
+  })
+
   it('reports a transport failure raised while the caller was aborting as BROWSER_ABORTED', async () => {
     const transport = fakeTransport(t => t.on('Page.reload', (_params, signal) => new Promise((_resolve, reject) => {
       if (signal === undefined) {

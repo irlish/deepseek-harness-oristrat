@@ -43,9 +43,17 @@ export function browserErrorOf(error: unknown): BrowserError {
   return new BrowserError(error instanceof Error ? error.message : String(error), 'BROWSER_PROTOCOL', { cause: error })
 }
 
-/** Why one command ended, when the deadline rather than the caller ended it. */
-function deadlineExceeded(signal: AbortSignal | undefined, error: unknown): boolean {
-  return signal?.aborted !== true && error instanceof Error && error.name === 'TimeoutError'
+/**
+ * Report whether the per-command deadline, rather than the caller, ended one
+ * command. The transport sees only the combined signal, so it reports the
+ * deadline firing exactly as it reports a caller abort; the two signals are what
+ * tell them apart, and the caller's abort wins when both have fired.
+ * @param deadline - signal that fires when the command outlives `timeoutMs`.
+ * @param signal - optional caller cancellation.
+ * @returns whether the deadline ended the command.
+ */
+function deadlineExceeded(deadline: AbortSignal, signal: AbortSignal | undefined): boolean {
+  return deadline.aborted && signal?.aborted !== true
 }
 
 /**
@@ -77,7 +85,7 @@ export class CdpSession {
     try {
       return await this.transport.send(method, params, combined) as T
     } catch (error) {
-      if (deadlineExceeded(signal, error)) {
+      if (deadlineExceeded(deadline, signal)) {
         throw new BrowserError(`browser command ${method} exceeded ${String(this.timeoutMs)}ms`, 'BROWSER_TIMEOUT', { cause: error })
       }
       throw browserErrorOf(error)

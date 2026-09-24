@@ -259,6 +259,7 @@ export class DesktopBrowserAutomation extends BrowserAutomation {
   /** {@inheritDoc BrowserAutomation.console} */
   async console(request: BrowserConsoleRequest, signal?: AbortSignal): Promise<BrowserConsolePage> {
     await this.prepare(request.owner, signal)
+    await this.assertCurrentPageAllowed(signal)
     const ring = await readPageConsole(this.session, signal)
     const levels = request.levels === undefined ? undefined : new Set(request.levels)
     const after = ring.entries.filter(entry => entry.seq > (request.since ?? 0) && (levels === undefined || levels.has(entry.level)))

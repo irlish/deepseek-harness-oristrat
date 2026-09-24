@@ -2,7 +2,7 @@
 
 [English](browser.md) | 中文
 
-由 [`@deepseek-ai/dsh-browser`](../../packages/browser/browser/README.zh.md) 拥有的浏览器自动化 seam：一个面向 agent 的接口，用来观察和驱动浏览器页面；它由持有具体浏览器的 provider 实现，由 [`@deepseek-ai/dsh-tool-browser`](../../packages/browser/tool-browser/README.zh.md) 的模型可见工具消费。桌面应用挂载唯一随仓库发布的 provider——[`@deepseek-ai/dsh-browser-desktop`](../../packages/browser/browser-desktop/README.zh.md)——运行在其内嵌的侧边栏面板之上。包级细节、配置和工具 schema 见这些 README；本页是 seam 的词汇。
+由 [`@deepseek-ai/dsh-browser`](../../packages/browser/browser/README.zh.md) 拥有的浏览器自动化 seam：一个面向 agent 的接口，用来观察和驱动浏览器页面；它由带浏览器传输通道的 provider 实现，由 [`@deepseek-ai/dsh-tool-browser`](../../packages/browser/tool-browser/README.zh.md) 的模型可见工具消费。当前桌面 profile 使用官方侧边栏 webview guest，不挂载早期的 [`@deepseek-ai/dsh-browser-desktop`](../../packages/browser/browser-desktop/README.zh.md) provider；其传输通道原本连接二开版本现已移除的 WebContentsView。包级细节、配置和工具 schema 见这些 README；本页是 seam 的词汇。
 
 来源：[`packages/browser/browser/src/types.ts`](../../packages/browser/browser/src/types.ts)、[`packages/browser/browser/src/index.ts`](../../packages/browser/browser/src/index.ts)
 
@@ -64,6 +64,7 @@ interface BrowserObservation extends BrowserPageIdentity {
   readonly nodeCount: number
   readonly truncated: boolean
   readonly nextCursor?: string
+  /** UTF-8 byte length of `text` as emitted, including its page header. */
   readonly byteLength: number
 }
 ```
@@ -113,8 +114,8 @@ provider 与它所驱动的浏览器之间的传输失败使用自己的封闭�
 /**
  * Command channel to one browser view, shaped like the browser's own debugging
  * protocol. A provider receives one of these from its composition and never
- * learns how it is carried; the desktop shell brokers it over the app's control
- * channel, and an in-process or remote backend may implement it differently.
+ * learns how it is carried. A shell, in-process backend, or remote backend may
+ * implement it, provided the composition supplies the channel.
  *
  * Implementations reject with {@link BrowserTransportError} and must settle
  * every call: neither a reply nor a rejection may be dropped.
@@ -131,7 +132,7 @@ interface BrowserTransport {
 }
 ```
 
-provider 从 context 而不是从配置解析其传输通道，因为持有浏览器的一方同时持有该通道：桌面应用在插件树挂载前以 `desktopBrowserTransport` 提供该通道，因此在该 shell 缺席的组合中挂载 provider 会在加载时报出缺少该键的错误，而不是在第一条命令时失败。
+provider 从 context 而不是从配置解析其传输通道，因为持有浏览器的一方同时持有该通道。`dsh-browser-desktop` 要求在插件树挂载前由组合以 `desktopBrowserTransport` 提供该通道；缺少该键时会在加载时报错。当前 Desktop shell 不提供该通道。
 
 <!-- BEGIN GENERATED cordis-surface (gen-cordis-catalog.ts) — do not edit between markers -->
 
@@ -199,10 +200,11 @@ abstract screenshot(request: BrowserScreenshotRequest, signal?: AbortSignal): Pr
 abstract console(request: BrowserConsoleRequest, signal?: AbortSignal): Promise<BrowserConsolePage>
 
 /**
- * Evaluate one expression in the page's main frame.
- * @param request - owner, expression source, and promise-awaiting option.
+ * Evaluate one expression in the page's main frame, awaiting a promise it
+ * returns, and project the result to the text the model reads.
+ * @param request - owner and expression; the caller decides whether model-authored expressions may run.
  * @param signal - optional cancellation.
- * @returns the serialized value plus its text projection for the model.
+ * @returns the text projection of the evaluated value.
  */
 abstract evaluate(request: BrowserEvaluateRequest, signal?: AbortSignal): Promise<BrowserEvaluateResult>
 ```

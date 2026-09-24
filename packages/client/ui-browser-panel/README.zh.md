@@ -1,5 +1,5 @@
 ---
-description: "右侧栏内嵌浏览器标签页：工具栏加测量 surface，驱动桌面主进程的 WebContentsView；仅桌面端可用，其他环境显示提示。"
+description: "二开旧 WebContentsView 桥使用的源码包；交付的侧边栏改用上游 webview guest 包。"
 kind: "package-reference"
 ---
 
@@ -9,7 +9,7 @@ kind: "package-reference"
 
 ## 概述
 
-使用本包可在桌面应用的右侧栏内浏览网页。`browser` 标签把主进程的 `WebContentsView` 覆盖到其 surface 元素上，并通过 `window.dshDesktop.browser` 桥驱动它：后退、前进、刷新，以及归一化为 http(s)、以回车提交的地址栏导航。边界经元素的 offset 链测量，并在元素 resize、捕获阶段滚动、窗口 resize 与挂载后的落定推送时重新推送。卸载隐藏视图；下一次挂载重新附着同一实例，文档与历史跨标签切换保留。在没有该桥的纯 Web 宿主上，面板渲染仅桌面端可用的提示。
+`dsh-client-ui-browser-panel` 是二开旧主进程 `WebContentsView` 使用的源码包。它测量 Sidebar 区域，并通过早期的 `window.dshDesktop.browser` 桥驱动导航。交付的 web-app bundle 改为挂载上游 `dsh-client-ui-sidebar-browser` 包；当前 Desktop 桥使用另一套 guest 租约接口，因此本面板无法驱动它的浏览器。提供旧桥的组合仍可使用本包源码。
 
 ## 目录
 
@@ -25,21 +25,21 @@ kind: "package-reference"
 <a id="use-this-package"></a>
 ## 使用本包
 
-把本包作为 web-app bundle 的一个浏览器条目发布；随附组合已经插入它。该标签以**内嵌浏览器**条目出现在右侧栏引导页中，并经 `ctx.sidebarRight.openTab('browser')` 打开。在桌面应用中，面板挂载时附着内嵌视图，卸载时隐藏它；此后由工具栏与地址栏驱动导航，地址表单以回车提交——工具栏不再有提交按钮。
+仅在提供早期 `window.dshDesktop.browser` 桥的组合中挂载本包。交付的 web-app bundle 使用[sidebar-browser](../ui-sidebar-browser/README.zh.md)。有兼容桥时，本包的标签出现在右侧 Sidebar，并可通过 `ctx.sidebarRight.openTab('browser')` 打开。
 
 ### 何时选择
 
-当桌面用户需要在会话旁边快速就地阅读网页——文档、参考资料、预览——而不离开窗口时选择它。在纯 Web 宿主上避免它，那里面板只能显示仅桌面端可用的提示；当浏览状态必须跨应用退出保留时也避免它：隐藏标签会保留视图及其文档、Cookie 与历史，但视图随窗口一同销毁。内嵌视图归桌面端所有；本包的浏览器半边只负责测量与驱动它。
+要在应用内阅读网页，请选择交付的[sidebar-browser](../ui-sidebar-browser/README.zh.md)。本包只适合维护带早期 WebContentsView 桥的组合；纯 Web 宿主只显示仅桌面端可用的提示。
 
 ### 最小配置
 
-在 Sidebar 栈旁边添加一个浏览器条目；web-app bundle 已经携带它：
+在提供兼容桥之后，集成组合可在 Sidebar 栈旁添加本包的浏览器条目：
 
 ```yaml
 - name: '@deepseek-ai/dsh-client-ui-browser-panel'
 ```
 
-本包没有配置字段。它需要右侧栏 tab 注册表（`sidebarRightTabs`）、键控的 `sidebar.right.pane.tab` 与 `sidebar.right.pane.tab.title` 座位，以及 locale 服务；桌面桥经 `window.dshDesktop.browser` 到达，由桌面应用的 preload 脚本安装。
+本包没有配置字段。它需要右侧栏 tab 注册表（`sidebarRightTabs`）、右侧栏导航器（`sidebarRight`）、键控的 `sidebar.right.pane.tab` 与 `sidebar.right.pane.tab.title` 座位、locale 服务，以及实现早期 WebContentsView 操作的桥。当前 Desktop preload 不实现该桥。
 
 -----
 
@@ -49,7 +49,7 @@ kind: "package-reference"
 <details>
 <summary>实现内幕——点击展开</summary>
 
-插件主体注册 `browser-panel` locale 字典、`browser` tab 类型（id `@deepseek-ai/dsh-client-ui-browser-panel`、band `builtin`、引导序 40、不认领地址）、面板主体与 chip 标题，并在每次 apply 读取一次桌面桥：纯 Web 宿主上桥为 `undefined`，主体渲染本地化的仅桌面端提示。有桥时，主体订阅导航状态（`url`、`title`、`canGoBack`、`canGoForward`、`loading`），把视图开到 surface 的布局盒上——由元素的 `offsetLeft`/`offsetTop` 链求和得到，该布局在祖先 transform 动画期间即为最终值——并由元素上的 `ResizeObserver`、捕获阶段 `scroll`、窗口 `resize` 与挂载后 300ms 的落定计时器重新推送取整后的边界；卸载时取消订阅并隐藏视图。下一次挂载经幂等的 open 动词重新附着同一视图，因此文档、Cookie 与历史跨每次标签切换保留，无需重新加载。地址栏在导航前归一化输入：含空白的文本被拒绝，裸主机名补 `https://` 前缀，只有可解析的 http(s) URL 才会导航。主进程属主在每个应用窗口上维持一个视图，使用持久分区 `persist:dsh-embedded-browser`，钳制渲染进程提供的边界，拒绝弹出窗口，并把每次导航限制在 http(s)。
+插件主体注册 `browser-panel` locale 字典、`browser` tab 类型（id `@deepseek-ai/dsh-client-ui-browser-panel`、band `builtin`、引导序 40、不认领地址）、面板主体与 chip 标题，并在每次 apply 读取一次桌面桥：纯 Web 宿主上桥为 `undefined`，主体渲染本地化的仅桌面端提示。有桥时，主体订阅导航状态（`url`、`title`、`canGoBack`、`canGoForward`、`loading`），把视图开到 surface 的布局盒上——由元素的 `offsetLeft`/`offsetTop` 链求和得到，该布局在祖先 transform 动画期间即为最终值——并由元素上的 `ResizeObserver`、捕获阶段 `scroll`、窗口 `resize` 与挂载后 300ms 的落定计时器重新推送取整后的边界；卸载时取消订阅并隐藏视图。下一次挂载经幂等的 open 动词重新附着同一视图，因此文档、Cookie 与历史跨每次标签切换保留，无需重新加载。地址栏在导航前归一化输入：含空白的文本被拒绝，裸主机名补 `https://` 前缀，只有可解析的 http(s) URL 才会导航。主进程属主在每个应用窗口上维持一个视图，使用持久分区 `persist:dsh-embedded-browser`，钳制渲染进程提供的边界，拒绝弹出窗口，并把每次导航限制在 http(s)。显示请求会打开浏览器 tab，因为自动化驱动的正是有人看着的那个面板，只有面板在屏幕上这件事才可见；工具栏会报告进行中的命令，直到它落定。
 
 ### 源码地图
 
@@ -89,7 +89,8 @@ kind: "package-reference"
 
 不发布 invariant 伴生包：面板不保留跨入口状态；视图驻留在桌面主进程，面板只经 preload 桥转发测量与意图。
 
-- 仅桌面端可用：纯 Web 宿主只显示提示，无法浏览。
+- 交付的 Desktop 不挂载本包，其 guest 桥也不实现本包要求的 WebContentsView 操作。
+- 纯 Web 宿主只显示提示，无法浏览。
 - 每个应用窗口只有一个视图实例：第二个浏览器标签复用同一视图，隐藏标签保持其存活；视图及其浏览状态仅随窗口销毁。
 - 位置依赖渲染进程测量并经 IPC 推送；侧边栏动画期间原生视图可能比 DOM 布局慢一帧。
 

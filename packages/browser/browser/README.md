@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-`dsh-browser` defines what anything in the harness may do with the browser pane a user watches: navigate, read the page as reference-bearing text, act on an element, capture an image, read console output, and evaluate a script. The definitions fix the vocabulary every provider, tool, and client shares — `@e12` element references, the `BROWSER_*` failure codes, and the request and result records. Compose it with a provider to let browser tools drive the pane; the desktop app mounts the only provider today. Mounting this package alone drives nothing: with no provider, `ctx.browser` is absent and no `browser_*` tool exists.
+`dsh-browser` defines what the harness may do with a browser pane: navigate, read reference-bearing text, act on an element, capture an image, read console output, and evaluate a script. Providers and tools share `@e12` element references, `BROWSER_*` failure codes, and request and result records. Compose it with a provider to drive a pane. The current Desktop profile has no provider for its webview guest. Mounting this package alone drives nothing: without a provider, `ctx.browser` is absent and no `browser_*` tool exists.
 
 ## Table of Contents
 
@@ -37,7 +37,7 @@ Seven operations are the whole surface. `state` reads the current page. `navigat
 
 ### Composing a provider
 
-A profile drives a browser only where a provider is mounted beside the consumer. The desktop app owns the embedded pane and the command channel to it, so it is the composition that mounts one:
+A profile drives a browser only where a provider is mounted beside the consumer. A shell that supplies a compatible browser transport may mount the provider:
 
 ```yaml
 - id: browser-desktop
@@ -93,7 +93,7 @@ The package default-exports the abstract `BrowserAutomation` service class and r
 Read these pages when the seam contract is not enough. They move from the reference vocabulary to the provider, the tools, and the decision behind the split.
 
 - [Browser subsystem](../../../docs/subsystems/browser.md) — the type definitions, semantics, and generated Cordis API for this seam.
-- [browser-desktop](../browser-desktop/README.md) — the provider that drives the embedded pane the desktop client shows.
+- [browser-desktop](../browser-desktop/README.md) — a provider for a shell-supplied debugging-protocol transport.
 - [tool-browser](../tool-browser/README.md) — the seven model-facing tools over this seam.
 - [browser group map](../README.md) — the sibling group page and its package table.
 - [Generated tool catalog](../../../docs/tool-catalog.md#deepseek-aidsh-tool-browser) — the schemas the consumer registers for the model.
@@ -125,7 +125,7 @@ No direct invalidation. The package assembles no request prefix, so reuse change
 
 These limits define where the seam stops. They are current package constraints, not a task backlog.
 
-- **Abstract only** — mounting this package registers the service with no provider behind it, so a composition drives no browser until a provider row is present; `dsh-browser-desktop` is the only provider, and only the desktop app composes it.
+- **Abstract only** — mounting this package registers the service with no provider behind it. `dsh-browser-desktop` is the only provider in this repository, and the current Desktop profile does not compose it.
 - **One view per provider instance** — the seam models the single pane a client shows; there is no target id, window list, or second-pane vocabulary, and `BrowserOwner` exists only to arbitrate that one view between callers.
 - **A closed verb set** — the seven operations are the whole surface: no download, upload, file-picker, dialog, cookie, storage, or network operation exists, and element addressing is limited to a minted reference, a CSS selector, or a viewport point.
 - **The seam stores nothing** — a screenshot is bytes the caller must store, and no operation persists page state, so a consumer that needs either owns it.

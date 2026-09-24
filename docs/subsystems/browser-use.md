@@ -104,10 +104,11 @@ abstract screenshot(request: BrowserScreenshotRequest, signal?: AbortSignal): Pr
 abstract console(request: BrowserConsoleRequest, signal?: AbortSignal): Promise<BrowserConsolePage>
 
 /**
- * Evaluate one expression in the page's main frame.
- * @param request - owner, expression source, and promise-awaiting option.
+ * Evaluate one expression in the page's main frame, awaiting a promise it
+ * returns, and project the result to the text the model reads.
+ * @param request - owner and expression; the caller decides whether model-authored expressions may run.
  * @param signal - optional cancellation.
- * @returns the serialized value plus its text projection for the model.
+ * @returns the text projection of the evaluated value.
  */
 abstract evaluate(request: BrowserEvaluateRequest, signal?: AbortSignal): Promise<BrowserEvaluateResult>
 ```

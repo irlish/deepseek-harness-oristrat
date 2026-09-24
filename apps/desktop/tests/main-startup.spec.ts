@@ -1616,6 +1616,21 @@ describe('desktop main startup', () => {
     expect(window.urls).toEqual(['dsh-app://app/'])
   })
 
+  it('routes browser guest reservations through the official desktop guest controller', async () => {
+    await import('../src/main.ts')
+    await harness.preparing.promise
+    harness.prepared.resolve()
+    await harness.hostStarted.promise
+    const acquire = harness.handlers.get(DESKTOP_IPC.browserAcquire)
+    const release = harness.handlers.get(DESKTOP_IPC.browserRelease)
+    expect(acquire).toBeDefined()
+    expect(release).toBeDefined()
+    const sender = harness.windows[0]!.webContents
+    expect(() => acquire!({ sender, senderFrame: sender.mainFrame }, '')).toThrow(
+      'desktop browser: a workspace storage identity is required',
+    )
+  })
+
   it('prepares an independent plugin profile for the unpackaged Host', async () => {
     harness.app.isPackaged = false
     vi.stubEnv('DSH_DESKTOP_DSH_DIR', undefined)

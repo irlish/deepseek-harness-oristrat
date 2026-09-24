@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/feature/2026-09-24-oristrat-sidebar-browser-agent-automation.md
-2026-09-24-oristrat-sidebar-browser-agent-automation.md: 1ed54f41947b68037671524b6756875cd1e45cc6
-2026-09-24-oristrat-sidebar-browser-agent-automation.zh.md: e435db3691c09cc24546a29c565ff7333d190871
+2026-09-24-oristrat-sidebar-browser-agent-automation.md: 72c2aa77c628e1eae72082ae6657169aaaec3e81
+2026-09-24-oristrat-sidebar-browser-agent-automation.zh.md: 580139f4eb316c56084b2930c3f0a680c82fda03

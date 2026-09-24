@@ -9,7 +9,7 @@ kind: "package-reference"
 
 ## 概述
 
-`dsh-tool-browser` 为 agent（智能体）提供七个工具来操作用户正在观看的浏览器面板：`browser_navigate`、`browser_observe`、`browser_act`、`browser_screenshot`、`browser_console`、`browser_state` 与 `browser_eval`。循环是「观察、操作、验证」：`browser_observe` 把页面读成文本，其中可操作的节点携带 `@e12` 这类引用；`browser_act` 驱动其中之一；每次操作都会返回它产生的页面状态。只有在挂载浏览器提供方时这些工具才存在，目前即桌面应用；截图还需要挂载附件存储，以及接受图像输入的模型路由。
+`dsh-tool-browser` 为 agent（智能体）提供七个工具来操作提供方拥有的浏览器面板：`browser_navigate`、`browser_observe`、`browser_act`、`browser_screenshot`、`browser_console`、`browser_state` 与 `browser_eval`。循环是「观察、操作、验证」：`browser_observe` 把页面读成文本，其中可操作的节点携带 `@e12` 这类引用；`browser_act` 驱动其中之一；每次操作都会返回它产生的页面状态。只有在挂载浏览器提供方时这些工具才存在；当前桌面 profile 没有与官方 webview guest 兼容的提供方。截图还需要挂载附件存储，以及接受图像输入的模型路由。
 
 ## 目录
 
@@ -142,7 +142,7 @@ assistant 调用会保留其参数——操作名、`@e12` 这类引用、值、
 
 这些限制说明该工具集何时不合适。它们是当前包约束，不是任务积压。
 
-- **在提供方组合之外缺席**——只有挂载 `ctx.browser` 时工具才会注册，因此没有桌面提供方的配置文件完全不暴露 `browser_*` 工具；仓库中没有其他包提供它。
+- **在提供方组合之外缺席**——只有挂载 `ctx.browser` 时工具才会注册；当前桌面 profile 不挂载兼容的提供方，因此不暴露 `browser_*` 工具。
 - **一个面板同一时刻仅一个会话**——调用会话在工作期间占用该面板，第二个会话会被拒绝直到第一个空闲；没有排队、没有交接，也没有在两个 agent 之间共享面板的方式。
 - **截图是带尺寸上限的内联图像**——截图以持久附件中的图像块返回，因此必须同时满足附件存储的图像上限与面板通道的转发截图上限；超出尺寸的截图会带指引地失败，而不会被降采样。
 - **运行中的调用由轮次而非面板停止**——面板只报告自动化正在运行，不提供逐操作取消，因此中断会话轮次是唯一的停止路径，该中止以被中止的命令形式抵达提供方。

@@ -2,7 +2,7 @@
 
 English | [中文](browser.zh.md)
 
-The browser automation seam owned by [`@deepseek-ai/dsh-browser`](../../packages/browser/browser/README.md): one agent-facing interface for observing and driving a browser page, implemented by a provider that owns a concrete browser and consumed by the model-facing tools of [`@deepseek-ai/dsh-tool-browser`](../../packages/browser/tool-browser/README.md). The desktop application mounts the only shipped provider, [`@deepseek-ai/dsh-browser-desktop`](../../packages/browser/browser-desktop/README.md), over its embedded sidebar pane. Package detail, configuration, and tool schemas live on those READMEs; this page is the seam's vocabulary.
+The browser automation seam owned by [`@deepseek-ai/dsh-browser`](../../packages/browser/browser/README.md): one agent-facing interface for observing and driving a browser page, implemented by a provider with a browser transport and consumed by the model-facing tools of [`@deepseek-ai/dsh-tool-browser`](../../packages/browser/tool-browser/README.md). The current Desktop profile uses the upstream sidebar webview guest and does not mount the earlier [`@deepseek-ai/dsh-browser-desktop`](../../packages/browser/browser-desktop/README.md) provider, whose transport addressed the fork's removed WebContentsView. Package detail, configuration, and tool schemas live on those READMEs; this page is the seam's vocabulary.
 
 Source: [`packages/browser/browser/src/types.ts`](../../packages/browser/browser/src/types.ts), [`packages/browser/browser/src/index.ts`](../../packages/browser/browser/src/index.ts)
 
@@ -64,6 +64,7 @@ interface BrowserObservation extends BrowserPageIdentity {
   readonly nodeCount: number
   readonly truncated: boolean
   readonly nextCursor?: string
+  /** UTF-8 byte length of `text` as emitted, including its page header. */
   readonly byteLength: number
 }
 ```
@@ -113,8 +114,8 @@ A provider that cannot reach its browser in-process declares a transport: a narr
 /**
  * Command channel to one browser view, shaped like the browser's own debugging
  * protocol. A provider receives one of these from its composition and never
- * learns how it is carried; the desktop shell brokers it over the app's control
- * channel, and an in-process or remote backend may implement it differently.
+ * learns how it is carried. A shell, in-process backend, or remote backend may
+ * implement it, provided the composition supplies the channel.
  *
  * Implementations reject with {@link BrowserTransportError} and must settle
  * every call: neither a reply nor a rejection may be dropped.
@@ -131,7 +132,7 @@ interface BrowserTransport {
 }
 ```
 
-A provider resolves its transport from the context rather than from configuration, because the party that owns the browser also owns the channel: the desktop application provides the channel under `desktopBrowserTransport` before the tree mounts, so mounting the provider in a composition without that shell fails at load with an error naming the missing key, rather than at the first command.
+A provider resolves its transport from the context rather than from configuration, because the party that owns the browser also owns the channel. `dsh-browser-desktop` requires a channel under `desktopBrowserTransport` before the plugin tree mounts and fails at load when the key is missing. The current Desktop shell does not supply that channel.
 
 <!-- BEGIN GENERATED cordis-surface (gen-cordis-catalog.ts) — do not edit between markers -->
 
@@ -199,10 +200,11 @@ abstract screenshot(request: BrowserScreenshotRequest, signal?: AbortSignal): Pr
 abstract console(request: BrowserConsoleRequest, signal?: AbortSignal): Promise<BrowserConsolePage>
 
 /**
- * Evaluate one expression in the page's main frame.
- * @param request - owner, expression source, and promise-awaiting option.
+ * Evaluate one expression in the page's main frame, awaiting a promise it
+ * returns, and project the result to the text the model reads.
+ * @param request - owner and expression; the caller decides whether model-authored expressions may run.
  * @param signal - optional cancellation.
- * @returns the serialized value plus its text projection for the model.
+ * @returns the text projection of the evaluated value.
  */
 abstract evaluate(request: BrowserEvaluateRequest, signal?: AbortSignal): Promise<BrowserEvaluateResult>
 ```
