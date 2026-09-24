@@ -39,7 +39,7 @@ kind: "package-reference"
 - name: '@deepseek-ai/dsh-client-ui-browser-panel'
 ```
 
-本包没有配置字段。它需要右侧栏 tab 注册表（`sidebarRightTabs`）、键控的 `sidebar.right.pane.tab` 与 `sidebar.right.pane.tab.title` 座位，以及 locale 服务；桌面桥经 `window.dshDesktop.browser` 到达，由桌面应用的 preload 脚本安装。
+本包没有配置字段。它需要右侧栏 tab 注册表（`sidebarRightTabs`）、右侧栏导航器（`sidebarRight`，其 `openTab` 用于响应显示请求）、键控的 `sidebar.right.pane.tab` 与 `sidebar.right.pane.tab.title` 座位，以及 locale 服务；桌面桥经 `window.dshDesktop.browser` 到达，由桌面应用的 preload 脚本安装。
 
 -----
 
@@ -49,7 +49,7 @@ kind: "package-reference"
 <details>
 <summary>实现内幕——点击展开</summary>
 
-插件主体注册 `browser-panel` locale 字典、`browser` tab 类型（id `@deepseek-ai/dsh-client-ui-browser-panel`、band `builtin`、引导序 40、不认领地址）、面板主体与 chip 标题，并在每次 apply 读取一次桌面桥：纯 Web 宿主上桥为 `undefined`，主体渲染本地化的仅桌面端提示。有桥时，主体订阅导航状态（`url`、`title`、`canGoBack`、`canGoForward`、`loading`），把视图开到 surface 的布局盒上——由元素的 `offsetLeft`/`offsetTop` 链求和得到，该布局在祖先 transform 动画期间即为最终值——并由元素上的 `ResizeObserver`、捕获阶段 `scroll`、窗口 `resize` 与挂载后 300ms 的落定计时器重新推送取整后的边界；卸载时取消订阅并隐藏视图。下一次挂载经幂等的 open 动词重新附着同一视图，因此文档、Cookie 与历史跨每次标签切换保留，无需重新加载。地址栏在导航前归一化输入：含空白的文本被拒绝，裸主机名补 `https://` 前缀，只有可解析的 http(s) URL 才会导航。主进程属主在每个应用窗口上维持一个视图，使用持久分区 `persist:dsh-embedded-browser`，钳制渲染进程提供的边界，拒绝弹出窗口，并把每次导航限制在 http(s)。
+插件主体注册 `browser-panel` locale 字典、`browser` tab 类型（id `@deepseek-ai/dsh-client-ui-browser-panel`、band `builtin`、引导序 40、不认领地址）、面板主体与 chip 标题，并在每次 apply 读取一次桌面桥：纯 Web 宿主上桥为 `undefined`，主体渲染本地化的仅桌面端提示。有桥时，主体订阅导航状态（`url`、`title`、`canGoBack`、`canGoForward`、`loading`），把视图开到 surface 的布局盒上——由元素的 `offsetLeft`/`offsetTop` 链求和得到，该布局在祖先 transform 动画期间即为最终值——并由元素上的 `ResizeObserver`、捕获阶段 `scroll`、窗口 `resize` 与挂载后 300ms 的落定计时器重新推送取整后的边界；卸载时取消订阅并隐藏视图。下一次挂载经幂等的 open 动词重新附着同一视图，因此文档、Cookie 与历史跨每次标签切换保留，无需重新加载。地址栏在导航前归一化输入：含空白的文本被拒绝，裸主机名补 `https://` 前缀，只有可解析的 http(s) URL 才会导航。主进程属主在每个应用窗口上维持一个视图，使用持久分区 `persist:dsh-embedded-browser`，钳制渲染进程提供的边界，拒绝弹出窗口，并把每次导航限制在 http(s)。显示请求会打开浏览器 tab，因为自动化驱动的正是有人看着的那个面板，只有面板在屏幕上这件事才可见；工具栏会报告进行中的命令，直到它落定。
 
 ### 源码地图
 

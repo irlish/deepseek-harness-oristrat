@@ -95,11 +95,11 @@ The provider is a Service Provider for `ctx.browser` over a command channel it d
 
 ### Main flow
 
-Every operation starts the same way. `prepare` claims or refreshes the lease, enables the DOM domain once, registers the page bootstrap for new documents once, and re-applies it when the document on screen does not carry it; operations that touch the page itself then re-check the origin policy against the page actually loaded, while `console` reads only the buffered ring, and `act` and `navigate` wait for the document to stop loading before reporting state.
+Every operation starts the same way. `prepare` claims or refreshes the lease, enables the DOM domain once, registers the page bootstrap for new documents once, and re-applies it when the document on screen does not carry it; every operation then re-checks the origin policy against the page actually loaded before it reads or changes anything — `console` installs nothing and evaluates only its own read-only expression over the buffered ring — and `act` and `navigate` wait for the document to stop loading before reporting state.
 
 ### Observation
 
-The observation is rendered from the accessibility tree the browser already computed rather than from a DOM dump: hidden nodes are absent without a visibility heuristic of the provider's own, and the output is far smaller than a raw node snapshot. Each rendered line carries the reference the model passes back, minted per generation; the previous generation stays resolvable so a model that reads a page and then acts on it is not racing its own re-observation. Geometry is deliberately absent from the text — an action resolves its own geometry when it runs — and the whole rendering is bounded by the configured depth, node, and byte limits.
+The observation is rendered from the accessibility tree the browser already computed rather than from a DOM dump: hidden nodes are absent without a visibility heuristic of the provider's own, and the output is far smaller than a raw node snapshot. Each rendered line carries the reference the model passes back; the store never reuses a reference text, so an older reference can only ever name the node it was minted for, and the previous observation stays resolvable while its node is still part of the page. Geometry is deliberately absent from the text — an action resolves its own geometry when it runs — and `observeMaxBytes` bounds the UTF-8 bytes of the complete text, page header and truncation marker included.
 
 ### Page bootstrap
 
@@ -137,7 +137,7 @@ The `browser_observe` result body is this provider's text. It opens with a page 
 
 #### Token effect
 
-Proportional to the rendered node lines, and bounded by the observation limits: the request's own `maxNodes` and `maxDepth`, otherwise `observeMaxNodes` and `observeMaxDepth`, with `observeMaxBytes` capping the rendered bytes. The text is read once per observation call and retained in the transcript like any other tool result.
+Proportional to the rendered node lines, and bounded by the observation limits: the request's own `maxNodes` and `maxDepth`, otherwise `observeMaxNodes` and `observeMaxDepth`, with `observeMaxBytes` capping the UTF-8 bytes of the complete text. The text is read once per observation call and retained in the transcript like any other tool result.
 
 #### KV Cache effect
 
@@ -169,6 +169,8 @@ These limits define where this provider is a poor fit. They are current package 
 - **Page dialogs are neutralized, never shown** — `alert`, `confirm`, and `prompt` are replaced by the injected script and recorded as console entries, so the model can read that a page raised one but can never answer a real dialog or see the browser's own prompt.
 - **Downloads and file pickers cannot be driven** — the desktop channel forwards only the protocol methods the feature needs, so a page that starts a download or opens a file chooser leaves the agent with no operation to complete it.
 - **A capture is bytes, not a stored image** — the provider returns image data and owns no storage, so the consumer decides whether the capture survives the call.
+- **The default origin decision admits every origin** — with `allowOrigins` and `denyOrigins` both empty, the model may drive any origin the pane can reach, loopback and intranet addresses included. This is the deliberate default for the desktop product, where a person watches the pane and can navigate away at will; a deployment that wants an allowlist sets `defaultOriginDecision: deny` and names its origins.
+- **References are consumed within one document** — reference text is never reused, so a document that accumulates more than 9,999,999 minted references, which needs thousands of full observations of one un-navigated page, mints text the reference grammar cannot express: the model can read such a reference but not write it back. Navigating resets the store and the counter.
 
 <a id="dev-note"></a>
 ### Dev Note

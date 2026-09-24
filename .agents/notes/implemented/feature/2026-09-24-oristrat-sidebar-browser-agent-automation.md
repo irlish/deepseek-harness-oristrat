@@ -28,8 +28,8 @@ The provider and the consumer are mounted in different planes: the provider belo
 ### Observation is the accessibility tree, rendered as text
 
 - `observe` walks the accessibility tree, renders each node as `role "name" value="…" [state]` with its `@eN` reference prefixed, and skips ignored nodes without skipping their subtrees. Geometry is deliberately absent: `Accessibility.getFullAXTree` measured 3,478,506 bytes and `DOMSnapshot.captureSnapshot` 830,203 bytes on a 1,500-link page, so a geometry-bearing observation would not fit a model's context at all. A consumer that needs coordinates captures an image or acts by reference.
-- References are minted per observation generation and resolved by a `RefStore` that admits the previous generation but reports `BROWSER_REF_STALE` for anything older, so a model cannot act on an element it invented or read two steps ago.
-- Output is bounded by depth, node count, and bytes; a truncated reading reports `nextCursor`, which the next `observe` call accepts.
+- A reference text is minted once per document and never reused, and the `RefStore` resolves the previous generation only while the node it names is still part of the newest observation; anything else, an invented reference included, is `BROWSER_REF_STALE`, so an older reference can only ever name the element it was minted for.
+- Output is bounded by depth, node count, and the UTF-8 bytes of the complete text — page header and truncation marker included; a truncated reading reports `nextCursor`, which the next `observe` call accepts.
 
 ### The command channel
 
@@ -44,7 +44,8 @@ The provider and the consumer are mounted in different planes: the provider belo
 
 ### Safety and cost bounds
 
-- Per-origin policy (`allowOrigins`/`denyOrigins`, exact origin, bare host, or `*.host` wildcard; deny wins; unparseable URLs refused) is checked before navigation and before every command against the current page.
+- Per-origin policy (`allowOrigins`/`denyOrigins`, exact origin, bare host, or `*.host` wildcard; deny wins; unparseable URLs refused) is checked before navigation and before every operation, console reads included, against the page actually loaded.
+- The shipped default admits every origin: `allowOrigins` and `denyOrigins` are empty and `defaultOriginDecision` is `allow`, so the model may drive any origin the pane can reach, loopback and intranet addresses included. That is a deliberate decision for a pane a person is watching and can navigate away from; a deployment that wants an allowlist sets `defaultOriginDecision: deny` and names its origins.
 - One browser view exists per application window, so `BrowserLease` arbitrates a single driver: a second owner is refused with `BROWSER_BUSY`, and an idle lease is stolen after `leaseIdleMs`.
 - Screenshots return inline with a hard byte cap; exceeding it is `payload-too-large` with the format and full-page advice in the message. Script evaluation is gated by `allowScriptEval` (default `true`, since the pane is the user's own browser and observation cannot be complete without it).
 - The pane keeps `sandbox: true`, `contextIsolation: true`, and no preload; the URL is parsed before navigation and only `http:`/`https:` are accepted.

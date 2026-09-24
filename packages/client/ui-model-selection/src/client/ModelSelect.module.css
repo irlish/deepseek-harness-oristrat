@@ -351,6 +351,7 @@
   width: 4px;
   height: 4px;
   border-radius: 50%;
+  corner-shape: round;
   background: var(--dsw-alias-label-dimmed);
   transform: translate(-50%, -50%);
   transition: background-color 160ms ease;
@@ -367,6 +368,7 @@
   width: 16px;
   height: 16px;
   border-radius: 50%;
+  corner-shape: round;
   background: var(--dsw-alias-brand-primary-invert);
   box-shadow: 0 1px 3px rgb(0 0 0 / 24%);
   transform: translate(-50%, -50%);

@@ -10,6 +10,12 @@ import { scriptPageWorld, type PageWorld } from './page-world.ts'
 const UNBOUNDED = { maxDepth: 500, maxNodes: 10_000, maxBytes: 10_000_000 }
 
 /**
+ * Slack a byte bound leaves above the node lines it must fit, covering the
+ * truncation marker's widest `nodes`/`shown`/`next_cursor` values.
+ */
+const MARKER_RESERVE = 64
+
+/**
  * Script one transport with a page world, an accessibility tree, and history.
  * @param options - tree, world overrides, and navigation history the page reports.
  * @returns the scripted transport.
@@ -66,18 +72,31 @@ describe('RefStore generations', () => {
     expect(new RefStore().resolve(refOf('@e9'))).toBeUndefined()
   })
 
-  it('keeps the previous generation resolvable while the new one wins', () => {
+  it('keeps the previous generation resolvable without reusing its index', () => {
     const refs = new RefStore()
-    const stale = refs.mint(101)
-    refs.mint(202)
+    const kept = refs.mint(101)
+    const dropped = refs.mint(202)
 
     refs.beginGeneration()
     const fresh = refs.mint(303)
+    refs.mint(101)
 
-    expect(fresh).toBe('e1')
+    expect(fresh).toBe('e3')
     expect(refs.resolve(fresh)).toBe(303)
-    expect(refs.resolve(refOf('@e2'))).toBe(202)
-    expect(refs.resolve(stale)).toBe(303)
+    expect(refs.resolve(kept)).toBe(101)
+    expect(refs.resolve(dropped)).toBeUndefined()
+  })
+
+  it('forgets a generation older than the one the newest observation replaced', () => {
+    const refs = new RefStore()
+    const oldest = refs.mint(101)
+
+    refs.beginGeneration()
+    refs.mint(101)
+    refs.beginGeneration()
+    refs.mint(101)
+
+    expect(refs.resolve(oldest)).toBeUndefined()
   })
 
   it('forgets every generation on reset', () => {
@@ -179,7 +198,7 @@ describe('observePage rendering', () => {
     expect(observation.nodeCount).toBe(4)
     expect(observation.truncated).toBe(false)
     expect(observation.nextCursor).toBeUndefined()
-    expect(observation.byteLength).toBe(observation.text.length)
+    expect(observation.byteLength).toBe(Buffer.byteLength(observation.text, 'utf8'))
     expect(observation.url).toBe('https://example.com/page')
     expect(observation.title).toBe('Example')
     expect(observation.loading).toBe(false)
@@ -320,19 +339,60 @@ describe('observePage bounds', () => {
     expect(observation.refs).toEqual(['e1', 'e2'])
   })
 
-  it('truncates at the byte bound', async () => {
+  it('truncates at the byte bound and keeps the complete text inside it', async () => {
     const transport = pageTransport({
       tree: [{ role: 'button', name: 'One', backendNodeId: 101, children: [{ role: 'button', name: 'Two', backendNodeId: 102 }] }],
     })
+    const header = '[page] url=https://example.com/page title=Example viewport=1000x800 scrollY=0'
+    const maxBytes = Buffer.byteLength(`${header}\n@e1 button "One"`, 'utf8') + MARKER_RESERVE
 
-    const observation = await observePage(sessionOf(transport), new RefStore(), { ...UNBOUNDED, maxBytes: '@e1 button "One"'.length })
+    const observation = await observePage(sessionOf(transport), new RefStore(), { ...UNBOUNDED, maxBytes })
 
     expect(observation.text).toBe([
-      '[page] url=https://example.com/page title=Example viewport=1000x800 scrollY=0',
+      header,
       '@e1 button "One"',
       '[truncated] nodes=1 shown=1 next_cursor=1',
     ].join('\n'))
     expect(observation.refs).toEqual(['e1'])
+    expect(observation.byteLength).toBe(Buffer.byteLength(observation.text, 'utf8'))
+    expect(observation.byteLength).toBeLessThanOrEqual(maxBytes)
+  })
+
+  it('emits the page header alone when the bound cannot hold a node line', async () => {
+    const transport = pageTransport({
+      tree: [{ role: 'button', name: 'One', backendNodeId: 101 }],
+    })
+
+    const observation = await observePage(sessionOf(transport), new RefStore(), { ...UNBOUNDED, maxBytes: 8 })
+
+    expect(observation.text).toBe([
+      '[page] url=https://example.com/page title=Example viewport=1000x800 scrollY=0',
+      '',
+      '[truncated] nodes=0 shown=0 next_cursor=0',
+    ].join('\n'))
+    expect(observation.refs).toEqual([])
+    expect(observation.truncated).toBe(true)
+    expect(observation.nextCursor).toBe('0')
+  })
+
+  it('measures the bound in bytes rather than UTF-16 code units', async () => {
+    const transport = pageTransport({
+      tree: [{ role: 'button', name: '购买', backendNodeId: 101, children: [{ role: 'button', name: '结算', backendNodeId: 102 }] }],
+    })
+    const header = '[page] url=https://example.com/page title=Example viewport=1000x800 scrollY=0'
+    const first = '@e1 button "购买"'
+    const maxBytes = Buffer.byteLength(`${header}\n${first}`, 'utf8') + MARKER_RESERVE
+
+    const observation = await observePage(sessionOf(transport), new RefStore(), { ...UNBOUNDED, maxBytes })
+
+    expect(Buffer.byteLength(first, 'utf8')).toBeGreaterThan(first.length)
+    expect(observation.text).toBe([
+      header,
+      first,
+      '[truncated] nodes=1 shown=1 next_cursor=1',
+    ].join('\n'))
+    expect(observation.byteLength).toBe(Buffer.byteLength(observation.text, 'utf8'))
+    expect(observation.byteLength).toBeLessThanOrEqual(maxBytes)
   })
 
   it('resumes at the cursor and mints references for the continuation only', async () => {

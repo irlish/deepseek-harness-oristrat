@@ -28,8 +28,8 @@ Status: implemented
 ### 观测是可访问性树，渲染为文本
 
 - `observe` 遍历可访问性树，把每个节点渲染为 `role "name" value="…" [state]` 并在前面加上它的 `@eN` 引用，同时跳过被忽略的节点而不跳过它们的子树。几何信息被有意略去：在含 1,500 个链接的页面上，`Accessibility.getFullAXTree` 测得 3,478,506 字节，`DOMSnapshot.captureSnapshot` 测得 830,203 字节，因此携带几何信息的观测根本无法放进模型的上下文。需要坐标的消费方改为截图或按引用操作。
-- 引用按观测代际铸造，并由 `RefStore` 解析：它接纳上一个代际，但对更早的一律报 `BROWSER_REF_STALE`，因此模型无法对它凭空编造或两步之前读到的元素采取动作。
-- 输出受深度、节点数与字节数约束；被截断的读取会报告 `nextCursor`，下一次 `observe` 调用可以接受它。
+- 引用文本在单个文档内只铸造一次、从不重复使用，`RefStore` 仅在该引用所指节点仍属于最新一次观测时才解析上一世代；其余情况（包括模型凭空编造的引用）一律报 `BROWSER_REF_STALE`，因此旧引用只可能指向它当初被铸造的那个元素。
+- 输出受深度、节点数与整份文本的 UTF-8 字节数（含页面行与截断标记）约束；被截断的读取会报告 `nextCursor`，下一次 `observe` 调用可以接受它。
 
 ### 命令通道
 
@@ -44,7 +44,8 @@ Status: implemented
 
 ### 安全与成本边界
 
-- 按 origin 的策略（`allowOrigins`/`denyOrigins`，精确 origin、裸主机名或 `*.host` 通配；拒绝优先；无法解析的 URL 一律拒绝）在导航之前以及每条命令之前针对当前页面检查。
+- 按 origin 的策略（`allowOrigins`/`denyOrigins`，精确 origin、裸主机名或 `*.host` 通配；拒绝优先；无法解析的 URL 一律拒绝）在导航之前以及每项操作之前针对实际加载的页面检查，读取控制台也包括在内。
+- 随附默认值放行所有 origin：`allowOrigins` 与 `denyOrigins` 均为空且 `defaultOriginDecision` 为 `allow`，因此模型可以驱动该面板能到达的任何 origin，包括环回与内网地址。这是针对“有人看着、且随时可以导航离开”的面板所做的有意决定；若部署方要白名单，请设置 `defaultOriginDecision: deny` 并列出其 origin。
 - 每个应用窗口只有一个浏览器视图，因此 `BrowserLease` 仲裁单一驱动者：第二个所有者会被以 `BROWSER_BUSY` 拒绝，空闲租约在 `leaseIdleMs` 之后可被抢占。
 - 截图以内联方式返回，并有硬性字节上限；超过上限即 `payload-too-large`，消息中给出格式与整页建议。脚本求值由 `allowScriptEval` 门控（默认 `true`，因为该面板就是用户自己的浏览器，缺少它观测无法完整）。
 - 面板保持 `sandbox: true`、`contextIsolation: true` 且没有 preload；URL 在导航前解析，只接受 `http:`/`https:`。

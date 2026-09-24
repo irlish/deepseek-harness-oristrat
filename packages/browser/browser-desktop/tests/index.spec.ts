@@ -444,7 +444,7 @@ describe('DesktopBrowserAutomation.observe', () => {
 
     expect(second.text).toBe([
       '[page] url=https://example.com/page title=Example viewport=1000x800 scrollY=0',
-      '  @e1 button "Buy"',
+      '  @e2 button "Buy"',
     ].join('\n'))
     expect(second.nodeCount).toBe(2)
   })
@@ -622,6 +622,15 @@ describe('DesktopBrowserAutomation.console', () => {
     const { browser } = await mount({}, providerTransport({ world: { console: null } }))
 
     await expect(browser.console({ owner: OWNER })).resolves.toEqual({ entries: [], dropped: 0, cursor: 0 })
+  })
+
+  it('refuses to read the console of a page the origin policy denies', async () => {
+    const { browser, transport } = await mount({ denyOrigins: ['example.com'] })
+
+    await expect(browser.console({ owner: OWNER })).rejects.toThrow(
+      expect.objectContaining({ code: 'BROWSER_ORIGIN_DENIED' }),
+    )
+    expect(evaluatedExpressions(transport).filter(expression => expression.includes('state.entries.slice()'))).toEqual([])
   })
 })
 

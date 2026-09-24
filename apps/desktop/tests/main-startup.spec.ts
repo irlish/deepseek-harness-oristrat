@@ -55,6 +55,11 @@ const harness = await vi.hoisted(async () => {
       this.ready.reject(new Error('child stopped'))
       return this.exited.promise
     })
+    /** Browser command handler the application installs for the Host to drive the pane through. */
+    browserCdp: ((method: string, params: Record<string, unknown>) => Promise<unknown>) | undefined
+    readonly setBrowserCdpHandler = vi.fn((handler: (method: string, params: Record<string, unknown>) => Promise<unknown>) => {
+      this.browserCdp = handler
+    })
     constructor(readonly node: string, readonly runtime: string, readonly profile: string) { hosts.push(this) }
   }
   const app = Object.assign(new EventEmitter(), {
@@ -310,6 +315,22 @@ describe('desktop main startup', () => {
     expect(harness.windows).toHaveLength(1)
     expect(window.urls).toEqual(['dsh-app://shell/startup.html', 'dsh-app://app/index.html'])
     expect(invoke(DESKTOP_IPC.backendStatus)).toEqual({ phase: 'ready' })
+  })
+
+  it('routes a Host browser command through the broker the application installed', async () => {
+    await import('../src/main.ts')
+    await harness.preparing.promise
+    harness.prepared.resolve()
+    await harness.hostStarted.promise
+    const host = harness.hosts[0]!
+
+    expect(host.setBrowserCdpHandler).toHaveBeenCalledTimes(1)
+    expect(host.browserCdp).toBeDefined()
+    // The method allowlist refuses this before the broker looks for a pane, so
+    // the rejection proves the command reached the broker itself.
+    await expect(host.browserCdp!('Target.createTarget', {})).rejects.toThrow(
+      'browser method Target.createTarget is not available to automation',
+    )
   })
 
   it('starts the unpackaged Host from the application development directory', async () => {

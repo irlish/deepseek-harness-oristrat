@@ -43,6 +43,13 @@ interface PageHeader {
   readonly dialogs: number
 }
 
+/**
+ * Byte cost the truncation marker adds to a clipped observation, at the widest
+ * `nodes`/`shown`/`next_cursor` values it can report. The bound reserves it so
+ * the complete emitted text — marker included — stays inside `maxBytes`.
+ */
+const TRUNCATION_MARKER_BYTES = Buffer.byteLength('\n[truncated] nodes=9999999 shown=9999999 next_cursor=9999999', 'utf8')
+
 /** Accessibility properties rendered as bracketed states on the node line. */
 const STATE_PROPERTIES = [
   'disabled', 'checked', 'expanded', 'focused', 'selected', 'required', 'readonly', 'invalid', 'modal', 'busy',
@@ -62,22 +69,27 @@ const STRUCTURAL_ROLES = new Set([
 ])
 
 /**
- * Element references for one document. References are minted by an observation
- * and resolve through the accessibility node's backend DOM node, which stays
- * valid while the document does; the previous observation's references remain
- * resolvable so a model that reads a page and then acts on it is never racing
- * its own re-observation.
+ * Element references for one document. A reference text is minted once and never
+ * reused, because the counter advances across observation generations: an older
+ * reference can therefore only resolve to the node it was minted for, never to a
+ * node a later observation happened to number the same way.
+ *
+ * The previous generation stays resolvable while its node is still part of the
+ * newest observation, so a model that reads a page and then acts on it is not
+ * racing its own re-observation. A reference whose node the newest observation
+ * dropped, and everything older than the previous generation, is stale.
  */
 export class RefStore {
   private current = new Map<BrowserRef, number>()
   private previous = new Map<BrowserRef, number>()
+  private observed = new Set<number>()
   private next = 1
 
   /** Start a new observation generation, demoting the last one to fallback. */
   beginGeneration(): void {
     this.previous = this.current
     this.current = new Map()
-    this.next = 1
+    this.observed = new Set()
   }
 
   /**
@@ -89,6 +101,7 @@ export class RefStore {
     const ref = createBrowserRef(this.next)
     this.next += 1
     this.current.set(ref, backendNodeId)
+    this.observed.add(backendNodeId)
     return ref
   }
 
@@ -98,13 +111,19 @@ export class RefStore {
    * @returns the backend DOM node id, or `undefined` when the reference is stale.
    */
   resolve(ref: BrowserRef): number | undefined {
-    return this.current.get(ref) ?? this.previous.get(ref)
+    const current = this.current.get(ref)
+    if (current !== undefined) return current
+    const previous = this.previous.get(ref)
+    // A fallback reference resolves only while the newest observation still
+    // holds the node it names.
+    return previous !== undefined && this.observed.has(previous) ? previous : undefined
   }
 
   /** Forget both generations, because the document that owned them is gone. */
   reset(): void {
     this.current = new Map()
     this.previous = new Map()
+    this.observed = new Set()
     this.next = 1
   }
 }
@@ -161,6 +180,13 @@ interface RenderedLine {
 
 /**
  * Read and render the accessibility tree of the current page.
+ *
+ * `maxBytes` bounds the UTF-8 bytes of the complete emitted text: the renderer
+ * charges the page header, its focus and dialog lines, the truncation marker,
+ * and every node line against it. Text a page renders in a multibyte script
+ * therefore costs what it actually occupies in the request, not one byte per
+ * UTF-16 code unit. The header and marker are never clipped, so they are the
+ * floor below which no node line fits.
  * @param session - command session for the browser view.
  * @param refs - reference store for the document being observed.
  * @param options - output bounds and optional continuation cursor.
@@ -183,8 +209,14 @@ export async function observePage(
   const roots = tree.nodes.filter(node => node.parentId === undefined || !byId.has(node.parentId))
   const lines: RenderedLine[] = []
   let emitted = 0
-  let byteLength = 0
+  let lineBytes = 0
   const progress = { truncated: false }
+
+  const headerLine = `[page] url=${header.url} title=${header.title} viewport=${String(viewport.width)}x${String(viewport.height)} scrollY=${String(header.scrollY)}`
+  const focusLine = header.active === '' ? '' : `\n[focused] ${header.active}`
+  const dialogLine = header.dialogs === 0 ? '' : `\n[dialogs] ${String(header.dialogs)} page dialog(s) were neutralized; see browser_console`
+  const prefix = `${headerLine}${focusLine}${dialogLine}\n`
+  const lineBudget = Math.max(0, options.maxBytes - utf8ByteLength(prefix) - TRUNCATION_MARKER_BYTES)
 
   const walk = (node: AxNode, depth: number): void => {
     if (progress.truncated) return
@@ -201,16 +233,23 @@ export async function observePage(
     const body = renderNodeBody(node, role, name, depth, options.maxDepth)
     if (body !== null) {
       if (emitted >= startIndex) {
+        // The node bound is decided before the reference is minted, so a line
+        // that never renders cannot consume an index the text does not show.
+        if (lines.length >= options.maxNodes) {
+          progress.truncated = true
+          return
+        }
         const indent = '  '.repeat(depth)
         const backendDOMNodeId = node.backendDOMNodeId
         const ref = backendDOMNodeId === undefined ? undefined : refs.mint(backendDOMNodeId)
         const text = `${indent}${ref === undefined ? '- ' : `${formatBrowserRef(ref)} `}${body}`
-        if (lines.length >= options.maxNodes || byteLength + text.length > options.maxBytes) {
+        const bytes = utf8ByteLength(text)
+        if (lineBytes + bytes > lineBudget) {
           progress.truncated = true
           return
         }
         lines.push(ref === undefined ? { text } : { text, ref })
-        byteLength += text.length
+        lineBytes += bytes
       }
       emitted += 1
       depth += 1
@@ -223,11 +262,8 @@ export async function observePage(
   }
   for (const root of roots) walk(root, 0)
 
-  const headerLine = `[page] url=${header.url} title=${header.title} viewport=${String(viewport.width)}x${String(viewport.height)} scrollY=${String(header.scrollY)}`
-  const focusLine = header.active === '' ? '' : `\n[focused] ${header.active}`
-  const dialogLine = header.dialogs === 0 ? '' : `\n[dialogs] ${String(header.dialogs)} page dialog(s) were neutralized; see browser_console`
   const truncatedLine = progress.truncated ? `\n[truncated] nodes=${String(emitted)} shown=${String(lines.length)} next_cursor=${String(emitted)}` : ''
-  const text = `${headerLine}${focusLine}${dialogLine}\n${lines.map(line => line.text).join('\n')}${truncatedLine}`
+  const text = `${prefix}${lines.map(line => line.text).join('\n')}${truncatedLine}`
   return {
     url: header.url,
     title: header.title,
@@ -238,8 +274,17 @@ export async function observePage(
     nodeCount: emitted,
     truncated: progress.truncated,
     ...(progress.truncated ? { nextCursor: String(emitted) } : {}),
-    byteLength: text.length,
+    byteLength: utf8ByteLength(text),
   }
+}
+
+/**
+ * Measure one string as the bytes a request carries it in.
+ * @param text - rendered observation text.
+ * @returns its UTF-8 byte length.
+ */
+function utf8ByteLength(text: string): number {
+  return Buffer.byteLength(text, 'utf8')
 }
 
 /**
