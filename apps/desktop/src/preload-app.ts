@@ -1,62 +1,70 @@
-/** Startup controls for shell documents; the embedded-browser face for application documents. */
+/** Origin-scoped boot, native directory selection, host paths of picked files, and update presentation with native confirmation actions. */
 
-import { contextBridge, ipcRenderer } from 'electron'
-import {
-  DESKTOP_IPC,
-  type DesktopBrowserActivity,
-  type DesktopBrowserApi,
-  type DesktopBrowserState,
-  type DshDesktopAppApi,
-  type DshDesktopStartupApi,
-} from './ipc.ts'
-import type { DesktopBackendState } from './backend-controller.ts'
+import { contextBridge, ipcRenderer, webUtils } from 'electron'
+import { DESKTOP_IPC, SCHEME, type DshDesktopProductApi, type DesktopUpdatePresentation } from './ipc.ts'
+import { PLATFORM_IPC } from './platform-ipc.ts'
+import { markDocumentPlatform, syncWindowFullscreen } from './preload-platform.ts'
+import { syncNativeTheme } from './preload-theme.ts'
+import { syncWindowsAppearance } from './preload-windows.ts'
+import { installMandatoryUpdateOverlay } from './preload-mandatory-overlay.ts'
+import { createDesktopBrowserBridge } from './preload-browser.ts'
 
-const startup: DshDesktopStartupApi = {
-  protocolVersion: 1,
-  locale: () => ipcRenderer.invoke(DESKTOP_IPC.localeGet) as ReturnType<DshDesktopStartupApi['locale']>,
-  backend: {
-    status: () => ipcRenderer.invoke(DESKTOP_IPC.backendStatus) as ReturnType<DshDesktopStartupApi['backend']['status']>,
-    subscribe(listener) {
-      const handle = (_event: Electron.IpcRendererEvent, state: DesktopBackendState): void => { listener(state) }
-      ipcRenderer.on(DESKTOP_IPC.backendState, handle)
-      return () => { ipcRenderer.off(DESKTOP_IPC.backendState, handle) }
+function createProductApi(): DshDesktopProductApi {
+  return {
+    protocolVersion: 1,
+    browser: createDesktopBrowserBridge(),
+    updates: {
+      status: () => ipcRenderer.invoke(DESKTOP_IPC.updatesStatus) as Promise<DesktopUpdatePresentation>,
+      open: () => ipcRenderer.invoke(DESKTOP_IPC.updatesOpen) as Promise<void>,
+      subscribe(listener) {
+        const handle = (_event: Electron.IpcRendererEvent, state: DesktopUpdatePresentation): void => { listener(state) }
+        ipcRenderer.on(DESKTOP_IPC.updatesPresentation, handle)
+        return () => { ipcRenderer.off(DESKTOP_IPC.updatesPresentation, handle) }
+      },
     },
-  },
-  disablePlugins: () => ipcRenderer.invoke(DESKTOP_IPC.pluginsDisableAll) as Promise<void>,
-  restart: () => ipcRenderer.invoke(DESKTOP_IPC.applicationRestart) as Promise<void>,
-  resetConfiguration: () => ipcRenderer.invoke(DESKTOP_IPC.configurationReset) as Promise<void>,
+  }
 }
 
-const browser: DesktopBrowserApi = {
-  open: (bounds, url) => ipcRenderer.invoke(DESKTOP_IPC.browserOpen, bounds, url) as Promise<void>,
-  hide: () => ipcRenderer.invoke(DESKTOP_IPC.browserHide) as Promise<void>,
-  navigate: url => ipcRenderer.invoke(DESKTOP_IPC.browserNavigate, url) as Promise<void>,
-  back: () => ipcRenderer.invoke(DESKTOP_IPC.browserBack) as Promise<void>,
-  forward: () => ipcRenderer.invoke(DESKTOP_IPC.browserForward) as Promise<void>,
-  reload: () => ipcRenderer.invoke(DESKTOP_IPC.browserReload) as Promise<void>,
-  setBounds: bounds => ipcRenderer.invoke(DESKTOP_IPC.browserSetBounds, bounds) as Promise<void>,
-  state: () => ipcRenderer.invoke(DESKTOP_IPC.browserGetState) as Promise<DesktopBrowserState>,
-  subscribe(listener) {
-    const handle = (_event: Electron.IpcRendererEvent, state: DesktopBrowserState): void => { listener(state) }
-    ipcRenderer.on(DESKTOP_IPC.browserState, handle)
-    return () => { ipcRenderer.off(DESKTOP_IPC.browserState, handle) }
-  },
-  subscribeReveal(listener) {
-    const handle = (): void => { listener() }
-    ipcRenderer.on(DESKTOP_IPC.browserReveal, handle)
-    return () => { ipcRenderer.off(DESKTOP_IPC.browserReveal, handle) }
-  },
-  subscribeActivity(listener) {
-    const handle = (_event: Electron.IpcRendererEvent, activity: DesktopBrowserActivity): void => { listener(activity) }
-    ipcRenderer.on(DESKTOP_IPC.browserActivity, handle)
-    return () => { ipcRenderer.off(DESKTOP_IPC.browserActivity, handle) }
-  },
+if (location.protocol === `${SCHEME}:` && location.hostname === 'app') {
+  ipcRenderer.on(DESKTOP_IPC.enterWorkspace, () => {
+    const body = document.body
+    const previous = body.getAttribute('tabindex')
+    body.tabIndex = -1
+    body.focus({ preventScroll: true })
+    if (previous === null) body.removeAttribute('tabindex')
+    else body.setAttribute('tabindex', previous)
+  })
+  syncWindowsAppearance()
+  if (process.platform === 'win32') installMandatoryUpdateOverlay()
+  contextBridge.exposeInMainWorld('__DSH_DIRECTORY_PICKER__', {
+    pick: () => ipcRenderer.invoke(DESKTOP_IPC.directoryPick) as Promise<string | null>,
+  })
+  // The composer cites dropped, picked, and pasted files and folders that
+  // have a real path as `@path` references instead of uploading them; a
+  // File without one (pasted bytes) answers '' and uploads as before.
+  contextBridge.exposeInMainWorld('__DSH_HOST_PATHS__', {
+    pathFor: (file: File) => webUtils.getPathForFile(file),
+  })
+  contextBridge.exposeInMainWorld('dshDesktopBoot', {
+    ready: () => ipcRenderer.invoke(DESKTOP_IPC.boot) as Promise<unknown>,
+    failed: (message: string) => ipcRenderer.invoke(DESKTOP_IPC.bootFailed, message) as Promise<void>,
+  })
+  contextBridge.exposeInMainWorld('dshPlatform', {
+    open: (page: 'usage' | 'top-up', bounds: { x: number; y: number; width: number; height: number }) => ipcRenderer.invoke(PLATFORM_IPC.open, page, bounds),
+    setBounds: (bounds: { x: number; y: number; width: number; height: number }) => ipcRenderer.invoke(PLATFORM_IPC.bounds, bounds),
+    close: () => ipcRenderer.invoke(PLATFORM_IPC.close),
+  })
 }
 
-const application: DshDesktopAppApi = { protocolVersion: 1, browser }
+markDocumentPlatform()
+syncWindowFullscreen()
+syncNativeTheme()
+// Main-process IPC also verifies the owning window and top frame.
+contextBridge.exposeInMainWorld('dshDesktop', location.protocol === `${SCHEME}:` && location.hostname === 'app' ? createProductApi() : { protocolVersion: 1 })
 
-contextBridge.exposeInMainWorld('dshDesktop', location.protocol === 'dsh-app:' && location.hostname === 'shell'
-  ? startup
-  : location.protocol === 'dsh-app:' && location.hostname === 'app'
-    ? application
-    : { protocolVersion: 1 })
+if (location.protocol === `${SCHEME}:` && location.hostname === 'app') {
+  contextBridge.exposeInMainWorld('__DSH_LOCALE__', {
+    read: () => ipcRenderer.invoke(DESKTOP_IPC.localeBootstrap),
+    onChange: (locale: string) => { ipcRenderer.send(DESKTOP_IPC.localeChanged, locale) },
+  })
+}

@@ -9,9 +9,9 @@ import type {} from '@deepseek-ai/dsh-client-locale/client'
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 // Type-only: pulls the Session root standard-props merge.
 import type {} from '@deepseek-ai/dsh-client-ui-session/client'
-// Type-only: pulls the ctx.settingsScope Context merge.
 import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
 import type { SidebarMode, SidebarPanelMetadata, SidebarRootInjected } from './contract/slots.ts'
+import { HeaderLeadingControls } from './HeaderLeadingControls.tsx'
 import { SidebarRoot } from './SidebarRoot.tsx'
 import { en, zh, type SidebarKey } from './locales.ts'
 
@@ -33,7 +33,7 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
 const NS = 'sidebar'
 
 /** Settings namespace owning the deployment work mode (host-registered). */
-const MODE_NS = 'oristrat'
+const MODE_NS = 'oristrat-msce-norms'
 
 /** The stored section shape; anything unrecognized reads as coding (fail closed). */
 interface OristratModeSettings {
@@ -50,7 +50,7 @@ interface WorkspaceNavigation {
 }
 
 /** Services required by the sidebar plugin. */
-export const inject = ['slots', 'layout', 'uiWorkspace', 'locale', 'settingsScope']
+export const inject = ['slots', 'layout', 'uiWorkspace', 'locale', 'configForms']
 
 /** Registers the sidebar shell and its service callbacks.
  * @param ctx - Client root context.
@@ -79,7 +79,7 @@ export function apply(ctx: ClientContext): void {
   // mirror (no wire read of its own), moved only by committed writes — the
   // switcher never displays a mode the Host refused, and a refused or failed
   // write leaves it on the last committed mode.
-  const modeSection = ctx.settingsScope.bind<OristratModeSettings>({ namespace: MODE_NS })
+  const modeSection = ctx.configForms.get<OristratModeSettings>(MODE_NS)
   const mode = createSnapshotStore<SidebarMode>('coding')
   const syncMode = (): void => {
     const next = parseMode(modeSection.getSnapshot().value)
@@ -108,6 +108,7 @@ export function apply(ctx: ClientContext): void {
     children: {
       'sidebar.brand.mark': { kind: 'single', scope: 'root' },
       'sidebar.brand.name': { kind: 'single', scope: 'root' },
+      'sidebar.toggle.badge': { kind: 'single', scope: 'root' },
       'sidebar.panellist': { kind: 'list', scope: 'root' },
       'sidebar.workspaces': { kind: 'single', scope: 'root' },
       'sidebar.settings': { kind: 'single', scope: 'root' },
@@ -115,5 +116,14 @@ export function apply(ctx: ClientContext): void {
     },
     inject: injectProps,
   }, SidebarRoot))
+  // macOS desktop hides the collapsed sidebar entirely, so the open/New
+  // Session controls move into the frame's window-chrome seat beside the
+  // traffic lights; the occupant reuses the shell's injected actions, and
+  // the AppFrame mounts the seat only while the column is fully hidden.
+  ctx.slots.inject('shell.leading', () => ctx.slots.register({
+    name: 'shell.leading',
+    locale: NS,
+    inject: injectProps,
+  }, HeaderLeadingControls))
   syncPanels()
 }

@@ -1,6 +1,6 @@
 {
   "name": "@deepseek-ai/dsh-guard-msce-gate",
-  "version": "0.1.5-rc.2",
+  "version": "0.1.7-rc.1",
   "description": "Hard MSCE gates: discovery before code mutation, submission gate before git handoff",
   "type": "module",
   "main": "lib/index.js",
@@ -22,13 +22,13 @@
   },
   "scripts": {},
   "peerDependencies": {
-    "@deepseek-ai/cordis": "workspace:^",
-    "@deepseek-ai/dsh-settings": "workspace:^"
+    "@deepseek-ai/cordis": "workspace:~",
+    "@deepseek-ai/dsh-settings": "workspace:*"
   },
   "devDependencies": {
-    "@deepseek-ai/cordis": "workspace:^",
-    "@deepseek-ai/dsh-settings": "workspace:^",
-    "@deepseek-ai/dsh-tools": "workspace:^"
+    "@deepseek-ai/cordis": "workspace:~",
+    "@deepseek-ai/dsh-settings": "workspace:*",
+    "@deepseek-ai/dsh-tools": "workspace:*"
   },
   "dependencies": {},
   "license": "MIT",

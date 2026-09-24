@@ -11,7 +11,7 @@
  */
 import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import type { PropsLocale } from '@deepseek-ai/dsh-client-ui-slots'
-import { IconChevronLeftOutline14, IconChevronRightOutline14, IconRefreshOutline14 } from '@deepseek-ai/dsh-client-ui-primitives'
+import { IconChevronLeftOutlineRegular, IconChevronRightOutlineRegular, IconRefreshOutlineRegular } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { BrowserActivity, BrowserState, DesktopBrowserBridge } from './bridge.ts'
 import { boundsFromLayout, normalizeUrlInput } from './bridge.ts'
 import type {} from './locales.ts'
@@ -106,13 +106,13 @@ export function BrowserPanel({ t, bridge }: BrowserPanelProps): ReactNode {
     <div className={css.panel}>
       <div className={css.toolbar}>
         <button type="button" className={css.tool} aria-label={t('action.back')} disabled={state?.canGoBack !== true} onClick={() => { desktop.back().catch(ignoreBridgeError) }}>
-          <IconChevronLeftOutline14 />
+          <IconChevronLeftOutlineRegular size={14} />
         </button>
         <button type="button" className={css.tool} aria-label={t('action.forward')} disabled={state?.canGoForward !== true} onClick={() => { desktop.forward().catch(ignoreBridgeError) }}>
-          <IconChevronRightOutline14 />
+          <IconChevronRightOutlineRegular size={14} />
         </button>
         <button type="button" className={css.tool} aria-label={t('action.reload')} onClick={() => { desktop.reload().catch(ignoreBridgeError) }}>
-          <IconRefreshOutline14 />
+          <IconRefreshOutlineRegular size={14} />
         </button>
         <form className={css.address} onSubmit={go}>
           <input

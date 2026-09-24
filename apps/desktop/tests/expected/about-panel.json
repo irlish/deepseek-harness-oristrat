@@ -1,0 +1,54 @@
+{
+  "darwin:en-US": {
+    "menu": [
+      { "label": "About Oristrat AI Stem", "role": "about" },
+      { "type": "separator" }
+    ],
+    "options": {
+      "applicationName": "Oristrat AI Stem",
+      "applicationVersion": "1.0.0",
+      "version": "",
+      "copyright": "",
+      "iconPath": "<app icon>"
+    }
+  },
+  "darwin:zh-CN": {
+    "menu": [
+      { "label": "关于 Oristrat AI Stem", "role": "about" },
+      { "type": "separator" }
+    ],
+    "options": {
+      "applicationName": "Oristrat AI Stem",
+      "applicationVersion": "1.0.0",
+      "version": "",
+      "copyright": "",
+      "iconPath": "<app icon>"
+    }
+  },
+  "win32:zh-CN": {
+    "menu": [
+      { "label": "关于 Oristrat AI Stem" },
+      { "type": "separator" }
+    ],
+    "options": {
+      "applicationName": "Oristrat AI Stem",
+      "applicationVersion": "1.0.0",
+      "version": "",
+      "copyright": "",
+      "iconPath": "<app icon>"
+    }
+  },
+  "win32:en-US": {
+    "menu": [
+      { "label": "About Oristrat AI Stem" },
+      { "type": "separator" }
+    ],
+    "options": {
+      "applicationName": "Oristrat AI Stem",
+      "applicationVersion": "1.0.0",
+      "version": "",
+      "copyright": "",
+      "iconPath": "<app icon>"
+    }
+  }
+}

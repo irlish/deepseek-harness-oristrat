@@ -28,6 +28,7 @@ export function terminalDefinition(t: TranslateNS<'terminal-panel'>): SidebarRig
     priority: 'builtin',
     title: () => t('type.label'),
     guide: [{
+      id: TERMINAL_ID,
       order: 20,
       title: () => t('guide.title'),
       description: () => t('guide.description'),

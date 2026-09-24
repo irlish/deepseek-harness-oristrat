@@ -70,8 +70,7 @@ The plugin body registers the `browser-panel` locale dictionaries, the `browser`
 ## Further Exploration
 
 - [ui-sidebar-right](../ui-sidebar-right/README.md) — the tab registry, the keyed seats, and the navigation controller this package registers into.
-- [Desktop browser view](../../../apps/desktop/src/browser-view.ts) — the main-process `WebContentsView` owner the bridge reaches.
-- [Desktop preload](../../../apps/desktop/src/preload-app.ts) — the preload script that exposes `window.dshDesktop.browser` to the renderer.
+- [ui-sidebar-browser](../ui-sidebar-browser/README.md) — the shared browser panel mounted in current Desktop profiles; this older panel is retained as source but is not mounted.
 
 -----
 

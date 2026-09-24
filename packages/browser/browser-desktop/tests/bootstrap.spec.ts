@@ -56,7 +56,7 @@ function installIntoPageRealm(): PageRealm & { readonly result: unknown } {
     warn: record('warn'),
     error: record('error'),
   }
-  const result = runInNewContext(PAGE_BOOTSTRAP_SOURCE, { window, console: pageConsole }) as unknown
+  const result: unknown = runInNewContext(PAGE_BOOTSTRAP_SOURCE, { window, console: pageConsole })
   return { window, console: pageConsole, listeners, forwarded, result }
 }
 

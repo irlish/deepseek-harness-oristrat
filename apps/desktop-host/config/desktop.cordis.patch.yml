@@ -1,75 +1,15 @@
-# Electron reuses the browser composition without its network and browser-launch rows.
-
-- id: web-startup
-  disabled: true
-
-- id: webserver
-  disabled: true
-
-- id: web-runtime
-  disabled: true
-
-- id: client-hmr
-  disabled: true
-
-- id: open-in-app
-  disabled: true
-
-# The Host disables its provider; search-policy.ts masks the preset's
-# model-facing web_search so only the DashScope MCP search is offered.
+# Desktop keeps the shared Web application and selects DashScope as its search provider.
 - id: web-search-deepseek
   disabled: true
 
-- id: ui-open-in-app
-  disabled: true
-
-- id: directory-picker
-  disabled: true
-
-- id: connection
-  inject:
-    - credentials
-  config: {}
-
 - insert:
-    # The byte-pipe transport binds no socket: bundle Host plugins that register
-    # web routes against webServer receive this in-process stand-in, and the
-    # pipe router dispatches matched extension channels ahead of the asset
-    # fallback.
-    - id: pipe-webserver
-      name: '@deepseek-ai/dsh-desktop-host'
-
-    - id: directory-picker-native
-      name: '@deepseek-ai/dsh-host-directory-picker-native'
-
-    # The browser automation provider exists only here: it consumes the command
-    # channel the Host provides for the embedded pane, so a composition without
-    # that channel — every non-desktop profile — cannot mount it, and its
-    # consumer (`tool-browser`) then registers no tool at all.
-    - id: browser-desktop
-      name: '@deepseek-ai/dsh-browser-desktop'
-
-    - id: ui-directory-picker-native
-      name: '@deepseek-ai/dsh-client-ui-directory-picker-native'
-
-    # Fork: external web search for proposals, PPT, docs, and any task that
-    # needs live facts. The Alibaba Bailian WebSearch MCP server authenticates
-    # with the user's DashScope key from $DSH_HOME/.env; a missing key or an
-    # offline host leaves the tools absent (failOnStartupError off) instead of
-    # blocking desktop startup, and the reconnect supervisor retries.
-    # The injected `credentials` service is what makes that key readable: the
-    # plugin resolves `authorizationEnv` at activation, so activating before the
-    # credentials provider exists fails the first generation, and the supervisor
-    # then gives up permanently (a failed generation never closes) — leaving the
-    # session with no search tool at all.
-    - id: mcp-client
+    - id: mcp-client-dashscope-websearch
       name: '@deepseek-ai/dsh-mcp-client'
-      inject:
-        - tools
-        - credentials
+      inject: [tools, credentials]
       config:
         transport: streamable-http
         serverName: dashscope-websearch
         url: https://dashscope.aliyuncs.com/api/v1/mcps/WebSearch/mcp
         authorizationEnv: DASHSCOPE_API_KEY
+        versionNegotiation: legacy
         failOnStartupError: false

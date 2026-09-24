@@ -1,5 +1,5 @@
 ---
-description: "常开 Oristrat MSCE 引擎开发规范，以模式作用域的 system-prompt 分节注入，并持有 oristrat settings 命名空间（mode: coding | work）以同时解除规范与配对硬门禁。"
+description: "Oristrat MSCE 开发规范以模式作用域的 system-prompt 分节注入，由官方插件动态配置控制。"
 kind: "package-reference"
 ---
 
@@ -9,7 +9,7 @@ kind: "package-reference"
 
 ## 概述
 
-使用本包可让 Oristrat MSCE 引擎开发规范在本 fork 部署中成为 prompt 原生内容。每个 agent 的 system prompt 都携带一个精简分节——组件边界、View import 与 Less/I18n 纪律、工程注释评审、与提交耦合的门禁，以及验证分级——代码工作无需调用 `msce-engine-app-development` skill 即遵循其规范内核。插件持有 `oristrat` settings 命名空间（`mode: coding | work`，默认 `coding`）：`work` 模式下分节不贡献文本，配对的 `dsh-guard-msce-gate` 对每个分派直接放行。没有 settings 服务时，模式失败关闭为 `coding`。
+使用本包可让 Oristrat MSCE 引擎开发规范在本 fork 部署中成为 prompt 原生内容。每个 agent 的 system prompt 都携带一个精简分节——组件边界、View import 与 Less/I18n 纪律、工程注释评审、与提交耦合的门禁，以及验证分级——代码工作无需调用 `msce-engine-app-development` skill 即遵循其规范内核。官方插件设置表单持有 `oristrat-msce-norms.mode`（默认 `coding`）。`work` 模式下分节不贡献文本，配对的 `dsh-guard-msce-gate` 对每个分派直接放行。没有 settings 服务时，守卫失败关闭为 `coding`。
 
 ## 目录
 
@@ -25,7 +25,7 @@ kind: "package-reference"
 <a id="use-this-package"></a>
 ## 使用本包
 
-在 agent 开发 Oristrat MSCE 引擎应用的组合中挂载本插件；`dsh-base` bundle 已携带该条目。部署模式为 `coding` 期间，规范随即治理每个组装的 system prompt。模式是面向用户的设置：随附客户端侧边栏的工作模式 chip 写入 `oristrat.mode`，分节的文本提供方在每次 prompt 组装时重新读取它，因此切换从下一个请求起生效，无需重启。
+在 agent 开发 Oristrat MSCE 引擎应用的组合中挂载本插件；`dsh-base` bundle 已携带该条目。部署模式为 `coding` 期间，规范随即治理每个组装的 system prompt。随附客户端侧边栏的工作模式 chip 修改官方插件动态配置，分节在每次 prompt 组装时读取当前值，因此切换从下一个请求起生效，无需重启。
 
 ### 何时选择
 
@@ -33,13 +33,13 @@ kind: "package-reference"
 
 ### 最小配置
 
-以无配置挂载本插件：
+以默认 `coding` 模式挂载本插件：
 
 ```yaml
 - name: '@deepseek-ai/dsh-context-oristrat-msce-norms'
 ```
 
-本插件没有配置字段。它注入 `systemPrompt` 注册表，并在存在 `settings` 服务时挂接它；没有该服务时模式读作 `coding`，规范保持强制。
+`mode` 配置字段接受 `coding` 或 `work`，属于动态配置，官方设置表单可在 Host 运行时修改。插件注入 `systemPrompt` 注册表；配对守卫通过 settings 服务读取当前模式，服务缺失时强制按 `coding` 处理。
 
 -----
 
@@ -49,13 +49,13 @@ kind: "package-reference"
 <details>
 <summary>实现内幕——点击展开</summary>
 
-一个名为 `context:oristrat-msce-norms` 的 `ctx.systemPrompt.section` 注册位于注册表的 `ORISTRAT_MSCE_NORMS` 顺序槽，其文本提供方闭包一个模式读取器。读取器默认为常量 `coding`；存在 `settings` 服务时，嵌套的 `ctx.inject(['settings'], ...)` 注册 `oristrat` 命名空间——一个 schemastery 对象，`mode` 为 `coding`/`work` 联合、默认 `coding`——并把读取器重绑到实时 settings 作用域。`work` 模式下提供方返回空字符串，prompt 组装把该分节整个过滤掉，不贡献 token。规范文本本身是一个导出常量；两个模式消费方——本分节与 [`dsh-guard-msce-gate`](../../guard/msce-gate/README.zh.md)——读取同一命名空间，因此一个开关同时解除两半。
+一个名为 `context:oristrat-msce-norms` 的 `ctx.systemPrompt.section` 注册位于注册表的 `ORISTRAT_MSCE_NORMS` 顺序槽，其文本提供方读取动态 `mode` 配置值。`work` 模式下提供方返回空字符串，prompt 组装把该分节整个过滤掉，不贡献 token。规范文本本身是一个导出常量；两个模式消费方——本分节与 [`dsh-guard-msce-gate`](../../guard/msce-gate/README.zh.md)——读取同一官方插件配置，因此一个开关同时解除两半。
 
 ### 源码地图
 
 | 文件 | 职责 |
 |---|---|
-| [`src/index.ts`](src/index.ts) | 插件入口：`oristrat` settings 命名空间、模式读取器与分节注册 |
+| [`src/index.ts`](src/index.ts) | 插件入口：动态 `mode` 配置与分节注册 |
 | [`src/norms.ts`](src/norms.ts) | `MSCE_NORMS_PROMPT`：分节的完整静态文本 |
 | [`tests/mode.spec.ts`](tests/mode.spec.ts) | 模式规格：coding、work 与失败关闭的分节文本 |
 
@@ -66,9 +66,9 @@ kind: "package-reference"
 <a id="further-exploration"></a>
 ## 进一步探索
 
-- [msce-gate](../../guard/msce-gate/README.zh.md)——读取同一 `oristrat` 模式的配对硬门禁。
+- [msce-gate](../../guard/msce-gate/README.zh.md)——读取同一模式的配对硬门禁。
 - [system-prompt 注册表](../../core/system-prompt/README.zh.md)——分节接缝及其排序。
-- [settings 能力](../../settings/settings/README.zh.md)——`oristrat` 命名空间的所在，以及服务缺席时如何失败关闭。
+- [settings 能力](../../settings/settings/README.zh.md)——官方插件配置表单，以及服务缺席时如何失败关闭。
 - [context 组地图](../README.zh.md)——同组请求上下文包。
 
 -----
@@ -154,7 +154,7 @@ kind: "package-reference"
 
 #### KV Cache 影响
 
-模式保持期间分节前缀稳定：相同字节在相同位置跨请求保留复用。切换 `oristrat.mode` 把分节文本替换为空字符串或换回，编辑 `src/norms.ts` 则一次改变所有会话的分节；两者都会使自该分节位置起的前缀复用失效。
+模式保持期间分节前缀稳定：相同字节在相同位置跨请求保留复用。切换 `oristrat-msce-norms.mode` 把分节文本替换为空字符串或换回，编辑 `src/norms.ts` 则一次改变所有会话的分节；两者都会使自该分节位置起的前缀复用失效。
 
 ## 已知限制与延期工作
 

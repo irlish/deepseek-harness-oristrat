@@ -9,7 +9,7 @@ kind: "package-reference"
 
 ## 概述
 
-使用本包可把规范分节以文字陈述的两条 Oristrat MSCE 规则变为物理强制。在 MSCE 工作区——根目录携带 HARNESS.md、FRAMEWORK.md 或 msce/Brick 系条目——内包装 `tools/execute`：会话没有 Harness-Aware Discovery 证据时阻止 `write`/`edit`；晚于最后一次代码修改的 `MSCE_SUBMISSION_GATE: PASS` 标记出现前阻止 `bash` git add/commit/push。被阻止的调用返回指名缺失前置条件的结构化 tool error，让模型修复自身流程而不是停摆。非 MSCE 工作区与所有其他工具原样放行，整个守卫在 `oristrat` 设置的 `work` 模式下解除。
+使用本包可把规范分节以文字陈述的两条 Oristrat MSCE 规则变为物理强制。在 MSCE 工作区——根目录携带 HARNESS.md、FRAMEWORK.md 或 msce/Brick 系条目——内包装 `tools/execute`：会话没有 Harness-Aware Discovery 证据时阻止 `write`/`edit`；晚于最后一次代码修改的 `MSCE_SUBMISSION_GATE: PASS` 标记出现前阻止 `bash` git add/commit/push。被阻止的调用返回指名缺失前置条件的结构化 tool error，让模型修复自身流程而不是停摆。非 MSCE 工作区与所有其他工具原样放行，整个守卫在 `oristrat-msce-norms` 插件的 `work` 模式下解除。
 
 ## 目录
 
@@ -39,7 +39,7 @@ kind: "package-reference"
 - name: '@deepseek-ai/dsh-guard-msce-gate'
 ```
 
-本插件没有配置字段。它注入 `tools` 运行时，并在存在 settings 服务时经 `ctx.get('settings')` 读取 `oristrat` 命名空间；settings 服务缺失或不可读时失败关闭为 `coding` 强制。
+本插件没有配置字段。它注入 `tools` 运行时，并在存在 settings 服务时经 `ctx.get('settings')` 读取 `oristrat-msce-norms` 插件配置；settings 服务缺失或不可读时失败关闭为 `coding` 强制。
 
 -----
 
@@ -65,7 +65,7 @@ kind: "package-reference"
 <a id="further-exploration"></a>
 ## 进一步探索
 
-- [oristrat-msce-norms](../../context/oristrat-msce-norms/README.zh.md)——prompt 原生的另一半，也是本守卫读取的 `oristrat` 模式的属主。
+- [oristrat-msce-norms](../../context/oristrat-msce-norms/README.zh.md)——prompt 原生的另一半，也是本守卫读取模式的属主。
 - [工具子系统参考](../../../docs/subsystems/tools.zh.md)——本守卫包装的 `tools/execute` 瀑布。
 - [timeout-policy](../timeout-policy/README.zh.md)——同为条件工具结果形态的兄弟守卫。
 - [guard 组地图](../README.zh.md)——同组守卫包与 loop 卫生家族。

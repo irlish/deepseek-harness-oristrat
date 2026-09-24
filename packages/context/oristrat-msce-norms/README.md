@@ -1,5 +1,5 @@
 ---
-description: "Always-on Oristrat MSCE engine development norms as a mode-scoped system-prompt section, plus the oristrat settings namespace (mode: coding | work) that lifts the norms and the paired hard gate."
+description: "Oristrat MSCE development norms as a mode-scoped system-prompt section, controlled by the official volatile plugin configuration."
 kind: "package-reference"
 ---
 
@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-Use this package to make the Oristrat MSCE engine development norms prompt-native in this fork's deployments. Every agent's system prompt carries one condensed section — component boundaries, View import and Less/I18n discipline, engineering comment reviews, the submission-coupled gate, and validation classifications — so code work follows the `msce-engine-app-development` skill's normative core without invoking it. The plugin owns the `oristrat` settings namespace (`mode: coding | work`, default `coding`): in `work` mode the section contributes no text and the paired `dsh-guard-msce-gate` passes every dispatch through. Without a settings service the mode fails closed to `coding`.
+Use this package to make the Oristrat MSCE engine development norms prompt-native in this fork's deployments. Every agent's system prompt carries one condensed section — component boundaries, View import and Less/I18n discipline, engineering comment reviews, the submission-coupled gate, and validation classifications — so code work follows the `msce-engine-app-development` skill's normative core without invoking it. The official plugin settings form owns `oristrat-msce-norms.mode` (`coding` by default). In `work` mode the section contributes no text and the paired `dsh-guard-msce-gate` passes every dispatch through. Without a settings service the guard fails closed to `coding`.
 
 ## Table of Contents
 
@@ -25,7 +25,7 @@ Use this package to make the Oristrat MSCE engine development norms prompt-nativ
 <a id="use-this-package"></a>
 ## Use this package
 
-Mount the plugin in a composition whose agents develop Oristrat MSCE engine applications; the `dsh-base` bundle already carries the row. The norms then govern every assembled system prompt while the deployment mode is `coding`. The mode is a user-facing setting: the shipped client's sidebar work-mode chip writes `oristrat.mode`, and the section's text provider re-reads it at each prompt assembly, so a switch takes effect from the next request without a restart.
+Mount the plugin in a composition whose agents develop Oristrat MSCE engine applications; the `dsh-base` bundle already carries the row. The norms then govern every assembled system prompt while the deployment mode is `coding`. The shipped client's sidebar work-mode chip edits the official volatile plugin configuration, and the section reads the current value at each prompt assembly. A switch takes effect from the next request without a restart.
 
 ### When to choose it
 
@@ -33,13 +33,13 @@ Choose it for deployments whose agents develop Oristrat MSCE engine applications
 
 ### Minimal configuration
 
-Mount the plugin with no configuration:
+Mount the plugin with the default `coding` mode:
 
 ```yaml
 - name: '@deepseek-ai/dsh-context-oristrat-msce-norms'
 ```
 
-The plugin has no configuration fields. It injects the `systemPrompt` registry and attaches to a `settings` service when one exists; without one, the mode reads as `coding` and the norms stay enforced.
+The `mode` configuration field accepts `coding` or `work` and is volatile, so the official settings form can change it while the Host runs. The plugin injects the `systemPrompt` registry; the paired guard reads the active mode through the settings service and enforces `coding` when that service is absent.
 
 -----
 
@@ -49,13 +49,13 @@ The plugin has no configuration fields. It injects the `systemPrompt` registry a
 <details>
 <summary>Implementation internals — click to expand</summary>
 
-One `ctx.systemPrompt.section` registration named `context:oristrat-msce-norms` sits at the registry's `ORISTRAT_MSCE_NORMS` order slot, and its text provider closes over a mode reader. The reader defaults to the constant `coding`; when a `settings` service exists, a nested `ctx.inject(['settings'], ...)` registers the `oristrat` namespace — a schemastery object with a `mode` union of `coding`/`work` defaulting to `coding` — and rebinds the reader to the live settings scope. In `work` mode the provider returns the empty string and prompt assembly filters the section out entirely, contributing no tokens. The norms text itself is one exported constant; both mode consumers — this section and [`dsh-guard-msce-gate`](../../guard/msce-gate/README.md) — read the same namespace, so one switch lifts both halves together.
+One `ctx.systemPrompt.section` registration named `context:oristrat-msce-norms` sits at the registry's `ORISTRAT_MSCE_NORMS` order slot. Its text provider reads the volatile `mode` configuration value. In `work` mode the provider returns the empty string and prompt assembly filters the section out entirely, contributing no tokens. The norms text itself is one exported constant; both mode consumers — this section and [`dsh-guard-msce-gate`](../../guard/msce-gate/README.md) — read the same official plugin configuration, so one switch lifts both halves together.
 
 ### Source map
 
 | File | Role |
 |---|---|
-| [`src/index.ts`](src/index.ts) | Plugin entry: the `oristrat` settings namespace, the mode reader, and the section registration |
+| [`src/index.ts`](src/index.ts) | Plugin entry: volatile `mode` configuration and section registration |
 | [`src/norms.ts`](src/norms.ts) | `MSCE_NORMS_PROMPT`: the section's complete static text |
 | [`tests/mode.spec.ts`](tests/mode.spec.ts) | Mode specs: coding, work, and fail-closed section text |
 
@@ -66,9 +66,9 @@ One `ctx.systemPrompt.section` registration named `context:oristrat-msce-norms` 
 <a id="further-exploration"></a>
 ## Further Exploration
 
-- [msce-gate](../../guard/msce-gate/README.md) — the paired hard gate that reads the same `oristrat` mode.
+- [msce-gate](../../guard/msce-gate/README.md) — the paired hard gate that reads the same mode.
 - [system-prompt registry](../../core/system-prompt/README.md) — the section seam and its ordering.
-- [settings capability](../../settings/settings/README.md) — where the `oristrat` namespace lives and how an absent service fails closed.
+- [settings capability](../../settings/settings/README.md) — the official plugin configuration form and how an absent service fails closed.
 - [context group map](../README.md) — the sibling request-context packages.
 
 -----
@@ -154,7 +154,7 @@ One fixed prompt-prefix cost per request in `coding` mode — the static section
 
 #### KV Cache effect
 
-The section is prefix-stable while the mode holds: identical bytes at the same position preserve reuse across requests. Switching `oristrat.mode` replaces the section text with the empty string or back, and editing `src/norms.ts` changes it for every session at once; either invalidates prefix reuse from the section's position onward.
+The section is prefix-stable while the mode holds: identical bytes at the same position preserve reuse across requests. Switching `oristrat-msce-norms.mode` replaces the section text with the empty string or back, and editing `src/norms.ts` changes it for every session at once; either invalidates prefix reuse from the section's position onward.
 
 ## Known Limitations and Deferred Work
 

@@ -70,8 +70,7 @@ kind: "package-reference"
 ## 进一步探索
 
 - [ui-sidebar-right](../ui-sidebar-right/README.zh.md)——本包注册进入的 tab 注册表、键控座位与导航控制器。
-- [桌面浏览器视图](../../../apps/desktop/src/browser-view.ts)——桥触达的主进程 `WebContentsView` 属主。
-- [桌面 preload](../../../apps/desktop/src/preload-app.ts)——向渲染进程暴露 `window.dshDesktop.browser` 的 preload 脚本。
+- [ui-sidebar-browser](../ui-sidebar-browser/README.zh.md)——当前 Desktop profile 挂载的共享浏览器面板；旧面板保留源码，但不再挂载。
 
 -----
 

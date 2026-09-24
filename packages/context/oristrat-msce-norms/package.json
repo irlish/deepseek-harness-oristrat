@@ -1,6 +1,6 @@
 {
   "name": "@deepseek-ai/dsh-context-oristrat-msce-norms",
-  "version": "0.1.5-rc.2",
+  "version": "0.1.7-rc.1",
   "description": "Always-on Oristrat MSCE engine development norms as a system-prompt section",
   "type": "module",
   "main": "lib/index.js",
@@ -22,17 +22,17 @@
   },
   "scripts": {},
   "peerDependencies": {
-    "@deepseek-ai/cordis": "workspace:^",
-    "@deepseek-ai/dsh-settings": "workspace:^"
+    "@deepseek-ai/cordis": "workspace:~",
+    "@deepseek-ai/dsh-settings": "workspace:*"
   },
   "dependencies": {
-    "@deepseek-ai/schemastery": "workspace:^"
+    "@deepseek-ai/schemastery": "workspace:~"
   },
   "devDependencies": {
-    "@deepseek-ai/cordis": "workspace:^",
-    "@deepseek-ai/dsh-settings": "workspace:^",
-    "@deepseek-ai/dsh-system-prompt": "workspace:^",
-    "@deepseek-ai/schemastery": "workspace:^"
+    "@deepseek-ai/cordis": "workspace:~",
+    "@deepseek-ai/dsh-settings": "workspace:*",
+    "@deepseek-ai/dsh-system-prompt": "workspace:*",
+    "@deepseek-ai/schemastery": "workspace:~"
   },
   "license": "MIT",
   "repository": {

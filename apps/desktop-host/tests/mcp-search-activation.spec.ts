@@ -68,7 +68,7 @@ class StubCredentials extends CredentialProvider {
 }
 
 /** One row of the shipped Desktop patch layer, limited to the fields this test reads. */
-function shippedEntry(id: string): { inject?: string[]; serverName: string; authorizationEnv: string } {
+function shippedEntry(id: string): { inject?: string[]; serverName: string; authorizationEnv: string; versionNegotiation: string } {
   const root = new URL('../../../', import.meta.url)
   const entries = composeEntries([loadOverlayPatches('desktop search test', fileURLToPath(
     new URL('apps/desktop-host/config/desktop.cordis.patch.yml', root),
@@ -78,6 +78,7 @@ function shippedEntry(id: string): { inject?: string[]; serverName: string; auth
   const declared = {
     serverName: configField(row, 'serverName'),
     authorizationEnv: configField(row, 'authorizationEnv'),
+    versionNegotiation: configField(row, 'versionNegotiation'),
   }
   const inject = Array.isArray(row.inject) ? row.inject.map((entry: unknown) => String(entry)) : undefined
   return inject === undefined ? declared : { inject, ...declared }
@@ -97,13 +98,14 @@ function configField(entry: { config?: unknown }, name: string): string {
  * still activating.
  * @param url - local Streamable HTTP MCP endpoint the entry connects to.
  * @param inject - dependencies the entry declares; the shipped list waits for credentials.
- * @returns the mounted composition, its tool names, and a hook that settles the late provider.
+ * @returns the mounted composition and its tool names after the late provider registers.
  */
 async function mountSearchEntry(
   url: string,
   inject: readonly string[],
-): Promise<{ ctx: Context; names: () => string[]; settle: () => Promise<void> }> {
-  const entry = shippedEntry('mcp-client')
+): Promise<{ ctx: Context; names: () => string[] }> {
+  const entry = shippedEntry('mcp-client-dashscope-websearch')
+  const releaseCredentials: PromiseWithResolvers<void> = Promise.withResolvers()
   const credentialsReady: PromiseWithResolvers<void> = Promise.withResolvers()
   const ctx = new Context()
   await ctx.plugin(SystemPrompt)
@@ -111,7 +113,7 @@ async function mountSearchEntry(
   ctx.plugin({
     name: 'late-credentials',
     apply: async (inner: Context) => {
-      await new Promise(resolve => setTimeout(resolve, 30))
+      await releaseCredentials.promise
       await inner.plugin(StubCredentials)
       credentialsReady.resolve()
     },
@@ -121,42 +123,54 @@ async function mountSearchEntry(
     serverName: entry.serverName,
     url,
     authorizationEnv: entry.authorizationEnv,
+    versionNegotiation: entry.versionNegotiation as 'legacy',
     failOnStartupError: false,
   })
-  await fiber
+  try {
+    if (!inject.includes('credentials')) await fiber
+    releaseCredentials.resolve()
+    await credentialsReady.promise
+    await fiber
+  } catch (error) {
+    releaseCredentials.resolve()
+    await ctx.fiber.dispose()
+    throw error
+  }
   return {
     ctx,
     names: () => ctx.tools.schemas().map(schema => schema.name),
-    settle: () => credentialsReady.promise,
   }
 }
 
 describe('Desktop DashScope search wiring', () => {
   it('registers the search tool when the shipped entry waits for credentials', async () => {
     const fixture = await startHttpMcpFixture()
-    const entry = shippedEntry('mcp-client')
-    expect(entry.inject).toEqual(expect.arrayContaining(['tools', 'credentials']))
-    const { ctx, names, settle } = await mountSearchEntry(fixture.url, entry.inject ?? mcpInject)
+    let ctx: Context | undefined
     try {
+      const entry = shippedEntry('mcp-client-dashscope-websearch')
+      expect(entry.inject).toEqual(expect.arrayContaining(['tools', 'credentials']))
+      expect(entry.versionNegotiation).toBe('legacy')
+      const mounted = await mountSearchEntry(fixture.url, entry.inject ?? mcpInject)
+      ctx = mounted.ctx
       await vi.waitFor(() => {
-        expect(names()).toContain(`mcp__${entry.serverName}__ping`)
+        expect(mounted.names()).toContain(`mcp__${entry.serverName}__ping`)
       }, { timeout: 10_000 })
       expect(fixture.authorization).toContain('Bearer sekret')
     } finally {
-      await settle()
-      await ctx.fiber.dispose()
+      await ctx?.fiber.dispose()
       await fixture.close()
     }
   })
 
   it('registers no search tool when the entry does not wait for credentials', async () => {
     const fixture = await startHttpMcpFixture()
-    const { ctx, names, settle } = await mountSearchEntry(fixture.url, mcpInject)
+    let ctx: Context | undefined
     try {
-      expect(names().filter(name => name.startsWith('mcp__'))).toEqual([])
+      const mounted = await mountSearchEntry(fixture.url, mcpInject)
+      ctx = mounted.ctx
+      expect(mounted.names().filter(name => name.startsWith('mcp__'))).toEqual([])
     } finally {
-      await settle()
-      await ctx.fiber.dispose()
+      await ctx?.fiber.dispose()
       await fixture.close()
     }
   }, 30_000)

@@ -28,6 +28,7 @@ export function browserDefinition(t: TranslateNS<'browser-panel'>): SidebarRight
     priority: 'builtin',
     title: () => t('type.label'),
     guide: [{
+      id: BROWSER_ID,
       order: 40,
       title: () => t('guide.title'),
       description: () => t('guide.description'),

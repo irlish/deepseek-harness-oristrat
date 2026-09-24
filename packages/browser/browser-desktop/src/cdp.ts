@@ -86,7 +86,7 @@ export class CdpSession {
 
   /**
    * Evaluate one expression in the main frame and return its value.
-   * @param expression - expression source; the caller owns its provenance.
+   * @param expression - expression source supplied by the trusted caller.
    * @param signal - optional caller cancellation.
    * @returns the unserialized evaluation result.
    */

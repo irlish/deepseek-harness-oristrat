@@ -136,6 +136,7 @@ export class GuiTerminalController extends TypertRemoteService {
       argv: shellArgv(),
       cwd: request.cwd ?? process.cwd(),
       env: { ...process.env, TERM: 'xterm-256color' },
+      terminalType: 'xterm-256color',
       cols: request.cols ?? DEFAULT_COLS,
       rows: request.rows ?? DEFAULT_ROWS,
       graceMs: 1000,

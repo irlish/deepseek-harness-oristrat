@@ -11,8 +11,8 @@
  * @module @deepseek-ai/dsh-desktop-host
  */
 
-import type { IncomingMessage, ServerResponse } from 'node:http'
-import { Readable, Writable } from 'node:stream'
+import { ServerResponse, type IncomingMessage } from 'node:http'
+import { Readable } from 'node:stream'
 import type { Context } from '@deepseek-ai/cordis'
 import { Service } from '@deepseek-ai/cordis'
 import type { IndexInjection, WebRoute, WebUpgradeRoute } from '@deepseek-ai/dsh-host-webserver'
@@ -69,63 +69,50 @@ function mintSessionCookie(connection: PipeSessionConnection): string | undefine
   return cookie
 }
 
-/** Collecting node:http response shim backed by a Writable stream. */
-class PipeServerResponse extends Writable {
-  statusCode = 200
-  private readonly headerMap = new Map<string, string>()
+/** Collecting node:http response backed by ServerResponse's header API. */
+class PipeServerResponse extends ServerResponse {
   private readonly chunks: Buffer[] = []
   private readonly finish: () => void
   /** Resolves once end() completes the response. */
   readonly settled: Promise<void>
   private ended = false
 
-  constructor() {
-    super()
+  constructor(request: IncomingMessage) {
+    super(request)
     let resolveSettled: () => void = () => {}
     this.settled = new Promise<void>((resolve) => { resolveSettled = resolve })
     this.finish = resolveSettled
   }
 
-  override _write(chunk: Buffer, _encoding: unknown, callback: () => void): void {
+  override write(
+    chunk: string | Uint8Array,
+    encoding?: BufferEncoding | ((error?: Error | null) => void),
+    callback?: (error?: Error | null) => void,
+  ): boolean {
     this.chunks.push(Buffer.from(chunk))
-    callback()
+    if (typeof encoding === 'function') encoding()
+    else callback?.()
+    return true
   }
 
-  setHeader(key: string, value: string | number | readonly string[]): void {
-    this.headerMap.set(key.toLowerCase(), Array.isArray(value) ? value.join(', ') : String(value))
-  }
-
-  getHeader(key: string): string | undefined {
-    return this.headerMap.get(key.toLowerCase())
-  }
-
-  removeHeader(key: string): void {
-    this.headerMap.delete(key.toLowerCase())
-  }
-
-  writeHead(status: number, headers?: Record<string, string | number | readonly string[]> | string): this {
-    this.statusCode = status
-    const rows = typeof headers === 'string' ? undefined : headers
-    if (rows !== undefined) {
-      for (const [key, value] of Object.entries(rows)) this.setHeader(key, value)
-    }
-    return this
-  }
-
-  override end(chunk?: unknown): this {
-    if (chunk !== undefined && chunk !== null) this.chunks.push(Buffer.from(chunk as Buffer | string))
+  override end(chunk?: string | Uint8Array | (() => void), encoding?: BufferEncoding | (() => void), callback?: () => void): this {
+    if (typeof chunk === 'string' || chunk instanceof Uint8Array) this.chunks.push(Buffer.from(chunk))
     if (!this.ended) {
       this.ended = true
       this.finish()
-      super.end()
     }
+    if (typeof chunk === 'function') chunk()
+    else if (typeof encoding === 'function') encoding()
+    else callback?.()
     return this
   }
 
   /** Frozen WHATWG response over the collected status, headers, and body. */
   toResponse(): Response {
     const body = this.chunks.length === 0 ? null : new Uint8Array(Buffer.concat(this.chunks))
-    return new Response(body, { status: this.statusCode, headers: new Headers([...this.headerMap]) })
+    const headers = new Headers(Object.entries(this.getHeaders())
+      .map(([key, value]): [string, string] => [key, Array.isArray(value) ? value.join(', ') : String(value)]))
+    return new Response(body, { status: this.statusCode, headers })
   }
 }
 
@@ -252,8 +239,8 @@ export class DesktopPipeWebServer extends Service {
       for await (const chunk of request.body) bodyChunks.push(Buffer.from(chunk))
     }
     const req = createRequestShim(request, bodyChunks, this.cookie)
-    const res = new PipeServerResponse()
-    await route.handler(req, res as unknown as ServerResponse)
+    const res = new PipeServerResponse(req)
+    await route.handler(req, res)
     await res.settled
     return res.toResponse()
   }

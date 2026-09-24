@@ -11,10 +11,10 @@ import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } 
 import { createPortal } from 'react-dom'
 import type { PropsLocale, PropsRuntime, TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
 import {
-  IconCheckOutline14,
-  IconChevronDownOutline14,
-  IconPlusOutline16,
-  IconSearchOutline16,
+  IconCheckOutlineRegular,
+  IconChevronDownOutlineRegular,
+  IconPlusOutlineRegular,
+  IconSearchOutlineRegular,
   Tooltip,
   useAnchoredPosition,
   useDismissOnOutsidePointer,
@@ -233,7 +233,7 @@ export function RepoEnvAction({
                       <RepoGlyph size={14} />
                       <span className={css.rowLabel}>{status.branch ?? ''}</span>
                       {divergence !== undefined && <span className={css.rowValue}>{divergence}</span>}
-                      <IconChevronDownOutline14 />
+                      <IconChevronDownOutlineRegular size={14} />
                     </button>
                     <div className={css.sources}>
                       <span className={css.rowLabel}>{t('row.sources')}</span>
@@ -261,7 +261,7 @@ export function RepoEnvAction({
               style={{ top: branchRowRef.current?.offsetTop ?? 0 }}
             >
               <div className={css.searchRow}>
-                <IconSearchOutline16 />
+                <IconSearchOutlineRegular size={16} />
                 <input
                   className={css.searchInput}
                   value={query}
@@ -287,7 +287,7 @@ export function RepoEnvAction({
                         onClick={() => { pick(name) }}
                       >
                         <span className={css.branchName}>{name}</span>
-                        {name === listing.current && <IconCheckOutline14 />}
+                        {name === listing.current && <IconCheckOutlineRegular size={14} />}
                       </button>
                     ))}
               </div>
@@ -306,7 +306,7 @@ export function RepoEnvAction({
                 )
                 : (
                   <button type="button" className={css.createRow} disabled={busy} onClick={() => { setCreating(true) }}>
-                    <IconPlusOutline16 />
+                    <IconPlusOutlineRegular size={16} />
                     <span>{t('branch.create')}</span>
                   </button>
                 )}

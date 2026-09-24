@@ -44,7 +44,7 @@ async function fixture(withPresetSearch = true, withMcpSearch = true): Promise<{
   await ctx.plugin(Object.assign((inner: Context) => {
     ;(agent as { ctx: Context }).ctx = createScope(inner, agent, { parent }).ctx
   }, { inject: ['tools', 'systemPrompt'] }))
-  agentEvents(ctx, agent).emit('agent/created', {})
+  agentEvents(ctx, agent).emit('agent/created', { source: 'startup' })
   return { ctx, agent, standing }
 }
 
@@ -121,13 +121,14 @@ describe('Desktop search policy', () => {
     const entries = composeEntries(patches)
     const byId = new Map(entries.map(entry => [entry.id, entry]))
     expect(byId.get('web-search-deepseek')?.disabled).toBe(true)
-    expect(byId.get('mcp-client')?.config).toMatchObject({
+    expect(byId.get('mcp-client-dashscope-websearch')?.config).toMatchObject({
       serverName: 'dashscope-websearch',
       authorizationEnv: 'DASHSCOPE_API_KEY',
+      versionNegotiation: 'legacy',
       failOnStartupError: false,
     })
     // The entry resolves `authorizationEnv` at activation: without waiting for
     // `credentials` the first generation fails and search is lost for good.
-    expect(byId.get('mcp-client')?.inject).toEqual(expect.arrayContaining(['tools', 'credentials']))
+    expect(byId.get('mcp-client-dashscope-websearch')?.inject).toEqual(expect.arrayContaining(['tools', 'credentials']))
   })
 })

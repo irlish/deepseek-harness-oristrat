@@ -20,17 +20,13 @@ export const SIDEBAR_COLLAPSED = 56
 /** Viewport width below which the sidebar auto-collapses to the rail (deepsuite
  * LG breakpoint); a manual toggle below it re-expands over the squeezed center
  * (stores.ts narrowExpanded). */
-// Fork: Oristrat Stem keeps the session sidebar open down to much narrower
-// windows than the upstream breakpoint.
-export const SIDEBAR_AUTO_COLLAPSE = 760
+export const SIDEBAR_AUTO_COLLAPSE = 1024
 /** Right column drag clamp floor. */
-// Fork: a slimmer floor lets the file/terminal column survive narrow frames.
-export const RIGHTBAR_MIN = 240
+export const RIGHTBAR_MIN = 300
 /** Maximum normal right panel width as a fraction of the frame. */
 export const RIGHTBAR_MAX_RATIO = 0.7
 /** First-open right panel preference as a fraction of the frame. */
-// Fork: first-open right panel leaves the conversation its room.
-export const RIGHTBAR_DEFAULT_RATIO = 0.34
+export const RIGHTBAR_DEFAULT_RATIO = 0.45
 
 /**
  * Clamp a panel width into its contract range.
@@ -48,11 +44,13 @@ export function clampWidth(px: number, min: number, max: number): number {
  * @param viewport - available frame width in px.
  * @param sidebar - sidebar width preference in px (0 = closed).
  * @param rightbar - requested right panel width in px (0 = no track).
+ * @param collapsedWidth - track width of the closed sidebar; the default keeps
+ *   the icon rail, 0 hides the column entirely (macOS desktop).
  * @returns actual widths after shrinking or removing the right track; only
  *   without that track may the center fall below its minimum, down to zero.
  */
-export function computeColumns(viewport: number, sidebar: number, rightbar: number): Columns {
-  const s = sidebar === 0 ? SIDEBAR_COLLAPSED : clampWidth(sidebar, SIDEBAR_MIN, SIDEBAR_MAX)
+export function computeColumns(viewport: number, sidebar: number, rightbar: number, collapsedWidth = SIDEBAR_COLLAPSED): Columns {
+  const s = sidebar === 0 ? collapsedWidth : clampWidth(sidebar, SIDEBAR_MIN, SIDEBAR_MAX)
   const available = viewport - s - CENTER_MIN
   const r = rightbar === 0 || available < RIGHTBAR_MIN
     ? 0

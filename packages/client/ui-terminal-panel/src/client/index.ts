@@ -8,6 +8,7 @@
  */
 import type { Context as ClientContext } from '@deepseek-ai/cordis'
 import type {} from '@deepseek-ai/dsh-api-remotes/client'
+import type {} from '@deepseek-ai/dsh-api-gui-terminal/remote'
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 import type {} from '@deepseek-ai/dsh-client-ui-sidebar-right/client'
 import type {
@@ -60,7 +61,7 @@ export function apply(ctx: ClientContext): void {
   ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'ui-terminal-panel: dictionaries')
   ctx.effect(() => ctx.sidebarRightTabs.register(terminalDefinition(t)), 'ui-terminal-panel: terminal type')
 
-  const wire = (ctx.remote as unknown as { guiTerminal: GuiTerminalWire }).guiTerminal
+  const wire: GuiTerminalWire = ctx.remote.guiTerminal
   const injected = (): TerminalTabBodyInjected => ({
     openTerminal: request => call(wire.open(request)),
     writeTerminal: request => call(wire.write(request)),

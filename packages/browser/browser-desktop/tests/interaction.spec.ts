@@ -296,7 +296,7 @@ describe('performAction targeting', () => {
 
   it('refuses an action verb outside the closed union', async () => {
     const transport = actionTransport()
-    const unsupported = requestOf({ action: 'teleport' as unknown as BrowserActionName })
+    const unsupported = requestOf({ action: 'teleport' as BrowserActionName })
 
     await expect(performAction(sessionOf(transport), new RefStore(), unsupported, VIEWPORT)).rejects.toThrow(
       expect.objectContaining({ code: 'BROWSER_PROTOCOL', message: 'unsupported action teleport' }),

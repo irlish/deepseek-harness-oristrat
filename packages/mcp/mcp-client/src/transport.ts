@@ -6,9 +6,9 @@
  * @module
  */
 
-import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js'
-import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
-import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js'
+import type { Transport } from '@modelcontextprotocol/client'
+import { StdioClientTransport } from '@modelcontextprotocol/client/stdio'
+import { StreamableHTTPClientTransport } from '@modelcontextprotocol/client'
 import { scrubbedParentEnv } from '@deepseek-ai/dsh-subprocess'
 import type { Config } from './index.ts'
 
@@ -40,20 +40,11 @@ export function createTransport(config: Config, authorization?: string): Transpo
         cwd: config.cwd,
       })
     case 'streamable-http':
-      // The MCP SDK's StreamableHTTPClientTransport has optional callback
-      // properties typed without `| undefined` (exactOptionalPropertyTypes
-      // mismatch with the Transport interface); the SDK constructed the
-      // object, so the cast records only that widening.
       return new StreamableHTTPClientTransport(
         new URL(config.url),
-        {
-          requestInit: {
-            headers: {
-              ...config.headers,
-              ...authorization === undefined ? {} : { Authorization: authorization },
-            },
-          },
-        },
-      ) as Transport
+        { requestInit: { headers: authorization === undefined
+          ? config.headers
+          : { ...config.headers, Authorization: authorization } } },
+      )
   }
 }

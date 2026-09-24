@@ -6,7 +6,7 @@
  * Harness-Aware Discovery left evidence in the session, and no git handoff
  * before an `MSCE_SUBMISSION_GATE: PASS` newer than the last mutation. Every
  * other workspace and every other tool passes through untouched. In work mode
- * (settings `oristrat.mode`, registered by the norms plugin) both gates lift
+ * (volatile plugin config `oristrat-msce-norms.mode`) both gates lift
  * entirely; an absent or unreadable settings service reads as coding, so the
  * gates stay enforced.
  */
@@ -63,9 +63,9 @@ function isMsceWorkspace(cwd: string | undefined): boolean {
 
 /** Whether the deployment currently runs in free-form work mode. */
 function isWorkMode(ctx: Context): boolean {
-  const section = ctx.get('settings')?.get('oristrat')
-  return typeof section === 'object' && section !== null
-    && (section as { mode?: unknown }).mode === 'work'
+  const descriptor = ctx.get('settings')?.describe().find(entry => entry.ns === 'oristrat-msce-norms')
+  const section = descriptor?.value
+  return typeof section === 'object' && section !== null && 'mode' in section && section.mode === 'work'
 }
 
 /** Stable text of one session event for marker scanning. */

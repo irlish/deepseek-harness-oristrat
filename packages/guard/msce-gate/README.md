@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-Use this package to physically enforce two Oristrat MSCE rules the norms section states as prose. Wrapping `tools/execute` inside MSCE workspaces — a root carrying HARNESS.md, FRAMEWORK.md, or msce/Brick-family entries — it blocks `write`/`edit` before the session shows Harness-Aware Discovery evidence, and blocks `bash` git add/commit/push before an `MSCE_SUBMISSION_GATE: PASS` marker newer than the last code mutation. Blocked calls return a structured tool error naming the missing prerequisite, so the model repairs its process instead of stalling. Non-MSCE workspaces and all other tools pass through untouched, and the whole guard lifts in the `oristrat` settings `work` mode.
+Use this package to physically enforce two Oristrat MSCE rules the norms section states as prose. Wrapping `tools/execute` inside MSCE workspaces — a root carrying HARNESS.md, FRAMEWORK.md, or msce/Brick-family entries — it blocks `write`/`edit` before the session shows Harness-Aware Discovery evidence, and blocks `bash` git add/commit/push before an `MSCE_SUBMISSION_GATE: PASS` marker newer than the last code mutation. Blocked calls return a structured tool error naming the missing prerequisite, so the model repairs its process instead of stalling. Non-MSCE workspaces and all other tools pass through untouched, and the whole guard lifts in the `oristrat-msce-norms` plugin's `work` mode.
 
 ## Table of Contents
 
@@ -39,7 +39,7 @@ Mount the plugin with no configuration:
 - name: '@deepseek-ai/dsh-guard-msce-gate'
 ```
 
-The plugin has no configuration fields. It injects the `tools` runtime and reads the `oristrat` settings namespace through `ctx.get('settings')` when present; an absent or unreadable settings service fails closed to `coding` enforcement.
+The plugin has no configuration fields. It injects the `tools` runtime and reads the `oristrat-msce-norms` plugin configuration through `ctx.get('settings')` when present; an absent or unreadable settings service fails closed to `coding` enforcement.
 
 -----
 
@@ -65,7 +65,7 @@ One `tools/execute` listener carries both gates. Per dispatch it first reads the
 <a id="further-exploration"></a>
 ## Further Exploration
 
-- [oristrat-msce-norms](../../context/oristrat-msce-norms/README.md) — the prompt-native half and the owner of the `oristrat` mode this guard reads.
+- [oristrat-msce-norms](../../context/oristrat-msce-norms/README.md) — the prompt-native half and the owner of the mode this guard reads.
 - [Tools subsystem reference](../../../docs/subsystems/tools.md) — the `tools/execute` waterfall this guard wraps.
 - [timeout-policy](../timeout-policy/README.md) — a sibling guard with the same conditional-tool-result shape.
 - [guard group map](../README.md) — the sibling guard packages and the loop-hygiene family.

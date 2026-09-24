@@ -49,7 +49,7 @@ function props(overrides: Partial<ComponentProps<typeof RepoEnvAction>> = {}): C
     repoCheckout: vi.fn().mockResolvedValue({ ok: true }),
     repoCreateBranch: vi.fn().mockResolvedValue({ ok: true }),
     ...overrides,
-  } as unknown as ComponentProps<typeof RepoEnvAction>
+  } as ComponentProps<typeof RepoEnvAction>
 }
 
 function openMenu(overrides: Partial<ComponentProps<typeof RepoEnvAction>> = {}): ReturnType<typeof render> {

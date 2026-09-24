@@ -1,0 +1,18 @@
+[
+  {
+    "role": "hide",
+    "label": "Hide Oristrat AI Stem"
+  },
+  {
+    "role": "hideOthers",
+    "label": "Hide Others"
+  },
+  {
+    "role": "unhide",
+    "label": "Show All"
+  },
+  {
+    "role": "quit",
+    "label": "Quit Oristrat AI Stem"
+  }
+]

@@ -1,10 +1,4 @@
 - tree "Sessions":
-  - treeitem "Recent Sessions" [expanded]:
-    - img
-    - text: Recent Sessions
-  - text: Sessions without a workspace appear here
-  - treeitem "workspace" [expanded]:
-    - img
-    - text: workspace
-  - treeitem "1 subagent running Delegate a background job. now"
+  - treeitem "workspace" [expanded]
   - treeitem "New Session" [selected]
+  - treeitem "1 subagent running Delegate a background job. now"

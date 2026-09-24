@@ -59,7 +59,7 @@ function call<T>(promise: Promise<RemoteEnvelope<T>>): Promise<T> {
 export function apply(ctx: ClientContext): void {
   ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'ui-repo-panel: dictionaries')
 
-  const wire = (ctx.remote as unknown as { guiRepo: GuiRepoWire }).guiRepo
+  const wire: GuiRepoWire = ctx.remote.guiRepo
   const injected = (): RepoEnvActionInjected => ({
     repoStatus: request => call(wire.status(request)),
     repoBranches: request => call(wire.branches(request)),

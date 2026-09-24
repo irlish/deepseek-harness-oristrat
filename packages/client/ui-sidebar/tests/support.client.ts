@@ -1,6 +1,6 @@
-/** Shared settings-scope double for the sidebar specs: the `oristrat` mode section. */
+/** Shared configuration-form double for the sidebar mode section. */
 import type { Context } from '@deepseek-ai/cordis'
-import { stubSettingsScope, type StubSettingsScope } from '@deepseek-ai/dsh-client-test-runtime'
+import { stubConfigForm, type StubConfigForm } from '@deepseek-ai/dsh-client-test-runtime'
 
 /** Stored section shape the work-mode scope mirrors. */
 export interface OristratModeSettings {
@@ -8,7 +8,7 @@ export interface OristratModeSettings {
 }
 
 /**
- * Provide `settingsScope` bound to one stub scope over the work-mode
+ * Provide `configForms` bound to one stub form over the work-mode
  * namespace. Seeding publishes a committed section before the plugin mounts,
  * mirroring the shared describe mirror's eager read; later `publish` calls
  * stand in for Host commit folds.
@@ -18,9 +18,9 @@ export interface OristratModeSettings {
  */
 export function provideSidebarModeScope(
   ctx: Context, initial?: 'coding' | 'work',
-): StubSettingsScope<OristratModeSettings> {
-  const stub = stubSettingsScope<OristratModeSettings>()
+): StubConfigForm<OristratModeSettings> {
+  const stub = stubConfigForm<OristratModeSettings>()
   if (initial !== undefined) stub.publish({ status: 'ready', value: { mode: initial }, writable: true })
-  ctx.provide('settingsScope', { bind: () => stub.scope } as never)
+  ctx.provide('configForms', { get: () => stub.scope } as never)
   return stub
 }

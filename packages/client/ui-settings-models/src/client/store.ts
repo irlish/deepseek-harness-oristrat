@@ -22,17 +22,6 @@ import type { SettingsSchemaOperations } from './schema-operations.ts'
  */
 const PROBE_ROUTE = '\u0000probe'
 
-/** Fork brand: the official provider presents under the Oristrat name. */
-export const ORISTRAT_OFFICIAL_NAME = 'Oristrat - official'
-
-/** Route ids the fork treats as its single official provider seat. */
-export const OFFICIAL_PROVIDER_IDS: readonly string[] = ['oristrat-official', 'deepseek-official']
-
-/** Present an official route under the fork brand, others verbatim. */
-function displayNameOf(provider: string, stored: string): string {
-  return OFFICIAL_PROVIDER_IDS.includes(provider) ? ORISTRAT_OFFICIAL_NAME : stored
-}
-
 /** One provider row after joining the configurable directory with live routes. */
 export interface ProviderDirectoryEntry {
   readonly provider: string
@@ -56,10 +45,9 @@ export function joinProviderDirectory(
 ): ProviderDirectoryEntry[] {
   const active = new Set(registered.map(provider => provider.id))
   const declared = new Set(directory.map(entry => entry.provider))
-  const visibleDirectory = directory.filter(entry => entry.provider !== 'deepseek-official')
-  const rows: ProviderDirectoryEntry[] = visibleDirectory.map(entry => ({
+  const rows: ProviderDirectoryEntry[] = directory.map(entry => ({
     provider: entry.provider,
-    displayName: displayNameOf(entry.provider, entry.displayName),
+    displayName: entry.displayName,
     settingsNs: entry.settingsNs,
     settingsPath: [...entry.settingsPath],
     active: active.has(entry.provider),
@@ -68,10 +56,9 @@ export function joinProviderDirectory(
   }))
   for (const provider of registered) {
     if (declared.has(provider.id)) continue
-    if (provider.id === 'deepseek-official') continue
     rows.push({
       provider: provider.id,
-      displayName: displayNameOf(provider.id, provider.name),
+      displayName: provider.name,
       settingsNs: '',
       settingsPath: [],
       active: true,
@@ -213,13 +200,10 @@ export class ModelsSettingsStore {
       const namespace = namespaces.get(entry.settingsNs)
       const configured = namespace !== undefined
         && (entry.settingsPath.length === 0 || this.schema.getPath(namespace.value, entry.settingsPath) !== undefined)
-      // Fork: the shipped Oristrat roster is the only configuration seat; it
-      // must survive, so its card drops the delete affordance entirely.
       const removable = namespace !== undefined
         && entry.settingsPath.length > 0
         && this.schema.hasPath(namespace.user, entry.settingsPath)
         && !this.schema.hasPath(namespace.base, entry.settingsPath)
-        && !OFFICIAL_PROVIDER_IDS.includes(entry.provider)
       return {
         entry,
         configured,
@@ -322,8 +306,8 @@ export function onboardingReadiness(state: ModelsSettingsState): OnboardingReadi
   }
   if (state.rows.some(providerUsable)) return { kind: 'provider-ready' }
   const row = state.rows.find(candidate =>
-    candidate.entry.provider === 'oristrat-official'
-    && candidate.entry.settingsNs === 'llm-pi-ai'
+    candidate.entry.provider === 'deepseek-official'
+    && candidate.entry.settingsNs === 'llm-deepseek'
     && candidate.entry.settingsPath.length === 0)
   if (row === undefined) return { kind: 'adapter-absent' }
   if (!row.entry.active) {

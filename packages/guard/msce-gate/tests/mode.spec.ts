@@ -3,31 +3,14 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { Context, Service } from '@deepseek-ai/cordis'
-import z from '@deepseek-ai/schemastery'
-import { SettingsProvider, type SettingsNamespace } from '@deepseek-ai/dsh-settings'
 import type { ToolExecutionResult } from '@deepseek-ai/dsh-tools'
 import * as gate from '../src/index.ts'
 
-/** In-memory settings provider: the Service Definition owns initialization. */
-class MemorySettings extends SettingsProvider {
-  doc: Record<string, unknown>
-
-  constructor(ctx: Context, options?: { doc?: Record<string, unknown> }) {
-    super(ctx)
-    this.doc = structuredClone(options?.doc ?? {})
-  }
-
-  get writable(): boolean {
-    return true
-  }
-
-  protected load(): Promise<Record<string, unknown>> {
-    return Promise.resolve(structuredClone(this.doc))
-  }
-
-  protected persist(ns: SettingsNamespace, section: Record<string, unknown>): Promise<void> {
-    this.doc[ns] = structuredClone(section)
-    return Promise.resolve()
+/** Config-form view used by the guard while the official Settings service is absent. */
+class MemorySettings extends Service {
+  constructor(ctx: Context, readonly options: { doc?: Record<string, unknown> } = {}) { super(ctx, 'settings') }
+  describe(): { ns: string; value: unknown }[] {
+    return [{ ns: 'oristrat-msce-norms', value: this.options.doc?.oristrat ?? { mode: 'coding' } }]
   }
 }
 
@@ -61,9 +44,6 @@ async function dispatchWrite(settingsDoc: Record<string, unknown> | undefined, c
   await ctx.plugin(StubTools)
   if (settingsDoc !== undefined) {
     await ctx.plugin(MemorySettings, { doc: settingsDoc })
-    // The norms plugin owns this registration in production; the guard only reads it.
-    ;(ctx.get('settings') as MemorySettings)
-      .register('oristrat', z.object({ mode: z.union(['coding', 'work']).default('coding') }))
   }
   await ctx.plugin(gate)
   const exec = {
@@ -74,7 +54,7 @@ async function dispatchWrite(settingsDoc: Record<string, unknown> | undefined, c
   // The registry dispatches with a scoped carrier and a prepared execution;
   // the guard reads neither identity, so the stub context stands in for both.
   type Dispatch = (carrier: unknown, name: 'tools/execute', exec: unknown, next: () => Promise<ToolExecutionResult>) => Promise<ToolExecutionResult>
-  const dispatch = ctx.waterfall.bind(ctx) as unknown as Dispatch
+  const dispatch = ctx.waterfall.bind(ctx) as Dispatch
   return await dispatch(ctx, 'tools/execute', exec, async () => PASSED)
 }
 

@@ -14,6 +14,8 @@ import type { MainPanelId } from '@deepseek-ai/dsh-client-ui-layout/client'
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
   interface SlotMap {
+    /** Non-interactive notification inside the collapsed sidebar expand button. */
+    'sidebar.toggle.badge': { kind: 'single'; scope: 'root'; owner: Record<never, never> }
     /**
      * Brand mark rendered in the expanded brand row and collapsed rail.
      * Declared by this package's `sidebar` entry; deployments may replace
@@ -123,7 +125,7 @@ export type SidebarRootInjected = {
   /** Select the global panel addressed by a sidebar row. */
   selectPanel: (id: MainPanelId) => void
   /**
-   * Request the deployment work mode stored in the `oristrat` settings
+   * Request the deployment work mode stored in the `oristrat-msce-norms` plugin settings
    * namespace. The write is fire-and-forget from the component's view: the
    * mode source moves only when the Host commits, so a refused write leaves
    * the switcher on its previous mode.
@@ -149,6 +151,7 @@ export type SidebarRootComponentProps =
   & PropsRenderSlots<
     | 'sidebar.brand.mark'
     | 'sidebar.brand.name'
+    | 'sidebar.toggle.badge'
     | 'sidebar.panellist'
     | 'sidebar.workspaces'
     | 'sidebar.settings'

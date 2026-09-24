@@ -144,17 +144,17 @@ describe('type definition', () => {
 
 describe('pane composition', () => {
   it('draws the body with and without a bridge', () => {
-    const withoutBridge = render(<BrowserTabBody {...({ t, bridge: undefined } as unknown as ComponentProps<typeof BrowserTabBody>)} />)
+    const withoutBridge = render(<BrowserTabBody {...({ t, bridge: undefined } as ComponentProps<typeof BrowserTabBody>)} />)
     expect(withoutBridge.getByText('内嵌浏览器仅在桌面客户端可用')).toBeTruthy()
     withoutBridge.unmount()
 
-    const withBridge = render(<BrowserTabBody {...({ t, bridge: fakeBridge() } as unknown as ComponentProps<typeof BrowserTabBody>)} />)
+    const withBridge = render(<BrowserTabBody {...({ t, bridge: fakeBridge() } as ComponentProps<typeof BrowserTabBody>)} />)
     expect(withBridge.getByRole('button', { name: '后退' })).toBeTruthy()
     withBridge.unmount()
   })
 
   it('draws the chip title with the glyph before the tab title', () => {
-    render(<BrowserTitle {...({ useTabInfo: () => ({ tab: { title: '浏览器' } }) } as unknown as ComponentProps<typeof BrowserTitle>)} />)
+    render(<BrowserTitle {...({ useTabInfo: () => ({ tab: { title: '浏览器' } }) } as ComponentProps<typeof BrowserTitle>)} />)
     expect(screen.getByText('浏览器')).toBeTruthy()
     expect(document.querySelector('svg')).toBeTruthy()
   })
