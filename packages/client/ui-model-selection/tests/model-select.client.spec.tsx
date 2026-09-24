@@ -96,6 +96,10 @@ describe('ModelSelect reasoning effort', () => {
       expect(trigger.getAttribute('aria-label')).toBe('选择模型，当前 DeepSeek-V4-Flash，推理等级 最高')
       expect(document.activeElement).toBe(trigger)
     })
+    fireEvent.click(trigger)
+    fireEvent.click(screen.getByRole('menuitem', { name: /推理等级/ }))
+    expect(screen.getByText('更高推理强度可能更快消耗使用额度')).toBeTruthy()
+    expect(screen.getByRole('slider').getAttribute('data-highest')).toBe('true')
   })
 
   it('names the unset provider default and commits stops from the keyboard', async () => {

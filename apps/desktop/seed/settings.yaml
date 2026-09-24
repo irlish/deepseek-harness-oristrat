@@ -8,6 +8,7 @@ llm-pi-ai:
       baseURL: https://api.oristrat.com/v1
       compat:
         thinkingFormat: openai
+        supportsDeveloperRole: false
       models:
         - id: glm-4.5
           name: GLM-4.5

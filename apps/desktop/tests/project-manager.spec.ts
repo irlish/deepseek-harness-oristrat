@@ -194,6 +194,27 @@ describe('desktop external plugin profile', () => {
     expect(JSON.parse(readFileSync(join(manager.paths.profile, 'package.json'), 'utf8'))).toMatchObject({ dependencies: {} })
   })
 
+  it('upgrades the existing Oristrat profile before the Host starts', async () => {
+    const { manager } = setup()
+    await manager.applyRelease()
+    const patch = join(manager.paths.profile, 'cordis.patch.yml')
+    writeFileSync(patch, [
+      '- id: llm-pi-ai',
+      '  config:',
+      '    providers:',
+      '      oristrat-official:',
+      '        compat: { thinkingFormat: openai }',
+      '        models: [{ id: deepseek-v4.1-flash }]',
+      '',
+    ].join('\n'))
+    await manager.applyRelease()
+    const updated = readFileSync(patch, 'utf8')
+    expect(updated).toContain('supportsDeveloperRole: false')
+    expect(updated).toContain('deepseek-v4.1-flash')
+    await manager.applyRelease()
+    expect(readFileSync(patch, 'utf8')).toBe(updated)
+  })
+
   it.skipIf(process.platform !== 'win32')('reuses the profile when the launch path changes only Windows letter casing', async () => {
     const { manager } = setup()
     await manager.applyRelease()

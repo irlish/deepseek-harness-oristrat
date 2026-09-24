@@ -25,7 +25,7 @@ Use this package to surface the session's repository environment in the Session 
 <a id="use-this-package"></a>
 ## Use this package
 
-Ship the package as a browser row of the web-app bundle; the shipped composition already inserts it. The trigger then renders in every Session header's utilities cluster, beside the Session menu button, and opens its popover on click. The menu inspects the workspace root the sessions mirror carries for the current session; until the mirror knows it, the Host falls back to the server's working directory.
+Ship the package as a browser row of the web-app bundle; the shipped composition already inserts it. The labeled Environment trigger renders immediately after the open-in-app split button in every Session header's utilities cluster and opens its popover on click. The menu inspects the workspace root the sessions mirror carries for the current session; until the mirror knows it, the Host falls back to the server's working directory.
 
 ### When to choose it
 
@@ -49,7 +49,7 @@ The package has no configuration fields. It requires the `conversation.session.h
 <details>
 <summary>Implementation internals — click to expand</summary>
 
-The plugin body registers two things under effects: the `repo-panel` locale dictionaries and one `conversation.session.header.utilities` entry (id `repo-env`, order 0). The action reads the session's `cwd` from the sessions mirror and, while open, runs one poll loop: an immediate `status` read, a fixed 4-second interval refresh, and — while the branch submenu is open — the same cadence for `branches`. A failed read keeps the loading note; a session without a workspace and a directory outside any worktree render their own notes instead of the rows. The submenu filters the listing by substring, marks the current branch with a checked radio row, and routes picks through `checkout` (`git switch`) and the draft form through `createBranch` (`git switch --create`); a refused mutation shows git's own message inside the submenu. Escape and outside pointer-down dismiss the popover.
+The plugin body registers two things under effects: the `repo-panel` locale dictionaries and one `conversation.session.header.utilities` entry (id `repo-env`, order -9). The action reads the session's `cwd` from the sessions mirror and, while open, runs one poll loop: an immediate `status` read, a fixed 4-second interval refresh, and — while the branch submenu is open — the same cadence for `branches`. A failed read keeps the loading note; a session without a workspace and a directory outside any worktree render their own notes instead of the rows. The submenu filters the listing by substring, marks the current branch with a checked radio row, and routes picks through `checkout` (`git switch`) and the draft form through `createBranch` (`git switch --create`); a refused mutation shows git's own message inside the submenu. Escape and outside pointer-down dismiss the popover.
 
 ### Source map
 

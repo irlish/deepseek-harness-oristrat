@@ -51,6 +51,7 @@ describe('plugin registration', () => {
     expect(fake.registered[0]?.definition).toMatchObject({
       name: 'conversation.session.header.utilities',
       id: 'repo-env',
+      order: -9,
       locale: 'repo-panel',
     })
   })

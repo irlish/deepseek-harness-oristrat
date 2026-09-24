@@ -6,6 +6,8 @@
 
 Desktop Host 追加专用 profile patch：禁用继承的 DeepSeek 搜索 provider，以该端点所需的 SDK `legacy` 握手挂载 DashScope WebSearch MCP 服务器，并从模型 prompt 和调用中隐藏继承的 `web_search` 工具。MCP 工具发现完成后，搜索工具名为 `mcp__dashscope-websearch__bailian_web_search`。把 `DASHSCOPE_API_KEY` 放在 `$DSH_HOME/.env`（通常是 `~/.oristrat/.env`）或凭据 provider 中；每次连接都通过该服务读取密钥。`web_fetch` 仍可用。DashScope 不可用时 Host 仍会启动，MCP 客户端按重连策略重试。
 
+Oristrat 的 OpenAI 兼容网关接受推理强度，但拒绝 pi-ai 原本为推理模型选择的 `developer` 消息角色。种子路由设置 `compat.supportsDeveloperRole: false`，使系统提示词使用 `system` 角色；Desktop 在 Host 启动前升级缺少该字段的既有 `oristrat-official` profile 行，同时保留明确配置过的兼容选项。共享加载页在 Host 和客户端插件初始化时继续显示 Oristrat 动态标志及 STEM 字标。
+
 应用菜单第一项“**关于 Oristrat AI Stem**”打开 Electron 原生关于面板，展示应用图标、产品名称和当前安装的发布版本。菜单文案跟随桌面壳的语言。macOS 的隐藏、隐藏其他、显示全部和退出条目使用本地化文案，隐藏和退出条目包含 Oristrat AI Stem 产品名称。这些条目保留原生动作和快捷键。macOS 从应用包读取图标，因此未打包的开发启动会显示 Electron 图标；Windows 使用随包分发的 PNG。
 
 Desktop 的本地原生目录流程打开绑定应用窗口的 Electron 文件夹对话框，并先恢复、显示和聚焦该窗口。并发请求共用一个对话框；取消不返回路径，失败后可以重试。普通 Web 使用 Host 选择器。浏览模式列出 Host 目录。Linux 缺少 zenity 或 kdialog 时，自动选择使用浏览模式，不使用 Electron 对话框。

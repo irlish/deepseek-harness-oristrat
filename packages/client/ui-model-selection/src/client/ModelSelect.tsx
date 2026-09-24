@@ -476,8 +476,9 @@ export function ModelSelect(
               {sliderLevels.length > 0 && (
                 <div className={css.effortBlock}>
                   <div className={css.effortHead}>
-                    <span>{t('menu.effort')}</span>
+                    <span className={css.effortCaption}>{t('menu.effort')}</span>
                     <span className={css.effortValue}>{effortLabel}</span>
+                    <span className={css.effortModel}>{modelLabel}</span>
                   </div>
                   <EffortSlider
                     levels={sliderLevels}
@@ -487,6 +488,9 @@ export function ModelSelect(
                     disabled={busy}
                     onSelect={(index) => { chooseEffort(sliderLevels[index]?.id) }}
                   />
+                  {currentIndex === sliderLevels.length - 1 && sliderLevels.length > 1 && (
+                    <div className={css.effortHint}>{t('effort.highestHint')}</div>
+                  )}
                 </div>
               )}
             </>

@@ -22,6 +22,7 @@ import {
 import type { DesktopPaths } from './paths.ts'
 import type { DesktopRelease } from './release.ts'
 import { readDesktopRuntime } from './runtime-tree.ts'
+import { migrateOristratGatewayCompat } from './profile-compat-migration.ts'
 import {
   initProfile, PROFILE_TEMPLATES, removeLinkProjections, sanitizeProfile, type ProfileTemplate,
 } from '@deepseek-ai/dsh-app-boot'
@@ -81,11 +82,12 @@ export class DesktopProjectManager {
    * Load application metadata and prepare the external plugin profile without installing packages.
    */
   async applyRelease(): Promise<void> {
-    await this.withLock(() => {
+    await this.withLock(async () => {
       // Validation only: an unreadable or mismatched runtime descriptor stops preparation before the Host starts.
       readDesktopRuntime(this.runtime.dsh)
       migrateProfileSettings(this.paths.profile)
       createPluginProfile(this.paths.profile)
+      await migrateOristratGatewayCompat(this.paths.profile)
       removeLinkProjections(this.paths.profile)
     })
   }

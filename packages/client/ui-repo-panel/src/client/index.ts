@@ -69,8 +69,8 @@ export function apply(ctx: ClientContext): void {
   ctx.effect(() => ctx.slots.inject('conversation.session.header.utilities', () => ctx.slots.register({
     name: 'conversation.session.header.utilities',
     id: 'repo-env',
-    // After the open-in-app split button, before the sidebar corner toggle.
-    order: 0,
+    // Immediately after the open-in-app split button in the header utility row.
+    order: -9,
     locale: NS,
     inject: injected,
   }, RepoEnvAction)), 'ui-repo-panel: header environment menu')

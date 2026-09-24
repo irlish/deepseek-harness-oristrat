@@ -31,8 +31,8 @@ export interface EffortSliderProps {
   readonly onSelect: (index: number) => void
 }
 
-/** Stop positions live inside a 10px inset so the knob never overhangs. */
-const TRACK_INSET_PX = 10
+/** Stop positions sit at the centers of the 38px end knobs. */
+const TRACK_INSET_PX = 19
 
 /**
  * Render the animated effort slider.
@@ -104,6 +104,7 @@ export function EffortSlider({ levels, currentIndex, ariaLabel, unsetLabel, disa
     <div
       ref={trackRef}
       className={clsx(css.slider, disabled && css.sliderDisabled)}
+      data-highest={currentIndex === last && currentIndex >= 0 ? 'true' : undefined}
       role="slider"
       tabIndex={disabled ? -1 : 0}
       aria-label={ariaLabel}

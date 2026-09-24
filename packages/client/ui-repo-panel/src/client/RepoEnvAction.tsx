@@ -202,6 +202,7 @@ export function RepoEnvAction({
           onClick={() => { setOpen(value => !value) }}
         >
           <EnvGlyph size={16} />
+          <span>{t('menu.title')}</span>
         </button>
       </Tooltip>
       {open && createPortal(
