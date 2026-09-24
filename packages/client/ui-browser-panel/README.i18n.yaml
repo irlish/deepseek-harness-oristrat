@@ -1,6 +1,46 @@
-# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
-# side as of the last confirmed-consistent state. Both languages carry equal authority;
-# after editing either side, bring the other along and re-record with:
+# Bilingual-pair consistency record for README.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write packages/client/ui-browser-panel/README.md
-README.md: 74d6b09acd8c08d2966621b95ab9096585c4114d
-README.zh.md: 8c637cc76bc78f59e8e2d04f804de236f36d7309
+/:
+  en: 796f609dfb806989
+  zh: e867ec32b4377c46
+/deepseek-ai-dsh-client-ui-browser-panel:
+  en: 3f835e21aaffc378
+  zh: fd2a4bc7090c6d17
+/deepseek-ai-dsh-client-ui-browser-panel/summary:
+  en: d735b97fd365849d
+  zh: 4f63095d28a92329
+/deepseek-ai-dsh-client-ui-browser-panel/table-of-contents:
+  en: d152484eb41ac6b4
+  zh: 09388d293f9be9cb
+/deepseek-ai-dsh-client-ui-browser-panel/use-this-package:
+  en: 15b3b9c558ceeefc
+  zh: 61ba7750b58c4b15
+/deepseek-ai-dsh-client-ui-browser-panel/use-this-package/when-to-choose-it:
+  en: 7932f4ac2019ff84
+  zh: 6aeea342113c8cc2
+/deepseek-ai-dsh-client-ui-browser-panel/use-this-package/minimal-configuration:
+  en: 811d5709996b7f87
+  zh: c550db902d8dd4d6
+/deepseek-ai-dsh-client-ui-browser-panel/understand-the-implementation:
+  en: 4b990626295db0d9
+  zh: e2d39569faa1427e
+/deepseek-ai-dsh-client-ui-browser-panel/understand-the-implementation/source-map:
+  en: f80ea608c55654b7
+  zh: 210450275ff79687
+/deepseek-ai-dsh-client-ui-browser-panel/further-exploration:
+  en: aa24b9e46d324dd5
+  zh: dd7b6002b052c503
+/deepseek-ai-dsh-client-ui-browser-panel/model-experience:
+  en: 98bb037635c08468
+  zh: 35e7968caa135068
+/deepseek-ai-dsh-client-ui-browser-panel/model-experience/kv-cache-effect:
+  en: ca75c51c89c2c9b0
+  zh: f57cc48a1b5cbfa9
+/deepseek-ai-dsh-client-ui-browser-panel/known-limitations-and-deferred-work:
+  en: c41cc8f564d1b6c4
+  zh: 85bfec1072710e9b
+/deepseek-ai-dsh-client-ui-browser-panel/known-limitations-and-deferred-work/dev-note:
+  en: e67f633dc6fe7773
+  zh: e88aeb617ffb74ea

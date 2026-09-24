@@ -65,6 +65,7 @@ export function TerminalPane({ openTerminal, writeTerminal, readTerminal, closeT
 
   useEffect(() => {
     const host = hostRef.current
+    /* v8 ignore next -- the host ref is attached before the effect runs. */
     if (host === null) return undefined
     installXtermCss()
     const lifetime = { disposed: false }
@@ -116,12 +117,12 @@ export function TerminalPane({ openTerminal, writeTerminal, readTerminal, closeT
           for (const frame of result.frames) activeTerm.write(frame.data)
           cursor = result.cursor
           if (!result.alive && result.frames.length === 0) {
-            if (timer !== undefined) clearInterval(timer)
+            clearInterval(timer)
             setStatus('dead')
           }
         }, (error: unknown) => {
           if (lifetime.disposed) return
-          if (timer !== undefined) clearInterval(timer)
+          clearInterval(timer)
           setDetail(String(error))
           setStatus('error')
         })

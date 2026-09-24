@@ -4,7 +4,7 @@ import { connectDesktopWelcome } from '../src/welcome-backend.ts'
 
 function transport(preference?: string) {
   const keys = new Map<string, string>()
-  const namespaces = [
+  const namespaces: Array<{ ns: string; value: Record<string, unknown> }> = [
     { ns: 'llm-deepseek', value: { apiKeyEnv: 'CUSTOM_DEEPSEEK_KEY' } },
     { ns: 'llm-pi-ai', value: { profiles: { example: { apiKeyEnv: 'EXAMPLE_API_KEY' } } } },
     { ns: 'locale', value: preference === undefined ? {} : { preference } },
@@ -19,7 +19,10 @@ function transport(preference?: string) {
     let value: unknown
     if (method === 'account/getState') value = { links: { usageUrl: 'http://localhost/usage', topUpUrl: 'http://localhost/top_up' }, status: 'signed-out', attempt: null }
     else if (method === 'settings/describe') value = { namespaces }
-    else if (method === 'llm/listConfigurableProviders') value = [{ settingsNs: 'llm-pi-ai', settingsPath: ['profiles', 'example'] }]
+    else if (method === 'llm/listConfigurableProviders') value = [
+      { provider: 'example', settingsNs: 'llm-pi-ai', settingsPath: ['profiles', 'example'] },
+      { provider: 'oristrat-official', settingsNs: 'llm-pi-ai', settingsPath: ['providers', 'oristrat-official'] },
+    ]
     else if (method === 'credentials/set') keys.set(payload.args.ref, payload.args.value)
     else value = Object.fromEntries(payload.args.refs.map(ref => [ref, { configured: keys.has(ref), writable: true }]))
     return Response.json({ type: 'server-response', rpcId, result: { ok: true, value } })
@@ -51,6 +54,20 @@ describe('desktop welcome Web operations', () => {
     host.keys.clear()
     expect(await backend.read()).toMatchObject({ hasApiKey: false })
     expect(host.send.mock.calls.every(([, init]) => !(init?.body as string | undefined)?.includes('credentials/set'))).toBe(true)
+  })
+
+  it('saves to the Oristrat route selected as the default model provider', async () => {
+    const host = transport()
+    host.namespaces.splice(0, 2)
+    host.namespaces.push(
+      { ns: 'agent-default-model', value: { provider: 'oristrat-official' } },
+      { ns: 'llm-pi-ai', value: { providers: { 'oristrat-official': { apiKeyEnv: 'ORISTRAT_OFFICIAL_API_KEY' } } } },
+    )
+    const backend = await connectDesktopWelcome(url, host.send)
+    expect(await backend.read()).toMatchObject({ hasApiKey: false, writable: true })
+    expect(await backend.save('sk-oristrat')).toEqual({ ok: true })
+    expect(host.keys.get('ORISTRAT_OFFICIAL_API_KEY')).toBe('sk-oristrat')
+    expect(await backend.read()).toMatchObject({ hasApiKey: true, writable: true })
   })
 
   it('reads language without querying account or model providers', async () => {

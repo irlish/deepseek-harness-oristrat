@@ -1,6 +1,22 @@
-# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
-# side as of the last confirmed-consistent state. Both languages carry equal authority;
-# after editing either side, bring the other along and re-record with:
+# Bilingual-pair consistency record for 2026-09-15-recent-sessions-unassigned-bucket.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/feature/2026-09-15-recent-sessions-unassigned-bucket.md
-2026-09-15-recent-sessions-unassigned-bucket.md: f3aedaa4bffab26200e0cead8bc0123fa21dc223
-2026-09-15-recent-sessions-unassigned-bucket.zh.md: 3fc353a0d23c72ee97f8f87524f031065dee9d2c
+/agent-note-recent-sessions-unassigned-bucket:
+  en: b3a449607cdcf230
+  zh: 41faeff225d3e829
+/agent-note-recent-sessions-unassigned-bucket/problem:
+  en: 34e5b81779940df0
+  zh: d9890485be4d029a
+/agent-note-recent-sessions-unassigned-bucket/decision:
+  en: aadc9d0777b3ed4c
+  zh: bc76744c5f62530d
+/agent-note-recent-sessions-unassigned-bucket/alternatives-considered:
+  en: 7b4d926551575143
+  zh: cc7222a6b97d1522
+/agent-note-recent-sessions-unassigned-bucket/consequences:
+  en: 7604ff1e5343b577
+  zh: 60a5007a272b1d9d
+/agent-note-recent-sessions-unassigned-bucket/testing:
+  en: 758e49e5bcc98a3d
+  zh: 611ce50d67890154

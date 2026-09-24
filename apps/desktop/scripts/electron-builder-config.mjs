@@ -110,7 +110,7 @@ export function createElectronBuilderConfig(
     // Unsigned builds carry their own suffix so a shared file can never pass for a release artifact.
     artifactName: unsigned
       ? 'oristrat-ai-stem-${version}-${os}-${arch}-unsigned.${ext}'
-      : 'deepseek-harness-${version}-${os}-${arch}.${ext}',
+      : 'oristrat-ai-stem-${version}-${os}-${arch}.${ext}',
     directories: { output: unsigned ? buildPaths.unsignedArtifacts : buildPaths.artifacts },
     asar: true,
     electronDist: buildPaths.electron,
@@ -146,6 +146,8 @@ export function createElectronBuilderConfig(
     extraResources: [
       { from: buildPaths.runtime, to: 'runtime' },
       { from: fileURLToPath(new URL('../build/icon.png', import.meta.url)), to: 'icon.png' },
+      // Windows tray bitmaps; macOS keeps the Dock and ships no menu bar icon.
+      ...(packagesWindows ? [{ from: fileURLToPath(new URL('../resources/tray-windows.ico', import.meta.url)), to: 'tray.ico' }] : []),
     ],
     mac: {
       icon: fileURLToPath(new URL('../build/icon.icns', import.meta.url)),

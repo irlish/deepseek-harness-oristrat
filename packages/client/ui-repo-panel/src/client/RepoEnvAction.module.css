@@ -5,7 +5,7 @@
   height: 24px;
   padding: 0 8px;
   border: 0.5px solid var(--dsw-alias-border-l4);
-  border-radius: 9px;
+  border-radius: var(--dsw-radius-sm);
   background: transparent;
   color: var(--dsw-alias-label-secondary);
   font-size: 11px;
@@ -25,8 +25,7 @@
   width: 264px;
   padding: 6px;
   border: 0.5px solid var(--dsw-alias-border-l1);
-  border-radius: 10px;
-  background: var(--dsw-alias-bg-l2, #fff);
+  border-radius: var(--dsw-radius-md);
   box-shadow: 0 8px 24px rgb(0 0 0 / 12%);
   color: var(--dsw-alias-label-primary);
   font-size: 13px;
@@ -49,7 +48,7 @@
   align-items: center;
   gap: 8px;
   padding: 6px 8px;
-  border-radius: 6px;
+  border-radius: var(--dsw-radius-sm);
 }
 
 .rowButton {
@@ -59,7 +58,7 @@
   width: 100%;
   padding: 6px 8px;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--dsw-radius-sm);
   background: transparent;
   color: inherit;
   font: inherit;
@@ -145,8 +144,7 @@
   width: 240px;
   max-height: 320px;
   border: 0.5px solid var(--dsw-alias-border-l1);
-  border-radius: 10px;
-  background: var(--dsw-alias-bg-l2, #fff);
+  border-radius: var(--dsw-radius-md);
   box-shadow: 0 8px 24px rgb(0 0 0 / 12%);
 }
 
@@ -157,7 +155,7 @@
   margin: 6px;
   padding: 0 8px;
   border: 0.5px solid var(--dsw-alias-border-l1);
-  border-radius: 6px;
+  border-radius: var(--dsw-radius-sm);
   color: var(--dsw-alias-label-caption);
 }
 
@@ -186,7 +184,7 @@
   width: 100%;
   padding: 6px 8px;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--dsw-radius-sm);
   background: transparent;
   color: inherit;
   font: inherit;
@@ -219,7 +217,7 @@
   padding: 6px 8px;
   border: none;
   border-top: 0.5px solid var(--dsw-alias-border-l1);
-  border-radius: 0 0 6px 6px;
+  border-radius: 0 0 var(--dsw-radius-sm) var(--dsw-radius-sm);
   background: transparent;
   color: var(--dsw-alias-label-secondary);
   font: inherit;

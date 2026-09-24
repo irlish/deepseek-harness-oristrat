@@ -1,6 +1,22 @@
-# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
-# side as of the last confirmed-consistent state. Both languages carry equal authority;
-# after editing either side, bring the other along and re-record with:
+# Bilingual-pair consistency record for 2026-09-20-oristrat-work-mode-vision-and-pptd-bundles.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/feature/2026-09-20-oristrat-work-mode-vision-and-pptd-bundles.md
-2026-09-20-oristrat-work-mode-vision-and-pptd-bundles.md: 45cc3462f536500725afb497d83fd0564d621919
-2026-09-20-oristrat-work-mode-vision-and-pptd-bundles.zh.md: 29b3797b4075632083f1e4b8214f72c0b9ea59ad
+/agent-note-oristrat-work-mode-per-model-vision-declaration-and-vendored-pptd-bundles:
+  en: cfa1e70eb30236cb
+  zh: 237db0b209293dfd
+/agent-note-oristrat-work-mode-per-model-vision-declaration-and-vendored-pptd-bundles/problem:
+  en: 835c34eeb52acb1a
+  zh: dd2d427ff534c60e
+/agent-note-oristrat-work-mode-per-model-vision-declaration-and-vendored-pptd-bundles/decision:
+  en: 0ff944b4ac06e234
+  zh: 7f801772d65af0f7
+/agent-note-oristrat-work-mode-per-model-vision-declaration-and-vendored-pptd-bundles/alternatives-considered:
+  en: b3416c20921e05b9
+  zh: aae363f40f6f3c18
+/agent-note-oristrat-work-mode-per-model-vision-declaration-and-vendored-pptd-bundles/consequences:
+  en: cd7ac42d9d628ec2
+  zh: 2beaebe4dbbe8344
+/agent-note-oristrat-work-mode-per-model-vision-declaration-and-vendored-pptd-bundles/testing:
+  en: 67b2537ba4090130
+  zh: 7f017de4bcb00a9a

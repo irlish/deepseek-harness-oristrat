@@ -1,6 +1,61 @@
-# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
-# side as of the last confirmed-consistent state. Both languages carry equal authority;
-# after editing either side, bring the other along and re-record with:
+# Bilingual-pair consistency record for README.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write packages/guard/msce-gate/README.md
-README.md: 6f6e66654399ec294f86b4202772a683ddfe9d66
-README.zh.md: d64cce8568d61406ac3a5121faf7a63163e79ad3
+/:
+  en: 9689ca7c80893783
+  zh: a53b8303531657d9
+/deepseek-ai-dsh-guard-msce-gate:
+  en: c63b2eaf1b40d7f7
+  zh: 844c1d682692cde2
+/deepseek-ai-dsh-guard-msce-gate/summary:
+  en: 9d52bec3f8c64501
+  zh: 58519b9d04017ee3
+/deepseek-ai-dsh-guard-msce-gate/table-of-contents:
+  en: d152484eb41ac6b4
+  zh: 09388d293f9be9cb
+/deepseek-ai-dsh-guard-msce-gate/use-this-package:
+  en: 23775537fc6a1e88
+  zh: 7fd7fd45f7194cc9
+/deepseek-ai-dsh-guard-msce-gate/use-this-package/when-to-choose-it:
+  en: 729f119c44c61fbd
+  zh: 1edd22db94cd7a7d
+/deepseek-ai-dsh-guard-msce-gate/use-this-package/minimal-configuration:
+  en: 1e958355a22bcd9e
+  zh: be9379cfe749aaf1
+/deepseek-ai-dsh-guard-msce-gate/understand-the-implementation:
+  en: 61c02996c949a5f1
+  zh: d445e12291616de4
+/deepseek-ai-dsh-guard-msce-gate/understand-the-implementation/source-map:
+  en: 6c3b807da5ccb49e
+  zh: 21ac06fad258b81a
+/deepseek-ai-dsh-guard-msce-gate/further-exploration:
+  en: 5f34323e7d63545c
+  zh: e10e9eca10069620
+/deepseek-ai-dsh-guard-msce-gate/model-experience:
+  en: 215e7ba838619b7b
+  zh: a311da3843709f90
+/deepseek-ai-dsh-guard-msce-gate/model-experience/conditional-tool-result:
+  en: 7877631ca859b191
+  zh: fb6f2aa33f70b82c
+/deepseek-ai-dsh-guard-msce-gate/model-experience/conditional-tool-result/what-the-model-sees:
+  en: 050a8de251f7f3a7
+  zh: 202fa4515d713fea
+/deepseek-ai-dsh-guard-msce-gate/model-experience/conditional-tool-result/what-the-model-sees/discovery-gate-refusal:
+  en: ac2545ef4d9d4447
+  zh: 47bac15afac40ade
+/deepseek-ai-dsh-guard-msce-gate/model-experience/conditional-tool-result/what-the-model-sees/submission-gate-refusal:
+  en: 6e6577f0f40a4511
+  zh: 68c14c03b18608fb
+/deepseek-ai-dsh-guard-msce-gate/model-experience/conditional-tool-result/token-effect:
+  en: 0d0d7c5ad3bf9ec1
+  zh: 0f59ac8d0209f3cc
+/deepseek-ai-dsh-guard-msce-gate/model-experience/conditional-tool-result/kv-cache-effect:
+  en: 2fbf2175168e8244
+  zh: 51f9e14f461e15b7
+/deepseek-ai-dsh-guard-msce-gate/known-limitations-and-deferred-work:
+  en: 3daeba47e57df7d6
+  zh: ed503226b97f0ba6
+/deepseek-ai-dsh-guard-msce-gate/known-limitations-and-deferred-work/dev-note:
+  en: e67f633dc6fe7773
+  zh: e88aeb617ffb74ea

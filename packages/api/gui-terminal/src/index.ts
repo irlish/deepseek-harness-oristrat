@@ -72,7 +72,6 @@ class GuiTerminalSession {
 
   /** Resolve once the ring grows, the session dies, or the signal aborts. */
   waitForChange(signal: AbortSignal): Promise<void> {
-    if (signal.aborted) return Promise.resolve()
     const { promise, resolve } = Promise.withResolvers<void>()
     const done = (): void => {
       signal.removeEventListener('abort', done)
@@ -216,10 +215,10 @@ export class GuiTerminalController extends TypertRemoteService {
       signal.throwIfAborted()
       const frames = session.framesSince(cursor)
       if (frames.length > 0) {
-        const last = frames[frames.length - 1]
-        if (last === undefined) break
-        yield * frames
-        cursor = last.seq + 1
+        for (const frame of frames) {
+          yield frame
+          cursor = frame.seq + 1
+        }
         continue
       }
       if (!session.alive) return

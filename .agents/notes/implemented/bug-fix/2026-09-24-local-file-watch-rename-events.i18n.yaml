@@ -1,6 +1,19 @@
-# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
-# side as of the last confirmed-consistent state. Both languages carry equal authority;
-# after editing either side, bring the other along and re-record with:
+# Bilingual-pair consistency record for 2026-09-24-local-file-watch-rename-events.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/bug-fix/2026-09-24-local-file-watch-rename-events.md
-2026-09-24-local-file-watch-rename-events.md: a8bcce1af70e20046ea1f851c05a626a0228043c
-2026-09-24-local-file-watch-rename-events.zh.md: 459a16aaca16b7e7c060062dbbb50b9039d13c71
+/agent-note-parent-directory-events-for-file-watches:
+  en: b7be0d50a94f1aa3
+  zh: c2db9919374da253
+/agent-note-parent-directory-events-for-file-watches/problem:
+  en: 45862d43fa4af757
+  zh: d18e8e5c1cb42659
+/agent-note-parent-directory-events-for-file-watches/decision:
+  en: c52d7f9c6ffab63e
+  zh: 664410abfaef320c
+/agent-note-parent-directory-events-for-file-watches/alternatives-considered:
+  en: f26d4b38ab550e67
+  zh: 3eaa70b8ad2191bc
+/agent-note-parent-directory-events-for-file-watches/consequences:
+  en: 27f04fe9bba028de
+  zh: 991801a0fee9183a

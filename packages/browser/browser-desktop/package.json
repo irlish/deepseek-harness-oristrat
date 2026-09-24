@@ -1,7 +1,7 @@
 {
   "name": "@deepseek-ai/dsh-browser-desktop",
   "description": "Desktop provider for the browser automation seam (ctx.browser): drives the embedded browser pane the desktop client shows through a brokered command channel, with protocol-level input that never takes the operating system's keyboard or pointer",
-  "version": "0.1.7-rc.1",
+  "version": "0.1.7-rc.2",
   "publishConfig": {
     "access": "public"
   },

@@ -1,6 +1,34 @@
-# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
-# side as of the last confirmed-consistent state. Both languages carry equal authority;
-# after editing either side, bring the other along and re-record with:
+# Bilingual-pair consistency record for 2026-09-22-oristrat-thinking-slider-websearch-mcp-repo-browser-panels.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/feature/2026-09-22-oristrat-thinking-slider-websearch-mcp-repo-browser-panels.md
-2026-09-22-oristrat-thinking-slider-websearch-mcp-repo-browser-panels.md: 6279bb01e5023db68d224530b40db70bd4c2bec1
-2026-09-22-oristrat-thinking-slider-websearch-mcp-repo-browser-panels.zh.md: 61ebd2948cdce66d7928ce71739a3b41eb493286
+/agent-note-oristrat-round-thinking-level-slider-websearch-mcp-repo-environment-panel-embedded-browser:
+  en: c5a5f347bbbb4af5
+  zh: c17864a3ec439eec
+/agent-note-oristrat-round-thinking-level-slider-websearch-mcp-repo-environment-panel-embedded-browser/problem:
+  en: b45c53bd03cf37e4
+  zh: a1ed4ba31f41d6fe
+/agent-note-oristrat-round-thinking-level-slider-websearch-mcp-repo-environment-panel-embedded-browser/decision:
+  en: a15c7c13f167e5ac
+  zh: 63bcc2ef60c2f344
+/agent-note-oristrat-round-thinking-level-slider-websearch-mcp-repo-environment-panel-embedded-browser/decision/thinking-level-slider-f1:
+  en: 661a19f9bf2778dd
+  zh: ec2e1dffdcd1e4a7
+/agent-note-oristrat-round-thinking-level-slider-websearch-mcp-repo-environment-panel-embedded-browser/decision/websearch-mcp-f2:
+  en: 879f1f6969caae63
+  zh: 676bf6c043716728
+/agent-note-oristrat-round-thinking-level-slider-websearch-mcp-repo-environment-panel-embedded-browser/decision/repo-environment-panel-f3:
+  en: f4d76eef18d6448f
+  zh: 9071bdf4a3d2a8e0
+/agent-note-oristrat-round-thinking-level-slider-websearch-mcp-repo-environment-panel-embedded-browser/decision/embedded-browser-f4:
+  en: 45b9a1b4d98955cb
+  zh: 82ddccc9b2bfac58
+/agent-note-oristrat-round-thinking-level-slider-websearch-mcp-repo-environment-panel-embedded-browser/decision/gate-normalization:
+  en: eb6c5885930cb1d4
+  zh: 9cbfc6a66befc2e1
+/agent-note-oristrat-round-thinking-level-slider-websearch-mcp-repo-environment-panel-embedded-browser/alternatives-considered:
+  en: 5c7e1f27bfdc2c83
+  zh: b772f50cd9c29133
+/agent-note-oristrat-round-thinking-level-slider-websearch-mcp-repo-environment-panel-embedded-browser/consequences:
+  en: 3a58cd7121b17ac1
+  zh: 109a6a9aebd5f1de

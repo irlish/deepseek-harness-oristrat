@@ -2,6 +2,7 @@ import { existsSync, lstatSync, mkdirSync, mkdtempSync, readdirSync, readFileSyn
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { parse } from 'yaml'
 import { resolveDesktopPaths } from '../src/paths.ts'
 import { DesktopProjectManager } from '../src/project-manager.ts'
 import { readProfilePlugins } from '@deepseek-ai/dsh-app-boot'
@@ -43,6 +44,23 @@ afterEach(() => {
 })
 
 describe('desktop external plugin profile', () => {
+  it('adds missing reasoning levels to a legacy Oristrat settings document before its import', async () => {
+    const { manager } = setup()
+    const path = join(manager.paths.home, 'settings.yaml')
+    mkdirSync(manager.paths.home, { recursive: true })
+    writeFileSync(path, 'llm-pi-ai:\n  providers:\n    oristrat-official:\n      compat: { supportsDeveloperRole: true }\n      models: [{ id: custom-model }]\n')
+    await manager.applyRelease()
+    const settings = parse(readFileSync(path, 'utf8')) as {
+      'llm-pi-ai': { providers: { 'oristrat-official': {
+        compat: { supportsDeveloperRole: boolean }
+        models: Array<{ id: string; reasoningEfforts?: Record<string, string> }>
+      } } }
+    }
+    const provider = settings['llm-pi-ai'].providers['oristrat-official']
+    expect(provider.compat.supportsDeveloperRole).toBe(true)
+    expect(provider.models[0]).toMatchObject({ id: 'custom-model', reasoningEfforts: { xhigh: 'xhigh' } })
+  })
+
   it('preserves installed packages, profile state, and the lockfile when preparing a launch', async () => {
     const { manager } = setup()
     await manager.applyRelease()

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { Context, Service } from '@deepseek-ai/cordis'
@@ -38,24 +38,41 @@ afterEach(() => {
   for (const dir of workspaces.splice(0)) rmSync(dir, { recursive: true, force: true })
 })
 
-/** Boot the guard over stubs with an optional settings document, and dispatch one write. */
-async function dispatchWrite(settingsDoc: Record<string, unknown> | undefined, cwd: string): Promise<ToolExecutionResult> {
+/** Boot the guard over stubs and dispatch one candidate tool call. */
+type TestExecution = {
+  name: string
+  arguments?: Record<string, unknown>
+  agent?: { session?: { meta?: { cwd?: string }; cwd?: string; events?: readonly unknown[] } }
+}
+
+async function dispatchTool(
+  settingsDoc: Record<string, unknown> | undefined,
+  exec: TestExecution,
+): Promise<ToolExecutionResult> {
   const ctx = new Context()
   await ctx.plugin(StubTools)
   if (settingsDoc !== undefined) {
     await ctx.plugin(MemorySettings, { doc: settingsDoc })
   }
   await ctx.plugin(gate)
-  const exec = {
-    name: 'write',
-    arguments: {},
-    agent: { session: { meta: { cwd }, events: [] } },
-  }
   // The registry dispatches with a scoped carrier and a prepared execution;
   // the guard reads neither identity, so the stub context stands in for both.
   type Dispatch = (carrier: unknown, name: 'tools/execute', exec: unknown, next: () => Promise<ToolExecutionResult>) => Promise<ToolExecutionResult>
   const dispatch = ctx.waterfall.bind(ctx) as Dispatch
-  return await dispatch(ctx, 'tools/execute', exec, async () => PASSED)
+  try {
+    return await dispatch(ctx, 'tools/execute', exec, async () => PASSED)
+  } finally {
+    await ctx.fiber.dispose()
+  }
+}
+
+/** Dispatch a code write from a workspace with optional session history. */
+function dispatchWrite(
+  settingsDoc: Record<string, unknown> | undefined,
+  cwd: string,
+  events: readonly unknown[] = [],
+): Promise<ToolExecutionResult> {
+  return dispatchTool(settingsDoc, { name: 'write', arguments: {}, agent: { session: { meta: { cwd }, events } } })
 }
 
 describe('msce-gate mode scoping', () => {
@@ -80,5 +97,42 @@ describe('msce-gate mode scoping', () => {
     workspaces.push(dir)
     const result = await dispatchWrite({}, dir)
     expect(result).toBe(PASSED)
+  })
+
+  it('recognizes a framework file and a component directory as MSCE roots', async () => {
+    const framework = mkdtempSync(join(tmpdir(), 'msce-framework-'))
+    const components = mkdtempSync(join(tmpdir(), 'msce-components-'))
+    workspaces.push(framework, components)
+    writeFileSync(join(framework, 'FRAMEWORK.md'), '# framework\n')
+    mkdirSync(join(components, 'components'))
+    expect((await dispatchWrite({}, framework)).isError).toBe(true)
+    expect((await dispatchWrite({}, components)).isError).toBe(true)
+  })
+
+  it('allows discovery evidence before a mutation and ignores malformed history', async () => {
+    const cwd = msceWorkspace()
+    const circular: { self?: object } = {}
+    circular.self = circular
+    const result = await dispatchWrite({}, cwd, [undefined, circular, { type: 'tool', name: 'read', path: 'HARNESS.md' }])
+    expect(result).toBe(PASSED)
+  })
+
+  it('requires a submission pass newer than the last mutation for git handoff', async () => {
+    const cwd = msceWorkspace()
+    const bash = (events: readonly unknown[], command: unknown): Promise<ToolExecutionResult> => dispatchTool({}, {
+      name: 'bash', arguments: { command }, agent: { session: { cwd, events } },
+    })
+    expect((await bash([], 'git add .')).isError).toBe(true)
+    expect((await bash([{ type: 'tool', name: 'edit' }, 'MSCE_SUBMISSION_GATE: PASS'], 'git commit -m done'))).toBe(PASSED)
+    expect((await bash(['MSCE_SUBMISSION_GATE: PASS', { type: 'tool', name: 'write' }], 'git push')).isError).toBe(true)
+    expect(await bash([], 'git status')).toBe(PASSED)
+    expect(await bash([], 23)).toBe(PASSED)
+  })
+
+  it('leaves sessions outside MSCE and tool calls without a session untouched', async () => {
+    expect(await dispatchTool({}, { name: 'write', arguments: {} })).toBe(PASSED)
+    expect(await dispatchTool({}, { name: 'write', arguments: {}, agent: { session: {} } })).toBe(PASSED)
+    expect((await dispatchTool({}, { name: 'write', arguments: {}, agent: { session: { cwd: msceWorkspace() } } })).isError).toBe(true)
+    expect(await dispatchWrite({}, join(tmpdir(), 'not-an-existing-msce-workspace'))).toBe(PASSED)
   })
 })

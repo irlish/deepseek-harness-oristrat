@@ -1,6 +1,46 @@
-# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
-# side as of the last confirmed-consistent state. Both languages carry equal authority;
-# after editing either side, bring the other along and re-record with:
+# Bilingual-pair consistency record for README.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write packages/api/gui-terminal/README.md
-README.md: a5bd584a6444c4dce02b683bd503638d7157953e
-README.zh.md: 1a3e3615da4ee1f7e4fd5ea37a3db7bbef1e3d6f
+/:
+  en: 791073a4e38c79ea
+  zh: b48b1f53c7290d50
+/deepseek-ai-dsh-api-gui-terminal:
+  en: e74bd9fa2111050f
+  zh: 12c98778030e906b
+/deepseek-ai-dsh-api-gui-terminal/summary:
+  en: cf174804aaa92218
+  zh: 46ad82cad49d5609
+/deepseek-ai-dsh-api-gui-terminal/table-of-contents:
+  en: d152484eb41ac6b4
+  zh: 09388d293f9be9cb
+/deepseek-ai-dsh-api-gui-terminal/use-this-package:
+  en: c7e81e94b66bbcf5
+  zh: 4f09910d6d4a8f3f
+/deepseek-ai-dsh-api-gui-terminal/use-this-package/when-to-choose-it:
+  en: 497cdb5835ae7159
+  zh: 1ebf001df8d17afe
+/deepseek-ai-dsh-api-gui-terminal/use-this-package/minimal-configuration:
+  en: 8494f42000deefe3
+  zh: 860588c0a50ced07
+/deepseek-ai-dsh-api-gui-terminal/understand-the-implementation:
+  en: 525b4705888217c4
+  zh: acc2898a10283f33
+/deepseek-ai-dsh-api-gui-terminal/understand-the-implementation/source-map:
+  en: 82ef6b8ac3941e0e
+  zh: 431a978ea8bb1cf8
+/deepseek-ai-dsh-api-gui-terminal/further-exploration:
+  en: c0ada20e22dacbb3
+  zh: bef683c4c78798de
+/deepseek-ai-dsh-api-gui-terminal/model-experience:
+  en: e7ede2782bfa4967
+  zh: de64889eda5fa7df
+/deepseek-ai-dsh-api-gui-terminal/model-experience/kv-cache-effect:
+  en: ca75c51c89c2c9b0
+  zh: f57cc48a1b5cbfa9
+/deepseek-ai-dsh-api-gui-terminal/known-limitations-and-deferred-work:
+  en: 55296f8ce48f36c1
+  zh: bb70f6b8963d3ec6
+/deepseek-ai-dsh-api-gui-terminal/known-limitations-and-deferred-work/dev-note:
+  en: e67f633dc6fe7773
+  zh: e88aeb617ffb74ea

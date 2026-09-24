@@ -1,7 +1,7 @@
 {
   "name": "@deepseek-ai/dsh-browser",
   "description": "Abstract browser automation capability seam (ctx.browser) for the DeepSeek Harness — page navigation, reference-bearing observations, element actions, screenshots, console reads, and the BrowserError taxonomy",
-  "version": "0.1.7-rc.1",
+  "version": "0.1.7-rc.2",
   "publishConfig": {
     "access": "public"
   },

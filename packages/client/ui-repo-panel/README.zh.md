@@ -49,7 +49,7 @@ kind: "package-reference"
 <details>
 <summary>实现内幕——点击展开</summary>
 
-插件主体在 effect 下注册两样东西：`repo-panel` locale 字典，以及一个 `conversation.session.header.utilities` 条目（id `repo-env`、order -9）。动作组件从 sessions mirror 读取会话的 `cwd`，并在打开期间运行一个轮询循环：立即 `status` 读取、固定 4 秒间隔刷新，以及——在分支子菜单打开期间——对 `branches` 采用相同节奏。读取失败保留加载提示；没有工作区的会话与位于任何工作树之外的目录渲染各自的提示而不是行区。子菜单按子串过滤列表，用选中的单选行标记当前分支，把点选经 `checkout`（`git switch`）路由、把草稿表单经 `createBranch`（`git switch --create`）路由；被拒绝的变更在子菜单内显示 git 自己的消息。Escape 与外部指针按下关闭气泡。
+插件主体在 effect 下注册两样东西：`repo-panel` locale 字典，以及一个 `conversation.session.header.utilities` 条目（id `repo-env`、order -9）。动作组件从 sessions mirror 读取会话的 `cwd`，并在打开期间运行一个轮询循环：立即 `status` 读取、固定 4 秒间隔刷新，以及——在分支子菜单打开期间——对 `branches` 采用相同节奏。读取失败保留加载提示；没有工作区的会话与位于任何工作树之外的目录渲染各自的提示而不是行区。子菜单按子串过滤列表，用选中的单选行标记当前分支，把点选经 `checkout`（`git switch`）路由、把草稿表单经 `createBranch`（`git switch --create`）路由；被拒绝的变更在子菜单内显示 git 自己的消息。气泡菜单与分支子菜单使用共享的 `MenuSurface` 材质。Escape 与外部指针按下关闭气泡。
 
 ### 源码地图
 

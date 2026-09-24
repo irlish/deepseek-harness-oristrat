@@ -1,6 +1,70 @@
-# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
-# side as of the last confirmed-consistent state. Both languages carry equal authority;
-# after editing either side, bring the other along and re-record with:
+# Bilingual-pair consistency record for README.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write apps/desktop/README.md
-README.md: 2eed378746345b90b37a5b8523e14006b515f221
-README.zh.md: fe69ae0acd5d2ee9dcf0ec95dac5447038806ea3
+/oristrat-ai-stem-desktop:
+  en: d8bdaf929bdfbbf4
+  zh: 6ce13a2bfb498d5b
+/oristrat-ai-stem-desktop/closing-the-window-and-quitting:
+  en: 73436766d31522d9
+  zh: 04ad7382b6fd2fbe
+/oristrat-ai-stem-desktop/key-technical-decisions:
+  en: 8fbf23e8a684c876
+  zh: fca0361921592f2d
+/oristrat-ai-stem-desktop/key-technical-decisions/bundled-workspace-dependencies:
+  en: 1642cf71b4dc2af9
+  zh: 5caa3933fec7b216
+/oristrat-ai-stem-desktop/installation-ownership:
+  en: 8307baf6c5b691d0
+  zh: 86e46b9552017ff6
+/oristrat-ai-stem-desktop/installation-ownership/runtime-and-plugin-activation:
+  en: bb1132589d578823
+  zh: 94c74f4a25cf67cf
+/oristrat-ai-stem-desktop/develop:
+  en: 9b9b362a9865e763
+  zh: c748901168e2db8c
+/oristrat-ai-stem-desktop/develop/startup-onboarding:
+  en: 042f5f599a1d8bcb
+  zh: ca0f927b0b52e74f
+/oristrat-ai-stem-desktop/develop/welcome-window-appearance:
+  en: 7220801ccc3b2e6b
+  zh: 042dc97976aef979
+/oristrat-ai-stem-desktop/package:
+  en: 4cd8a8da6977928d
+  zh: 9f624855a2edac37
+/oristrat-ai-stem-desktop/package/release-versions:
+  en: cd44ae4c0be08ca0
+  zh: bf9c15e2f8affadb
+/oristrat-ai-stem-desktop/package/runtime-file-selection:
+  en: f0e345fd89868803
+  zh: fd2c775ad23fa2f0
+/oristrat-ai-stem-desktop/package/upload-updates:
+  en: c64d7fe2fe2534b7
+  zh: 2188e1ae99ab4b33
+/oristrat-ai-stem-desktop/package/unsigned-windows-test-installer:
+  en: cfd5780dd26a8e46
+  zh: f7a16b1ede793b7b
+/oristrat-ai-stem-desktop/package/windows-installer-interface:
+  en: 72ec3771bef70387
+  zh: a7e904d4127fb949
+/oristrat-ai-stem-desktop/package/windows-ev-signing:
+  en: 8efe3498dbe8686d
+  zh: a88c16f20a9430f3
+/oristrat-ai-stem-desktop/updates:
+  en: d0df867b69cbffa4
+  zh: eeb47b79b86fe5ee
+/oristrat-ai-stem-desktop/updates/mandatory-update-policy:
+  en: 2f789a4949fafb12
+  zh: d8b28c01cfee11b7
+/oristrat-ai-stem-desktop/updates/local-updater-qualification:
+  en: bc50fd8a4d96c227
+  zh: fb0a6ce80c31cda6
+/oristrat-ai-stem-desktop/low-level-development-overrides:
+  en: 0b225f914142ef0b
+  zh: 9ffd07768d37824e
+/oristrat-ai-stem-desktop/known-limitations:
+  en: 5b77213c86bbcfb6
+  zh: b34bf21773bb852b
+/oristrat-ai-stem-desktop/dev-note:
+  en: 8e26b460ba31f21b
+  zh: fbcd0307b3867125

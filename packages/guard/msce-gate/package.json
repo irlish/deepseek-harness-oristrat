@@ -1,6 +1,6 @@
 {
   "name": "@deepseek-ai/dsh-guard-msce-gate",
-  "version": "0.1.7-rc.1",
+  "version": "0.1.7-rc.2",
   "description": "Hard MSCE gates: discovery before code mutation, submission gate before git handoff",
   "type": "module",
   "main": "lib/index.js",

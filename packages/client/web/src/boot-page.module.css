@@ -33,7 +33,7 @@
   width: 132px;
   height: 132px;
   overflow: hidden;
-  border-radius: 24px;
+  border-radius: var(--dsw-radius-xl);
   color: var(--dsw-alias-label-primary, var(--dsh-boot-label-primary));
 }
 

@@ -1,6 +1,6 @@
 {
   "name": "@deepseek-ai/dsh-context-oristrat-msce-norms",
-  "version": "0.1.7-rc.1",
+  "version": "0.1.7-rc.2",
   "description": "Always-on Oristrat MSCE engine development norms as a system-prompt section",
   "type": "module",
   "main": "lib/index.js",

@@ -19,7 +19,7 @@ export interface DesktopWelcomeBackend {
   /** @returns The saved UI language without account or provider requests. */
   readLocalePreference(): Promise<string | null>
   /**
-   * @param apiKey - User-entered official provider key.
+   * @param apiKey - User-entered key for the configured default provider.
    * @returns A safe write outcome without provider diagnostics.
    */
   save(apiKey: string): Promise<{ ok: boolean }>
@@ -61,15 +61,37 @@ export async function connectDesktopWelcome(
     return envelope.result.value
   }
   const account = desktopAccountBackend(origin, invoke, cookies)
-  const settingsAndReference = async () => {
+  const settingsAndReferences = async () => {
     const settings = await invoke({ namespace: 'settings', method: 'describe', args: {} })
     if (!record(settings) || !Array.isArray(settings.namespaces)) throw new Error('desktop welcome: missing settings namespaces')
-    const official: unknown = settings.namespaces.find((item: unknown) => record(item) && item.ns === 'llm-deepseek')
-    if (official === undefined) return { settings: { namespaces: settings.namespaces }, ref: undefined }
-    if (!record(official) || !record(official.value) || typeof official.value.apiKeyEnv !== 'string') {
-      throw new Error('desktop welcome: missing official DeepSeek credential reference')
+    const providers = await invoke({ namespace: 'llm', method: 'listConfigurableProviders', args: {} })
+    if (!Array.isArray(providers)) throw new Error('desktop welcome: invalid provider directory')
+    const namespaces = settings.namespaces
+    const providerRefs = new Map<string, string>()
+    for (const provider of providers) {
+      if (!record(provider) || typeof provider.provider !== 'string'
+        || typeof provider.settingsNs !== 'string' || !Array.isArray(provider.settingsPath)) {
+        throw new Error('desktop welcome: invalid provider settings address')
+      }
+      const namespace: unknown = namespaces.find((item: unknown) => record(item) && item.ns === provider.settingsNs)
+      let value: unknown = record(namespace) ? namespace.value : undefined
+      for (const key of provider.settingsPath as unknown[]) {
+        if (typeof key !== 'string') throw new Error('desktop welcome: invalid provider settings path')
+        value = record(value) ? value[key] : undefined
+      }
+      if (record(value) && typeof value.apiKeyEnv === 'string') providerRefs.set(provider.provider, value.apiKeyEnv)
     }
-    return { settings: { namespaces: settings.namespaces }, ref: official.value.apiKeyEnv }
+    const defaultModel: unknown = namespaces.find((item: unknown) => record(item) && item.ns === 'agent-default-model')
+    const defaultProvider = record(defaultModel) && record(defaultModel.value) ? defaultModel.value.provider : undefined
+    if (defaultProvider !== undefined && typeof defaultProvider !== 'string') {
+      throw new Error('desktop welcome: invalid default provider')
+    }
+    const official: unknown = namespaces.find((item: unknown) => record(item) && item.ns === 'llm-deepseek')
+    const officialRef = record(official) && record(official.value) ? official.value.apiKeyEnv : undefined
+    let ref: string | undefined
+    if (defaultProvider === undefined && typeof officialRef === 'string') ref = officialRef
+    else if (typeof defaultProvider === 'string') ref = providerRefs.get(defaultProvider)
+    return { namespaces, refs: [...providerRefs.values()], ref }
   }
   const localePreference = (namespaces: unknown[]): string | null => {
     const locale: unknown = namespaces.find((item: unknown) => record(item) && item.ns === 'locale')
@@ -80,22 +102,7 @@ export async function connectDesktopWelcome(
     return locale.value.preference ?? null
   }
   const read = async (): Promise<WelcomeState> => {
-    const { settings, ref } = await settingsAndReference()
-    const providers = await invoke({ namespace: 'llm', method: 'listConfigurableProviders', args: {} })
-    if (!Array.isArray(providers)) throw new Error('desktop welcome: invalid provider directory')
-    const namespaces = settings.namespaces
-    const refs = providers.flatMap((provider: unknown) => {
-      if (!record(provider) || typeof provider.settingsNs !== 'string' || !Array.isArray(provider.settingsPath)) {
-        throw new Error('desktop welcome: invalid provider settings address')
-      }
-      const namespace: unknown = namespaces.find((item: unknown) => record(item) && item.ns === provider.settingsNs)
-      let value: unknown = record(namespace) ? namespace.value : undefined
-      for (const key of provider.settingsPath as unknown[]) {
-        if (typeof key !== 'string') throw new Error('desktop welcome: invalid provider settings path')
-        value = record(value) ? value[key] : undefined
-      }
-      return record(value) && typeof value.apiKeyEnv === 'string' ? [value.apiKeyEnv] : []
-    })
+    const { namespaces, refs, ref } = await settingsAndReferences()
     const unique = [...new Set([...(ref === undefined ? [] : [ref]), ...refs])]
     const states: Record<string, unknown> = {}
     // credentials.describe accepts at most 64 references per request.
@@ -123,7 +130,7 @@ export async function connectDesktopWelcome(
     async save(apiKey) {
       if (!/^[\x21-\x7e]+$/.test(apiKey)) return { ok: false }
       try {
-        const { ref } = await settingsAndReference()
+        const { ref } = await settingsAndReferences()
         if (ref === undefined) return { ok: false }
         await invoke({ namespace: 'credentials', method: 'set', args: { ref, value: apiKey } })
         return { ok: true }

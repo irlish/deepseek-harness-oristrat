@@ -15,6 +15,7 @@ import {
   IconChevronDownOutlineRegular,
   IconPlusOutlineRegular,
   IconSearchOutlineRegular,
+  MenuSurface,
   Tooltip,
   useAnchoredPosition,
   useDismissOnOutsidePointer,
@@ -206,7 +207,7 @@ export function RepoEnvAction({
         </button>
       </Tooltip>
       {open && createPortal(
-        <div ref={panelRef} className={css.popover} role="menu" aria-label={t('menu.title')} style={position ?? undefined}>
+        <MenuSurface ref={panelRef} className={css.popover} role="menu" aria-label={t('menu.title')} style={position ?? undefined}>
           <div className={css.caption}>{t('menu.title')}</div>
           {cwd === undefined
             ? <div className={css.note}>{t('state.noSession')}</div>
@@ -254,7 +255,7 @@ export function RepoEnvAction({
                   </>
                 )}
           {branchesOpen && (
-            <div
+            <MenuSurface
               className={css.submenu}
               role="menu"
               aria-label={t('branch.title')}
@@ -312,9 +313,9 @@ export function RepoEnvAction({
                   </button>
                 )}
               {error !== null && <div className={css.error}>{error}</div>}
-            </div>
+            </MenuSurface>
           )}
-        </div>,
+        </MenuSurface>,
         document.body,
       )}
     </>

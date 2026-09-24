@@ -71,6 +71,15 @@ const nonLinuxWebWorkerTests = process.platform === 'linux'
 
 const platformUnsupportedTests = [...windowsUnsupportedTests, ...nonLinuxWebWorkerTests]
 
+// These implementations read Linux-only procfs/libc state. Their owning tests
+// run in the Linux lane; other hosts cannot execute their covered paths.
+const nonLinuxCoverageExclusions = process.platform === 'linux'
+  ? []
+  : [
+      'packages/experimental/ptc-runtime-python/src/read-process-start.ts',
+      'packages/subprocess/subprocess-local/src/linux-execve.ts',
+    ]
+
 const windowsUnsupportedCoveragePackages = process.platform === 'win32'
   ? [...windowsUnsupportedPackages, 'packages/subprocess/*']
   : []
@@ -350,6 +359,7 @@ export default defineConfig({
         'packages/interaction/commands/src/index.ts',
         'packages/interaction/commands/src/invariant.ts',
         'packages/session/session-projection/src/index.ts',
+        ...nonLinuxCoverageExclusions,
         ...windowsUnsupportedCoveragePackages.map(path => `${path}/src/**/*.ts`),
         ...windowsOnlyCoverageExclusions,
         ...windowsRunnerCoverageExclusions,

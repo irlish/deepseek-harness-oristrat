@@ -1,6 +1,46 @@
-# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
-# side as of the last confirmed-consistent state. Both languages carry equal authority;
-# after editing either side, bring the other along and re-record with:
+# Bilingual-pair consistency record for README.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write packages/client/ui-repo-panel/README.md
-README.md: ffb451958ed28777e074512bb1ed18b85dbd4d48
-README.zh.md: 5ea7ee79fadd6914283844b3fa3d48d37b4ac180
+/:
+  en: 5c078efd5f1e5ccb
+  zh: 78d1032934a126a4
+/deepseek-ai-dsh-client-ui-repo-panel:
+  en: 8edee02ca63d1b35
+  zh: d0df5b3b73a2566b
+/deepseek-ai-dsh-client-ui-repo-panel/summary:
+  en: b329b786f7d469db
+  zh: 3a8582c20e55dd27
+/deepseek-ai-dsh-client-ui-repo-panel/table-of-contents:
+  en: d152484eb41ac6b4
+  zh: 09388d293f9be9cb
+/deepseek-ai-dsh-client-ui-repo-panel/use-this-package:
+  en: fda6dbbb52e3d686
+  zh: d5eb0218c33f5e54
+/deepseek-ai-dsh-client-ui-repo-panel/use-this-package/when-to-choose-it:
+  en: 4ef04da7c045a6ad
+  zh: b17bd8ba3f51f8e4
+/deepseek-ai-dsh-client-ui-repo-panel/use-this-package/minimal-configuration:
+  en: cacfa70d6d06b6e8
+  zh: 55fb19df3e5c3b70
+/deepseek-ai-dsh-client-ui-repo-panel/understand-the-implementation:
+  en: 4a2c46ec040cff25
+  zh: 0bf51deb205e83f2
+/deepseek-ai-dsh-client-ui-repo-panel/understand-the-implementation/source-map:
+  en: 0e72025e6abe45da
+  zh: 48a88f58c0674a1b
+/deepseek-ai-dsh-client-ui-repo-panel/further-exploration:
+  en: 6adc7b31bd57aa20
+  zh: 4946d8e018f587e7
+/deepseek-ai-dsh-client-ui-repo-panel/model-experience:
+  en: 1723c2153ec6e4a7
+  zh: 6b0e9a66bb8ff6a5
+/deepseek-ai-dsh-client-ui-repo-panel/model-experience/kv-cache-effect:
+  en: ca75c51c89c2c9b0
+  zh: f57cc48a1b5cbfa9
+/deepseek-ai-dsh-client-ui-repo-panel/known-limitations-and-deferred-work:
+  en: d3fc1460e048aae7
+  zh: 88115bbf8362dd94
+/deepseek-ai-dsh-client-ui-repo-panel/known-limitations-and-deferred-work/dev-note:
+  en: e67f633dc6fe7773
+  zh: e88aeb617ffb74ea

@@ -1,6 +1,58 @@
-# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
-# side as of the last confirmed-consistent state. Both languages carry equal authority;
-# after editing either side, bring the other along and re-record with:
+# Bilingual-pair consistency record for README.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write packages/context/oristrat-msce-norms/README.md
-README.md: a9729c557c2887ccd0cb7cc2a6110e77725eec74
-README.zh.md: 24845127e506406793451a76dad8dfc1815409d4
+/:
+  en: 87fc53559f59ae67
+  zh: abb2dc7b2424ac08
+/deepseek-ai-dsh-context-oristrat-msce-norms:
+  en: 5fd31351689184c6
+  zh: 17ed821b2d1ee5eb
+/deepseek-ai-dsh-context-oristrat-msce-norms/summary:
+  en: d7aa330061766c13
+  zh: 353390ef492e9207
+/deepseek-ai-dsh-context-oristrat-msce-norms/table-of-contents:
+  en: d152484eb41ac6b4
+  zh: 09388d293f9be9cb
+/deepseek-ai-dsh-context-oristrat-msce-norms/use-this-package:
+  en: b2ae320d1d41d9f3
+  zh: 5f10809a6c36793c
+/deepseek-ai-dsh-context-oristrat-msce-norms/use-this-package/when-to-choose-it:
+  en: e26b484763c0da4a
+  zh: 4683e78e54c9fee7
+/deepseek-ai-dsh-context-oristrat-msce-norms/use-this-package/minimal-configuration:
+  en: 65c352e65ba2c9d1
+  zh: 4351c9b93032b7b8
+/deepseek-ai-dsh-context-oristrat-msce-norms/understand-the-implementation:
+  en: 57b97e01b5bd8a6f
+  zh: cb70b4e601dbd1d1
+/deepseek-ai-dsh-context-oristrat-msce-norms/understand-the-implementation/source-map:
+  en: fa0cc4b65b3d8e8d
+  zh: bbdc1326d8191eb0
+/deepseek-ai-dsh-context-oristrat-msce-norms/further-exploration:
+  en: 88aeb1ac820862b8
+  zh: 411ed8c344416431
+/deepseek-ai-dsh-context-oristrat-msce-norms/model-experience:
+  en: 215e7ba838619b7b
+  zh: a311da3843709f90
+/deepseek-ai-dsh-context-oristrat-msce-norms/model-experience/mode-scoped-norms-system-prompt-section:
+  en: f843c37e186fd70c
+  zh: 15f289aa1c58cc11
+/deepseek-ai-dsh-context-oristrat-msce-norms/model-experience/mode-scoped-norms-system-prompt-section/what-the-model-sees:
+  en: bca7f2224dc0a1de
+  zh: a27f8c38b4c0b529
+/deepseek-ai-dsh-context-oristrat-msce-norms/model-experience/mode-scoped-norms-system-prompt-section/what-the-model-sees/norms-section-text:
+  en: c379b23c577c150c
+  zh: 5f5460a12b55ba74
+/deepseek-ai-dsh-context-oristrat-msce-norms/model-experience/mode-scoped-norms-system-prompt-section/token-effect:
+  en: b733db68a0be668b
+  zh: d5dec89ca4581ca6
+/deepseek-ai-dsh-context-oristrat-msce-norms/model-experience/mode-scoped-norms-system-prompt-section/kv-cache-effect:
+  en: 7707e819d470dc71
+  zh: 6717be34463e7aa3
+/deepseek-ai-dsh-context-oristrat-msce-norms/known-limitations-and-deferred-work:
+  en: 658de2f363dc248e
+  zh: 026ff6d7daeda3b4
+/deepseek-ai-dsh-context-oristrat-msce-norms/known-limitations-and-deferred-work/dev-note:
+  en: e67f633dc6fe7773
+  zh: e88aeb617ffb74ea

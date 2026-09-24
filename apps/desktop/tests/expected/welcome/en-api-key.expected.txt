@@ -1,7 +1,7 @@
 Oristrat AI Stem
 Oristrat AI Stem
 Add an API key to get started
-Configure official DeepSeek models to start using Harness
+Configure Oristrat official models to get started
 Enter API key [password]
 Save and continue [disabled]
 Set up later

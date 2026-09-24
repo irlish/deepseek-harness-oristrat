@@ -1,6 +1,37 @@
-# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
-# side as of the last confirmed-consistent state. Both languages carry equal authority;
-# after editing either side, bring the other along and re-record with:
+# Bilingual-pair consistency record for 2026-09-24-oristrat-sidebar-browser-agent-automation.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/feature/2026-09-24-oristrat-sidebar-browser-agent-automation.md
-2026-09-24-oristrat-sidebar-browser-agent-automation.md: 72c2aa77c628e1eae72082ae6657169aaaec3e81
-2026-09-24-oristrat-sidebar-browser-agent-automation.zh.md: 580139f4eb316c56084b2930c3f0a680c82fda03
+/agent-note-sidebar-browser-agent-automation-over-the-debugging-protocol:
+  en: 581a365ae32f640d
+  zh: 2a5f878f3ac9cef7
+/agent-note-sidebar-browser-agent-automation-over-the-debugging-protocol/problem:
+  en: 265629e561faf894
+  zh: 129e24292136a9a6
+/agent-note-sidebar-browser-agent-automation-over-the-debugging-protocol/decision:
+  en: a15c7c13f167e5ac
+  zh: 63bcc2ef60c2f344
+/agent-note-sidebar-browser-agent-automation-over-the-debugging-protocol/decision/the-seam-split-by-role:
+  en: a34d20e3fa9f5c9d
+  zh: 80ac1d85288ffbe5
+/agent-note-sidebar-browser-agent-automation-over-the-debugging-protocol/decision/input-goes-into-the-page-never-into-the-operating-system:
+  en: a2f4863171b91fa4
+  zh: bef56c20d00ebd20
+/agent-note-sidebar-browser-agent-automation-over-the-debugging-protocol/decision/observation-is-the-accessibility-tree-rendered-as-text:
+  en: 569f930222f4bcd0
+  zh: d8047e27c1e45b95
+/agent-note-sidebar-browser-agent-automation-over-the-debugging-protocol/decision/the-command-channel:
+  en: e5f046c094858d59
+  zh: 19eac1677f1b552e
+/agent-note-sidebar-browser-agent-automation-over-the-debugging-protocol/decision/the-run-is-visible-and-the-pane-is-revealed-automatically:
+  en: 89bcd0f0e94139c4
+  zh: d6082ac374a34429
+/agent-note-sidebar-browser-agent-automation-over-the-debugging-protocol/decision/safety-and-cost-bounds:
+  en: adbcc770658310b4
+  zh: da65596238acb5f5
+/agent-note-sidebar-browser-agent-automation-over-the-debugging-protocol/consequences:
+  en: 00cb09cc502064fd
+  zh: e9cc2d6d06ab3129
+/agent-note-sidebar-browser-agent-automation-over-the-debugging-protocol/alternatives-considered:
+  en: dd2ad173ddc354ed
+  zh: 0de3f8c9f23b28f3

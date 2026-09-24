@@ -122,6 +122,19 @@
     - id: workspace-files
       name: '@deepseek-ai/dsh-api-workspace-files'
 
+    # Durable Host-wide reminders. The Schedule service owns the task store and
+    # delivers each due occurrence as a follow-up in its original Session;
+    # `time-context` supplies the current time, browser zone, and elapsed time
+    # the model needs to resolve an unqualified date or time. The browser half
+    # is the `ui-schedule` row below.
+    - id: time-context
+      name: '@deepseek-ai/dsh-time-context'
+      disabled: true
+
+    - id: schedule
+      name: '@deepseek-ai/dsh-schedule'
+      disabled: true
+
     # Configuration-surface reads and writes over Typert Remote. Each method
     # reports an actionable error when its settings-domain provider is absent.
     - id: ui-settings-account
@@ -228,6 +241,12 @@
 
     - id: locale
       name: '@deepseek-ai/dsh-client-locale'
+
+    - id: shortcuts
+      name: '@deepseek-ai/dsh-client-shortcuts'
+
+    - id: ui-shortcuts
+      name: '@deepseek-ai/dsh-client-ui-shortcuts'
 
     - id: ui-layout
       name: '@deepseek-ai/dsh-client-ui-layout'
@@ -355,9 +374,8 @@
     - id: ui-jobs
       name: '@deepseek-ai/dsh-client-ui-jobs'
 
-    # Read-only active Schedule catalog. The shipped Web graph resolves the
-    # client package but leaves it disabled; the explicit Schedule overlay
-    # enables this same row together with the host Schedule services.
+    # Task management and Session reminder catalog over the Host Schedule
+    # service mounted above.
     - id: ui-schedule
       name: '@deepseek-ai/dsh-client-ui-schedule'
       disabled: true
@@ -561,9 +579,59 @@
 - id: llm-deepseek
   disabled: true
 
+# The official Settings service now persists provider configuration in the
+# profile patch. Ship the Oristrat route in that same layer so a fresh Desktop
+# or Web profile can use it before any legacy settings import runs.
+- id: llm-pi-ai
+  config:
+    providers:
+      oristrat-official:
+        displayName: Oristrat - official
+        api: openai-completions
+        baseURL: https://api.oristrat.com/v1
+        compat:
+          thinkingFormat: openai
+          supportsDeveloperRole: false
+        models:
+          - id: glm-4.5
+            name: GLM-4.5
+            reasoningEfforts: &oristrat-efforts
+              low: low
+              medium: medium
+              high: high
+              xhigh: xhigh
+          - id: glm-4.5-air
+            name: GLM-4.5-Air
+            reasoningEfforts: *oristrat-efforts
+          - id: glm-4.6
+            name: GLM-4.6
+            reasoningEfforts: *oristrat-efforts
+          - id: glm-4.7
+            name: GLM-4.7
+            reasoningEfforts: *oristrat-efforts
+          - id: glm-5
+            name: GLM-5
+            reasoningEfforts: *oristrat-efforts
+          - id: glm-5-turbo
+            name: GLM-5-Turbo
+            reasoningEfforts: *oristrat-efforts
+          - id: glm-5.1
+            name: GLM-5.1
+            reasoningEfforts: *oristrat-efforts
+          - id: glm-5.2
+            name: GLM-5.2
+            reasoningEfforts: *oristrat-efforts
+          - id: glm-5.3
+            name: GLM-5.3
+            reasoningEfforts: *oristrat-efforts
+          - id: glm-5.3-flash
+            name: GLM-5.3-Flash
+            reasoningEfforts: *oristrat-efforts
+        apiKeyEnv: ORISTRAT_OFFICIAL_API_KEY
+
 # Fork: default Agents start on the declared Oristrat route, not the disabled
 # native DeepSeek adapter's catalog model.
 - id: agent-default-model
   config:
     provider: oristrat-official
-    model: glm-4.5
+    model: glm-5.3

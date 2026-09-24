@@ -104,6 +104,19 @@ describe('desktopBrowser', () => {
 })
 
 describe('BrowserPanel', () => {
+  it('keeps native browser bounds in sync when ResizeObserver is unavailable', async () => {
+    vi.stubGlobal('ResizeObserver', undefined)
+    const bridge = fakeBridge()
+    const { unmount } = render(<BrowserPanel t={t} bridge={bridge} />)
+    await waitFor(() => { expect(bridge.open).toHaveBeenCalledOnce() })
+    fireEvent(window, new Event('resize'))
+    expect(bridge.setBounds).toHaveBeenCalled()
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 325)) })
+    expect(bridge.setBounds.mock.calls.length).toBeGreaterThan(1)
+    unmount()
+    expect(bridge.hide).toHaveBeenCalledOnce()
+  })
+
   it('explains the desktop-only surface without a bridge', () => {
     render(<BrowserPanel t={t} bridge={undefined} />)
     expect(screen.getByText('内嵌浏览器仅在桌面客户端可用')).toBeTruthy()

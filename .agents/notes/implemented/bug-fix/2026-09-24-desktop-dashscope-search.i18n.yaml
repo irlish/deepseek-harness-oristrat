@@ -1,6 +1,22 @@
-# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
-# side as of the last confirmed-consistent state. Both languages carry equal authority;
-# after editing either side, bring the other along and re-record with:
+# Bilingual-pair consistency record for 2026-09-24-desktop-dashscope-search.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/bug-fix/2026-09-24-desktop-dashscope-search.md
-2026-09-24-desktop-dashscope-search.md: 33efedca417f696d11fb917d838babd985a8bb16
-2026-09-24-desktop-dashscope-search.zh.md: dc841da83a3497f573b9f07dbadd8898699641df
+/agent-note-desktop-search-through-dashscope-mcp:
+  en: 4ec6093d39a305f4
+  zh: 23509935e71c40e8
+/agent-note-desktop-search-through-dashscope-mcp/problem:
+  en: 0ff1625b0c4df163
+  zh: 832b3e84999529cb
+/agent-note-desktop-search-through-dashscope-mcp/decision:
+  en: 299811bd5f93224a
+  zh: 2c80b060edf8f1e3
+/agent-note-desktop-search-through-dashscope-mcp/alternatives-considered:
+  en: 2adc584312f925c4
+  zh: bb1c653f31ce737c
+/agent-note-desktop-search-through-dashscope-mcp/consequences:
+  en: 21ebdaf5ca8e9e75
+  zh: 9e3b232591cae2dc
+/agent-note-desktop-search-through-dashscope-mcp/testing:
+  en: baccf6684ae46d8e
+  zh: 66c178ed67277f7c

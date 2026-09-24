@@ -1,6 +1,19 @@
-# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
-# side as of the last confirmed-consistent state. Both languages carry equal authority;
-# after editing either side, bring the other along and re-record with:
+# Bilingual-pair consistency record for 2026-09-24-upstream-desktop-browser-guests.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/architecture/2026-09-24-upstream-desktop-browser-guests.md
-2026-09-24-upstream-desktop-browser-guests.md: db88877a5bd978ac06f68566b92a55a775796248
-2026-09-24-upstream-desktop-browser-guests.zh.md: f14490f265ed738e6be6bde53b190ae162d5ebc3
+/agent-note-desktop-browser-guests-after-the-upstream-merge:
+  en: f68510a5d97ff5c8
+  zh: b000caabea6d0a9f
+/agent-note-desktop-browser-guests-after-the-upstream-merge/problem:
+  en: 4270bc13e6bcf187
+  zh: 33f0b480fbec9e89
+/agent-note-desktop-browser-guests-after-the-upstream-merge/decision:
+  en: e52379e383936776
+  zh: a50e71dd63224821
+/agent-note-desktop-browser-guests-after-the-upstream-merge/alternatives-considered:
+  en: 774f841a346e6543
+  zh: cd30a64d021951d1
+/agent-note-desktop-browser-guests-after-the-upstream-merge/consequences:
+  en: c656a0850ed6b1b5
+  zh: a02cb73cced39269

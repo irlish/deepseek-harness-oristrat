@@ -1,7 +1,7 @@
 {
   "name": "@deepseek-ai/dsh-api-gui-terminal",
   "description": "Browser-interactive terminal Remote BFF over the subprocess PTY layer",
-  "version": "0.1.7-rc.1",
+  "version": "0.1.7-rc.2",
   "publishConfig": {
     "access": "public"
   },

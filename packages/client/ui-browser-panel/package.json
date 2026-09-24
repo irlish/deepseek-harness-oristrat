@@ -1,7 +1,7 @@
 {
   "name": "@deepseek-ai/dsh-client-ui-browser-panel",
   "description": "Browser right-sidebar embedded browser panel over the desktop WebContentsView bridge",
-  "version": "0.1.7-rc.1",
+  "version": "0.1.7-rc.2",
   "license": "MIT",
   "repository": {
     "type": "git",

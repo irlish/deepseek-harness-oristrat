@@ -291,6 +291,63 @@ describe('apply (plugin lifecycle)', () => {
     }
   })
 
+  it('reports both unresolved close barriers when disposal races a successful handshake', async () => {
+    const connecting: PromiseWithResolvers<void> = Promise.withResolvers()
+    const errors: string[] = []
+    ctx.logger.error = (message: unknown) => { errors.push(String(message)) }
+    mockConnect.mockImplementation(() => connecting.promise)
+    mockClose.mockImplementation(() => {
+      connecting.resolve()
+      return Promise.resolve()
+    })
+    const fiber = ctx.plugin({ name: 'mcp-unconfirmed-close', inject, apply }, { ...stdioConfig, reconnect: { enabled: false } })
+    const activation = Promise.resolve(fiber).catch((error: unknown) => error)
+    await vi.waitFor(() => { expect(mockConnect).toHaveBeenCalledTimes(1) })
+    vi.useFakeTimers({ toFake: ['setTimeout'] })
+    try {
+      const disposal = fiber.dispose()
+      await vi.advanceTimersByTimeAsync(5_001)
+      await vi.advanceTimersByTimeAsync(5_001)
+      await disposal
+      await activation
+      expect(errors.filter(message => message.includes('transport closure could not be confirmed'))).toHaveLength(2)
+      expect(mockClose).toHaveBeenCalledTimes(2)
+      expect(ctx.tools.schemas()).toEqual([])
+    } finally {
+      connecting.resolve()
+      vi.useRealTimers()
+      await ctx.fiber.dispose()
+    }
+  })
+
+  it('accepts a close signal from the late handshake cleanup', async () => {
+    const connecting: PromiseWithResolvers<void> = Promise.withResolvers()
+    const errors: string[] = []
+    ctx.logger.error = (message: unknown) => { errors.push(String(message)) }
+    mockConnect.mockImplementation(() => connecting.promise)
+    mockClose
+      .mockImplementationOnce(() => {
+        connecting.resolve()
+        return Promise.resolve()
+      })
+      .mockImplementationOnce(function (this: { onclose?: () => void }) {
+        this.onclose?.()
+        return Promise.resolve()
+      })
+    const fiber = ctx.plugin({ name: 'mcp-late-close', inject, apply }, { ...stdioConfig, reconnect: { enabled: false } })
+    const activation = Promise.resolve(fiber).catch((error: unknown) => error)
+    try {
+      await vi.waitFor(() => { expect(mockConnect).toHaveBeenCalledTimes(1) })
+      await fiber.dispose()
+      await activation
+      expect(mockClose).toHaveBeenCalledTimes(2)
+      expect(errors).toEqual([])
+    } finally {
+      connecting.resolve()
+      await ctx.fiber.dispose()
+    }
+  })
+
   it('allows one serverName in each independent registration scope', async () => {
     const first = createScope(ctx, {})
     const second = createScope(ctx, {})

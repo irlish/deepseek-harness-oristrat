@@ -437,6 +437,7 @@ export class RemoteProcesses {
       if (endpoint.socket !== undefined) { socket.destroy(); return }
       socket.disableRenegotiation()
       socket.pause()
+      /* v8 ignore next -- a post-handshake TLS error is absorbed while the socket closes; the handler has no state change. */
       socket.on('error', () => {})
       endpoint.socket = socket
       server.close()
