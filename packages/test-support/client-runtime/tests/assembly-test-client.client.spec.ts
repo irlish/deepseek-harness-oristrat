@@ -18,7 +18,7 @@ const SIDEBAR = '@deepseek-ai/dsh-client-ui-sidebar'
 const PARALLEL_PROBE = '@deepseek-ai/dsh-client-test-parallel-probe'
 /** Declared by ui-sidebar, whose SlotMap merge is outside this package's compilation face. */
 const SIDEBAR_SETTINGS = 'sidebar.settings' as never
-const BRAND = '@deepseek-ai/dsh-client-ui-brand-official'
+const PROVIDED_PLUGIN = '@deepseek-ai/dsh-client-ui-open-in-app'
 const globals = globalThis as { EventSource?: unknown; ResizeObserver?: unknown }
 /** The whole roster's first boot pays the cold module transform of every plugin package. */
 const COLD_BOOT_TIMEOUT_MS = 60_000
@@ -204,9 +204,9 @@ describe('TestClient (jsdom)', () => {
 
   it('boots with a provided row in place of the real plugin', async () => {
     const apply = vi.fn()
-    const client = await started({ roster: webApp, provide: { [BRAND]: { apply } } }, { mount: true })
+    const client = await started({ roster: webApp, provide: { [PROVIDED_PLUGIN]: { apply } } }, { mount: true })
     expect(apply).toHaveBeenCalledOnce()
-    expect([...client.ctx.loader.entries()].some(entry => entry.options.name === BRAND)).toBe(true)
+    expect([...client.ctx.loader.entries()].some(entry => entry.options.name === PROVIDED_PLUGIN)).toBe(true)
   })
 
   it('reload rebuilds the declaring entry; unload collapses it', async () => {

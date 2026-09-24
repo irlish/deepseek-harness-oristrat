@@ -13,7 +13,7 @@ vi.mock('chokidar', async (importOriginal) => {
 
 afterEach(() => { vi.restoreAllMocks() })
 
-async function setup(kind: 'file' | 'directory' | 'missing' = 'file') {
+async function setup(kind: 'file' | 'directory' | 'missing' = 'file', pollIntervalMs?: number) {
   const watcher = new chokidar.FSWatcher()
   onTestFinished(() => watcher.close())
   const started = Promise.withResolvers<undefined>()
@@ -23,7 +23,7 @@ async function setup(kind: 'file' | 'directory' | 'missing' = 'file') {
   })
   const ctx = new Context()
   onTestFinished(() => ctx.fiber.dispose())
-  await ctx.plugin(LocalFileSystem)
+  await ctx.plugin(LocalFileSystem, pollIntervalMs === undefined ? {} : { missingFileWatchIntervalMs: pollIntervalMs })
   const path = resolve('/workspace/file.txt')
   const target = { targetKey: FsTargetKey(path), displayPath: 'file.txt' }
   const stat = vi.spyOn(ctx.fs, 'stat').mockResolvedValue(kind === 'missing'
@@ -39,12 +39,11 @@ describe('local filesystem watch', () => {
     const h = await setup(kind)
     const pending = h.fs.watch(h.target, h.changed, h.controller.signal)
     await h.started
-    const ignored = h.watch.mock.calls[0]![1]!.ignored
-    if (typeof ignored !== 'function') throw new Error('Expected a target filter')
-    expect(h.watch).toHaveBeenCalledExactlyOnceWith(dirname(h.path), { ignoreInitial: true, depth: 0, ignored })
-    expect(ignored(dirname(h.path))).toBe(false)
-    expect(ignored(h.path)).toBe(false)
-    expect(ignored(join(dirname(h.path), 'unrelated.txt'))).toBe(true)
+    expect(h.watch).toHaveBeenCalledExactlyOnceWith(dirname(h.path), {
+      ignoreInitial: true,
+      depth: 0,
+      ...(kind === 'missing' ? { usePolling: true, interval: 100 } : {}),
+    })
     let ready = false
     void pending.then(() => { ready = true })
     await Promise.resolve(undefined)
@@ -75,14 +74,23 @@ describe('local filesystem watch', () => {
     const pending = h.fs.watch(h.target, h.changed, h.controller.signal)
     await h.started
     expect(h.watch.mock.calls[0]![0]).toBe(h.path)
-    const ignored = h.watch.mock.calls[0]![1]!.ignored
-    if (typeof ignored !== 'function') throw new Error('Expected a target filter')
-    expect(ignored(join(h.path, 'child.txt'))).toBe(false)
+    expect(h.watch).toHaveBeenCalledExactlyOnceWith(h.path, { ignoreInitial: true, depth: 0 })
     h.watcher.emit('ready')
     const close = await pending
     h.watcher.emit('all', 'change', join(h.path, 'child.txt'))
     expect(h.changed).toHaveBeenCalledExactlyOnceWith()
     await close()
+  })
+
+  it('uses the configured interval when a target is missing', async () => {
+    const h = await setup('missing', 250)
+    const pending = h.fs.watch(h.target, h.changed, h.controller.signal)
+    await h.started
+    expect(h.watch).toHaveBeenCalledExactlyOnceWith(dirname(h.path), {
+      ignoreInitial: true, depth: 0, usePolling: true, interval: 250,
+    })
+    h.watcher.emit('ready')
+    await (await pending)()
   })
 
   it('does not acquire a watcher when cancelled during metadata lookup', async () => {

@@ -421,7 +421,8 @@ describe('workspaceFiles.changes — backends and access', () => {
     await expect(stream.next()).resolves.toEqual({ done: true, value: undefined })
   })
 
-  it('observes creation of a missing outside file through the real local watcher', async () => {
+  // A real polling watch can deliver its queued event after the default case budget under a full test run.
+  it('observes creation of a missing outside file through the real local watcher', { timeout: 15_000 }, async () => {
     watch.mockRestore()
     const path = join(harness.outside, 'created.txt')
     const staging = join(harness.outside, 'staged.txt')

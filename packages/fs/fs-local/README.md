@@ -44,6 +44,7 @@ Load the backend with a base directory; relative paths resolve against it, and a
 | Field | Default | Meaning |
 |---|---|---|
 | `cwd` | `process.cwd()` | Base directory for relative paths |
+| `missingFileWatchIntervalMs` | `100` | Polling interval in milliseconds when a file is absent at watch startup |
 | `diffBasisMaxBytes` | `10 MiB` | UTF-8 byte limit per overwrite-diff side; larger overwrites return `before: null` |
 
 The generated [configuration catalog](../../../docs/config-catalog.md#deepseek-aidsh-fs-local) is the exhaustive source for every accepted field and its JSDoc.
@@ -54,7 +55,7 @@ Read any regular UTF-8 text file whole or as a stream, read raw bytes up to a ca
 
 Read, listing, and mutation failures are typed `FsError`s with stable codes — `FS_NOT_FOUND`, `FS_NOT_TEXT` (binary content), `FS_STALE_VERSION` (changed since observation), `FS_EDIT_NOT_FOUND` or `FS_AMBIGUOUS_EDIT` (no unique literal match), and others — so callers branch on the code, never on message text. A missing target on an edit reports `FS_STALE_VERSION` whether or not the version guard is supplied.
 
-Chokidar observes one file or a directory's direct entries through OS events, without polling or recursive watching. Files use a filtered parent-directory watch, so readiness also covers creation of an initially missing file. File watches cover in-place writes, atomic replacement, deletion, and same-path recreation while the parent directory remains.
+Chokidar observes existing files and directories through nonrecursive OS events. A watch opened before its target file exists polls the parent directory at `missingFileWatchIntervalMs`, so atomic creation is reported even when the OS omits its event. File watches filter delivered events by target path and cover in-place writes, atomic replacement, deletion, and same-path recreation while the parent directory remains.
 
 -----
 

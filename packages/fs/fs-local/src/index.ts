@@ -45,6 +45,8 @@ import type { FsIoInternals } from './fsio.ts'
 export interface Config {
   /** Base directory for relative paths. Defaults to `process.cwd()`. */
   cwd?: string
+  /** Polling interval for watches opened before a file exists. Defaults to 100 ms. */
+  missingFileWatchIntervalMs?: number
   /**
    * Exclusive UTF-8 byte limit on each overwrite-diff side, capped by the
    * runtime's safe allocation/decode maximum. Defaults to 10 MiB.
@@ -69,12 +71,13 @@ export class LocalFileSystem extends FileSystem {
   override async watch(target: FsTarget, changed: (error?: Error) => void, signal: AbortSignal): Promise<() => Promise<void>> {
     signal.throwIfAborted()
     const path = resolve(this.processPath(target))
-    const directory = (await this.stat(target, signal))?.type === 'directory'
+    const kind = (await this.stat(target, signal))?.type
+    const directory = kind === 'directory'
     signal.throwIfAborted()
     const root = directory ? path : dirname(path)
     const watcher = watch(root, {
       ignoreInitial: true, depth: 0,
-      ignored: entry => !directory && resolve(entry) !== root && resolve(entry) !== path,
+      ...(kind === undefined ? { usePolling: true, interval: this.config.missingFileWatchIntervalMs } : {}),
     })
     watcher.on('all', (_event, entry) => {
       if (directory || resolve(entry) === path) changed()
@@ -91,6 +94,7 @@ export class LocalFileSystem extends FileSystem {
 
   static Config: z<Config> = z.object({
     cwd: z.string().default(process.cwd()),
+    missingFileWatchIntervalMs: z.number().default(100),
     diffBasisMaxBytes: z.number().default(DEFAULT_DIFF_BASIS_MAX_BYTES),
   })
 
@@ -110,6 +114,9 @@ export class LocalFileSystem extends FileSystem {
       || resolved.diffBasisMaxBytes <= 0
       || resolved.diffBasisMaxBytes > MAX_DIFF_BASIS_BYTES) {
       throw new Error(`fs-local: diffBasisMaxBytes must be a positive safe integer no greater than ${MAX_DIFF_BASIS_BYTES}`)
+    }
+    if (!Number.isSafeInteger(resolved.missingFileWatchIntervalMs) || resolved.missingFileWatchIntervalMs <= 0) {
+      throw new Error('fs-local: missingFileWatchIntervalMs must be a positive safe integer')
     }
     this.config = resolved
   }

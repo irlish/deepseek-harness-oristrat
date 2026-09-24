@@ -26,7 +26,8 @@ describe('gen-tool-catalog collectToolCatalog', () => {
     const catalog = await collectToolCatalog()
     const names = catalog.flatMap(entry => entry.schemas.map(s => s.name)).sort()
     expect(names).toEqual([
-      'ask_user_question', 'bash', 'bash', 'cordis_inspect_list',
+      'ask_user_question', 'bash', 'bash', 'browser_act', 'browser_console', 'browser_eval',
+      'browser_navigate', 'browser_observe', 'browser_screenshot', 'browser_state', 'cordis_inspect_list',
       'cordis_inspect_query',
       'create_goal', 'edit', 'exit_plan_mode', 'get_goal', 'glob', 'grep',
       'interrupt_agent', 'interrupt_agent', 'job_kill', 'job_list', 'job_output',

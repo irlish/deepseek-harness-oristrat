@@ -133,6 +133,7 @@ function packageNameFor(rel: string, scanRoot: string): string | null {
 /**
  * Collect every `SessionEventMap` merge, rejecting inherited, non-literal,
  * untyped, undocumented, duplicate, or incorrectly owned members in one report.
+ * A file removed after the directory scan is omitted; other read failures abort.
  */
 export function collectLogEvents(scanRoot: string = root): LogEventEntry[] {
   const entries: LogEventEntry[] = []
@@ -141,7 +142,14 @@ export function collectLogEvents(scanRoot: string = root): LogEventEntry[] {
   let owningDecl: string | null = null
   for (const rel of globSync('packages/*/*/src/**/*.{ts,tsx}', { cwd: scanRoot }).map(s => s.split(sep).join('/')).sort()) {
     const abs = resolve(scanRoot, rel)
-    const text = readFileSync(abs, 'utf8')
+    let text: string
+    try {
+      text = readFileSync(abs, 'utf8')
+    } catch (error) {
+      // Repository tests can remove a temporary source after globSync found it.
+      if (typeof error === 'object' && error !== null && 'code' in error && error.code === 'ENOENT') continue
+      throw error
+    }
     if (!text.includes('SessionEventMap')) continue
     const sf = ts.createSourceFile(abs, text, ts.ScriptTarget.Latest, true)
     for (const { decl, topLevel } of sessionEventMapDecls(sf)) {

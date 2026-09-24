@@ -1175,6 +1175,8 @@ Source: [`packages/context/file-reference-local/src/index.ts:34`](../packages/co
 export interface Config {
   /** Base directory for relative paths. Defaults to `process.cwd()`. */
   cwd?: string
+  /** Polling interval for watches opened before a file exists. Defaults to 100 ms. */
+  missingFileWatchIntervalMs?: number
   /**
    * Exclusive UTF-8 byte limit on each overwrite-diff side, capped by the
    * runtime's safe allocation/decode maximum. Defaults to 10 MiB.

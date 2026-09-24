@@ -44,6 +44,7 @@ kind: "package-reference"
 | 字段 | 默认值 | 含义 |
 |---|---|---|
 | `cwd` | `process.cwd()` | 相对路径的基准目录 |
+| `missingFileWatchIntervalMs` | `100` | 开始监听时文件不存在，轮询父目录的间隔（毫秒） |
 | `diffBasisMaxBytes` | `10 MiB` | 每次覆写 diff 一侧的 UTF-8 字节上限；更大的覆写返回 `before: null` |
 
 生成的[配置目录](../../../docs/config-catalog.zh.md#deepseek-aidsh-fs-local)完整列出了所有受支持字段及其 JSDoc。
@@ -54,7 +55,7 @@ kind: "package-reference"
 
 读取、列出与变更操作的失败是携带稳定错误码的类型化 `FsError`——`FS_NOT_FOUND`、`FS_NOT_TEXT`（二进制内容）、`FS_STALE_VERSION`（自观察以来已变化）、`FS_EDIT_NOT_FOUND` 或 `FS_AMBIGUOUS_EDIT`（无唯一字面量匹配）等——因此调用方依据错误码分支，绝不解析消息文本。编辑遇到缺失目标时，无论是否提供版本防护，都报告 `FS_STALE_VERSION`。
 
-Chokidar 通过 OS 事件观察单个文件或目录的直接子项，不使用轮询或递归监听。文件使用筛选到目标的父目录监听，因此就绪时也能接收起初缺失文件的创建事件。父目录保持存在时，文件监听覆盖原地写入、原子替换、删除和同路径重建。
+Chokidar 通过非递归 OS 事件观察已有文件与目录。如果开始监听时目标文件不存在，它会按 `missingFileWatchIntervalMs` 轮询父目录，因此即使 OS 漏报事件也能发现原子创建。文件监听按目标路径筛选收到的事件；父目录保持存在时，监听覆盖原地写入、原子替换、删除和同路径重建。
 
 -----
 

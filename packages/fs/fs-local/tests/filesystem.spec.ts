@@ -56,6 +56,7 @@ describe('registration', () => {
     const bareFiber = await bare.plugin(LocalFileSystem)
     expect((bare.fs as LocalFileSystem).config.cwd).toBe(process.cwd())
     expect((bare.fs as LocalFileSystem).config.diffBasisMaxBytes).toBe(10 * 1024 * 1024)
+    expect((bare.fs as LocalFileSystem).config.missingFileWatchIntervalMs).toBe(100)
     await bareFiber.dispose()
   })
 
@@ -79,6 +80,16 @@ describe('registration', () => {
       const invalid = new Context()
       await expect(invalid.plugin(LocalFileSystem, { diffBasisMaxBytes })).rejects.toThrow(
         `fs-local: diffBasisMaxBytes must be a positive safe integer no greater than ${maxDiffBasisBytes}`,
+      )
+      await invalid.fiber.dispose()
+    }
+  })
+
+  it('requires a positive safe polling interval for missing file watches', async () => {
+    for (const missingFileWatchIntervalMs of [0, -1, 1.5, Number.MAX_SAFE_INTEGER + 1]) {
+      const invalid = new Context()
+      await expect(invalid.plugin(LocalFileSystem, { missingFileWatchIntervalMs })).rejects.toThrow(
+        'fs-local: missingFileWatchIntervalMs must be a positive safe integer',
       )
       await invalid.fiber.dispose()
     }

@@ -1,7 +1,7 @@
 /** Extract complete persistent Session record types from one source-only compiler program. */
 
 import { readFileSync } from 'node:fs'
-import { dirname, extname, relative, resolve, sep } from 'node:path'
+import { basename, dirname, extname, relative, resolve, sep } from 'node:path'
 import ts from 'typescript'
 import { collectLogEvents } from './persistence-catalog-source.ts'
 import { sourceCompatibilityAnnotations } from './persistence-source-annotations.ts'
@@ -149,7 +149,9 @@ function hostSourceFiles(root: string, configPath: string, seen = new Set<string
   const errors = parsed.errors.filter(error => error.code !== 18003)
   if (errors.length > 0) throw new PersistenceSchemaError(errors.map(diagnosticText).join('\n'))
   return [
-    ...parsed.fileNames.filter(file => /^packages\/[^/]+\/[^/]+\/src\//.test(slash(relative(root, file)))),
+    // Oxlint's project-discovery test creates and removes source probes while this program is assembled.
+    ...parsed.fileNames.filter(file => !basename(file).startsWith('oxlint-contract-')
+      && /^packages\/[^/]+\/[^/]+\/src\//.test(slash(relative(root, file)))),
     ...(parsed.projectReferences ?? []).flatMap(reference =>
       hostSourceFiles(root, extname(reference.path) === '.json' ? reference.path : resolve(reference.path, 'tsconfig.json'), seen)),
   ]
