@@ -14,8 +14,8 @@ it('ships install metadata with the built web application', async () => {
   // so only an absent `id`, which defaults to the resolved `start_url`, gives
   // each mount its own identity. `public-mount.e2e.ts` reads the resolved form.
   expect(manifest).toEqual({
-    name: 'DeepSeek Harness',
-    short_name: 'DSH',
+    name: 'Oristrat AI Stem',
+    short_name: 'Oristrat AI',
     start_url: './',
     scope: './',
     display: 'fullscreen',
@@ -34,8 +34,13 @@ it('ships fixed-color favicons selected by document media queries', async () => 
   expect(index).toContain('<link rel="icon" type="image/svg+xml" href="./favicon.svg" media="(prefers-color-scheme: light)" />')
   const light = await readFile(join(DIST_ROOT, 'favicon.svg'), 'utf8')
   const dark = await readFile(join(DIST_ROOT, 'favicon-dark.svg'), 'utf8')
-  expect(light).not.toContain('<style>')
-  expect(light).toContain('fill="#000"')
-  expect(dark).toContain('fill="#fff"')
-  expect(dark.replace('fill="#fff"', 'fill="#000"')).toBe(light)
+  const mark = (await readFile(new URL('../../../packages/client/ui-primitives/src/OristratMark.tsx', import.meta.url), 'utf8'))
+    .match(/data:image\/png;base64,[^']+/u)?.[0]
+  expect(mark).toBeDefined()
+  expect(light).toContain(mark)
+  expect(dark).toContain(mark)
+  expect(light).toContain('fill="#ffffff"')
+  expect(dark).toContain('fill="#20242a"')
+  expect(dark).toContain('<feColorMatrix type="matrix"')
+  expect(dark).toContain('filter="url(#white)"')
 })

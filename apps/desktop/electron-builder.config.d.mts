@@ -23,6 +23,7 @@ export interface DesktopElectronBuilderConfig {
     { readonly from: string, readonly to: 'icon.png' },
   ]
   readonly mac: {
+    readonly icon: string
     readonly extendInfo: { readonly NSMicrophoneUsageDescription: string }
     readonly identity: string | undefined
     readonly forceCodeSigning: boolean
@@ -34,6 +35,7 @@ export interface DesktopElectronBuilderConfig {
     readonly writeUpdateInfo: boolean
   }
   readonly win: {
+    readonly icon: string
     readonly forceCodeSigning: boolean
     readonly signtoolOptions: {
       readonly publisherName: string | undefined

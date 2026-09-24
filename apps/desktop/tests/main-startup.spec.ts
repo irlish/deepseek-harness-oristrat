@@ -403,6 +403,18 @@ describe('desktop main startup', () => {
     expect((await handler(new Request('dsh-app://unknown/update-dialog.html'))).status).toBe(404)
   })
 
+  it('serves both Oristrat theme favicons from the packaged Web client', async () => {
+    await readyForUpdate()
+    const { serveWebDocument, forwardWebRequest } = await import('../src/web-document.ts')
+    const handler = harness.protocolHandle.mock.calls[0]![1]
+    for (const file of ['favicon.svg', 'favicon-dark.svg', 'manifest.webmanifest']) {
+      const request = new Request(`dsh-app://app/${file}`)
+      await handler(request)
+      expect(serveWebDocument).toHaveBeenLastCalledWith(request, expect.stringContaining('dsh-web-frontend'))
+    }
+    expect(forwardWebRequest).not.toHaveBeenCalled()
+  })
+
   it('installs hidden native DevTools shortcuts in the macOS application menu', async () => {
     vi.stubGlobal('process', { ...process, platform: 'darwin' })
     await readyForUpdate()
