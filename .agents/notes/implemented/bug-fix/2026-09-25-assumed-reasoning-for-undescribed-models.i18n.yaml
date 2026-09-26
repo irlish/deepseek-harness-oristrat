@@ -1,0 +1,22 @@
+# Bilingual-pair consistency record for 2026-09-25-assumed-reasoning-for-undescribed-models.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write .agents/notes/implemented/bug-fix/2026-09-25-assumed-reasoning-for-undescribed-models.md
+/agent-note-assumed-reasoning-for-models-nothing-describes:
+  en: 8bab1c3d3fd24a5e
+  zh: 476f5f3dd6c14cd6
+/agent-note-assumed-reasoning-for-models-nothing-describes/problem:
+  en: 575137496b36e209
+  zh: 282d367823b57739
+/agent-note-assumed-reasoning-for-models-nothing-describes/decision:
+  en: 972186c35da1443a
+  zh: ea6ecf4a0b0524ba
+/agent-note-assumed-reasoning-for-models-nothing-describes/alternatives-considered:
+  en: 324187d55d768744
+  zh: ddc21ddf8550a220
+/agent-note-assumed-reasoning-for-models-nothing-describes/consequences:
+  en: c62d494880131589
+  zh: 11637831d935c553
+/agent-note-assumed-reasoning-for-models-nothing-describes/testing:
+  en: 575017f666207e16
+  zh: cb27e094f536e7cf

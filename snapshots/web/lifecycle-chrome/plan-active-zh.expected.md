@@ -9,6 +9,8 @@
 - button "视图选项"
 - button "添加工作区"
 - tree "会话":
+  - treeitem "最近会话" [expanded]
+  - text: 未关联工作区的会话会显示在这里
   - treeitem "workspace" [expanded]
   - treeitem "新会话" [selected]
 - button "设置"

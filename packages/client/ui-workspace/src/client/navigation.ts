@@ -43,6 +43,16 @@ export interface UiWorkspace {
    */
   openWorkspace(workspaceId: WorkspaceId, beforeOpen?: (sessionId: SessionId) => void): Promise<void>
   /**
+   * Connect the bucket of Sessions outside every Workspace (Recent Sessions)
+   * and open its blank Session unless a later navigation supersedes it.
+   * @param beforeOpen - optional synchronous preparation for the selected Session,
+   * skipped after supersession; a throw aborts the open and releases the retained reference.
+   * @returns completion; a superseded request may create a Session but does not open it.
+   * @throws on failure; a refused creation is also shown through the Workspace
+   * notice unless a later navigation or disposal superseded the request.
+   */
+  openUnassigned(beforeOpen?: (sessionId: SessionId) => void): Promise<void>
+  /**
    * Fork a Session without changing the current selection.
    * @param sessionId - source Session.
    * @returns completion after child creation and inherited-title increment.
@@ -57,7 +67,8 @@ export interface UiWorkspace {
   /**
    * Start a New Session flow and navigate to its Session; a creation the Host
    * refuses is shown through the Workspace notice and leaves the selection as it was.
-   * @param workspaceId - explicit target; absent inherits the current or most recent Workspace.
+   * @param workspaceId - explicit target; absent inherits the current or most
+   * recent Workspace, or opens the Recent Sessions bucket when neither exists.
    */
   startSession(workspaceId?: WorkspaceId): void
   /**
@@ -125,6 +136,7 @@ export class DirectoryBrowseError extends Error {
 /** Implements Workspace archive and directory UI operations. */
 class UiWorkspaceService extends Service implements UiWorkspace {
   private readonly connecting = new Map<WorkspaceId, Promise<SessionId>>()
+  private connectingUnassigned: Promise<SessionId> | undefined
   private readonly lifetime = new AbortController()
   private readonly selection = createSnapshotStore<MainSelection>(
     {}, { persist: { name: 'dsh.sessions.current' } },
@@ -182,17 +194,54 @@ class UiWorkspaceService extends Service implements UiWorkspace {
       const summary = sessions.byId[id]
       if (summary === undefined || !summary.blank || summary.cwd !== workspace.path
         || !workspace.sessionIds.includes(id) || archived.includes(id)) continue
-      return this.reuseBlank(workspace.workspaceId, id)
+      return this.adoptBlank(id, { workspaceId: workspace.workspaceId })
     }
     return this.sessions.create({ workspaceId: workspace.workspaceId })
   }
 
-  private async reuseBlank(workspaceId: WorkspaceId, sessionId: SessionId): Promise<SessionId> {
+  /**
+   * Resolve the reusable or newly created blank Session outside every
+   * Workspace. A creation without a target directory lands the Session on the
+   * Host `defaultCwd`, which is the field the Recent Sessions bucket reads.
+   * @returns completion with a Session already addressable through the Session Controller.
+   */
+  private connectUnassigned(): Promise<SessionId> {
+    const inflight = this.connectingUnassigned
+    if (inflight !== undefined) return inflight
+    const attempt = this.reuseOrCreateUnassigned()
+      .finally(() => { this.connectingUnassigned = undefined })
+    this.connectingUnassigned = attempt
+    return attempt
+  }
+
+  private reuseOrCreateUnassigned(): Promise<SessionId> {
+    const { items, archivedSessionIds } = this.workspaces.list.getSnapshot()
+    const assigned = new Set(items.flatMap(item => [...item.sessionIds]))
+    const sessions = this.sessions.list.getSnapshot()
+    for (const id of sessions.ids) {
+      const summary = sessions.byId[id]
+      // An unassigned blank may belong to another window's loose Session, so
+      // adoption carries the same writer-held retry as a Workspace blank.
+      if (summary === undefined || !summary.blank || assigned.has(id)
+        || archivedSessionIds.includes(id)) continue
+      return this.adoptBlank(id, {})
+    }
+    return this.sessions.create()
+  }
+
+  /**
+   * Adopt one blank Session by re-creating it on the Host, falling back to a
+   * fresh blank when the Host reports the blank held by another writer.
+   * @param sessionId - the blank Session to adopt.
+   * @param target - the adopted Session's Workspace, or an empty target for a Session outside every Workspace.
+   * @returns the addressable Session identity.
+   */
+  private async adoptBlank(sessionId: SessionId, target: { workspaceId?: WorkspaceId }): Promise<SessionId> {
     try {
-      return await this.sessions.create({ workspaceId, sessionId })
+      return await this.sessions.create({ ...target, sessionId })
     } catch (error: unknown) {
       if (sessionCreateErrorOf(error)?.rpcError.code !== 'session/writer-held') throw error
-      return this.sessions.create({ workspaceId })
+      return this.sessions.create(target)
     }
   }
 
@@ -208,6 +257,19 @@ class UiWorkspaceService extends Service implements UiWorkspace {
     } catch (error: unknown) {
       // Reported here, not in connectWorkspace: startup restoration calls that
       // directly and stays console-only.
+      if (!navigation.aborted) this.notify({ kind: 'createFailed', message: creationFailureMessage(error) })
+      throw error
+    }
+    if (navigation.aborted) return
+    this.replaceMain(sessionId, navigation, 'reveal', beforeOpen)
+  }
+
+  async openUnassigned(beforeOpen?: (sessionId: SessionId) => void): Promise<void> {
+    const navigation = AbortSignal.any([this.ctx.layout.beginNavigation(), this.lifetime.signal])
+    let sessionId: SessionId
+    try {
+      sessionId = await this.connectUnassigned()
+    } catch (error: unknown) {
       if (!navigation.aborted) this.notify({ kind: 'createFailed', message: creationFailureMessage(error) })
       throw error
     }
@@ -231,7 +293,12 @@ class UiWorkspaceService extends Service implements UiWorkspace {
       : undefined
     const target = workspaceId ?? currentWorkspaceId ?? recent
     if (target === undefined) {
-      this.clearMain()
+      // New Session with no Workspace to target lands outside every Workspace:
+      // the Recent Sessions bucket gives it a standing home instead of leaving
+      // the session-less view with no visible way forward.
+      void this.openUnassigned().catch(
+        (reason: unknown) => { console.warn('new session failed:', reason) },
+      )
       return
     }
     void this.openWorkspace(target).catch(
@@ -331,7 +398,7 @@ class UiWorkspaceService extends Service implements UiWorkspace {
     let sessionId: SessionId | undefined
     if (summary !== undefined && workspace !== undefined && summary.cwd === workspace.path
       && !workspaces.archivedSessionIds.includes(summary.id)) {
-      sessionId = await this.reuseBlank(workspace.workspaceId, summary.id)
+      sessionId = await this.adoptBlank(summary.id, { workspaceId: workspace.workspaceId })
     }
     let target = workspace?.workspaceId ?? recentWorkspace(workspaces.items, sessions.byId)
     if (target === undefined && workspaces.items.length === 0 && sessions.ids.length === 0) {

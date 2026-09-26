@@ -19,7 +19,7 @@ fork 的产品负责人在一轮内要求四项用户可见能力：
 
 ### 思考等级滑块（F1）
 
-- `apps/desktop/seed/settings.yaml` 为全部十个 glm 模型锚定同一份 `reasoningEfforts`（`low/medium/high/xhigh`），并设置路由 `compat.thinkingFormat: openai`；`settings-thinking-migration.ts` 在启动时对既有 `~/.oristrat/settings.yaml` 幂等地补齐同样事实，保留显式 `false`。
+- `apps/desktop/seed/settings.yaml` 为全部十个 glm 模型锚定同一份 `reasoningEfforts`（`low/medium/high/xhigh`），并设置路由 `compat.thinkingFormat: openai`；`settings-thinking-migration.ts` 在启动时对既有 `~/.oristrat/settings.yaml` 幂等地补齐同样事实，保留显式 `false`。 已安装目录没有描述的模型不再依赖这份 seed 才能得到滑块：路由的 `assumeReasoning` 会为它提供 pi-ai 的默认等级（[推理等级假定](../bug-fix/2026-09-25-assumed-reasoning-for-undescribed-models.zh.md)）。
 - `ModelSelect` 根面板以 `EffortSlider` 取代 effort 二级面板：适配器每公布一个等级一个档位，轨道填充、圆点滑动；未设定时呈空心圆点并标注提供方默认。指针拖动（window 级监听、ref 防陈旧闭包）与键盘（方向键/Home/End，stopPropagation）都经同一 `directory.select` 路径提交；成功提交推理强度后菜单仍按既有 settle 行为关闭。
 
 ### WebSearch MCP（F2）

@@ -121,6 +121,7 @@ interface WorkspaceNavigation {
     workspaceId: Parameters<ConversationInjected['selectWorkspace']>[0],
     beforeOpen: (sessionId: SessionId) => void,
   ): Promise<void>
+  openUnassigned(beforeOpen: (sessionId: SessionId) => void): Promise<void>
 }
 
 /** Action registration used by the composer without importing its command-UI consumer. */
@@ -365,6 +366,7 @@ export function apply(ctx: Context, config: Config = Config({})): void {
           workMode: workModeSource,
         },
         selectWorkspace: workspaceId => workspaceNavigation.openWorkspace(workspaceId, carryDraft),
+        selectUnassigned: () => workspaceNavigation.openUnassigned(carryDraft),
       }
     },
   }, ConversationContent)

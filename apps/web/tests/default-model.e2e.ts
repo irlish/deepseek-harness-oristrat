@@ -170,4 +170,30 @@ describe('web e2e: the composer model switch is the default for later sessions',
     await expect.poll(async () => box.isEnabled(), { timeout: 15_000 }).toBe(true)
     expect(tripwire.pageErrors).toEqual([])
   }, 60_000)
+
+  it('offers the assumed levels for a model the installed catalog does not describe', async () => {
+    onTestFailed(() => saveFailureShot(page, 'web-e2e-default-model-assumed-effort'))
+    const trigger = page.getByRole('button', { name: /^选择模型/ })
+    await trigger.waitFor({ timeout: 15_000 })
+    await trigger.click()
+
+    // Neither route declares reasoningEfforts and the installed catalog has no
+    // entry for either id, so the Host serves the current model with pi-ai's own
+    // defaulting: the composer card carries those five levels — the slider a
+    // model switch must not take away.
+    const slider = page.getByRole('slider')
+    await expect.poll(() => slider.getAttribute('aria-valuemax'), { timeout: 10_000 }).toBe('4')
+    await expect.poll(() => slider.getAttribute('aria-valuetext')).toBe('跟随提供商默认')
+
+    // The highest assumed level is `high`, and committing it is this scenario's
+    // own write: the trailing `End` reaches it with no pane in between.
+    await slider.focus()
+    await page.keyboard.press('End')
+    await expect.poll(() => trigger.getAttribute('aria-label'), { timeout: 10_000 }).toMatch(/，推理等级 高$/)
+    await expect.poll(
+      () => scaffold.ctx.agentDefaultModel.currentSelection().reasoningEffort,
+      { timeout: 10_000 },
+    ).toBe('high')
+    expect(tripwire.pageErrors).toEqual([])
+  }, 60_000)
 })

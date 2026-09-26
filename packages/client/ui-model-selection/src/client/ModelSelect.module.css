@@ -96,7 +96,7 @@
   /* Let the visible pane's rows set the card width, but keep pathological ids
      and narrow screens inside a bounded card where ellipsis remains. */
   width: max-content;
-  min-width: min(240px, calc(100vw - 32px));
+  min-width: min(220px, calc(100vw - 32px));
   max-width: min(420px, calc(100vw - 32px));
   max-height: min(360px, calc(100vh - 96px));
   overflow: hidden;
@@ -287,58 +287,42 @@
 
 .effortBlock {
   box-sizing: border-box;
-  width: min(360px, calc(100vw - 32px));
-  padding: 16px 18px 18px;
+  width: min(224px, calc(100vw - 32px));
+  padding: 7px 10px 9px;
 }
 
 .effortHead {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  margin-bottom: 22px;
+  flex-direction: row;
+  align-items: baseline;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 7px;
 }
 
 .effortCaption {
-  font-size: 12px;
-  line-height: 18px;
+  font-size: 11px;
+  line-height: 16px;
   color: var(--dsw-alias-label-caption);
 }
 
 .effortValue {
   color: var(--dsw-static-blue-600, #2563eb);
-  font-size: 16px;
-  line-height: 23px;
-  font-weight: 500;
-}
-
-.effortModel {
-  max-width: 100%;
-  overflow: hidden;
-  color: var(--dsw-alias-label-secondary);
   font-size: 13px;
-  line-height: 19px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.effortHint {
-  margin-top: 15px;
-  color: var(--dsw-static-blue-600, #2563eb);
-  font-size: 12px;
   line-height: 18px;
-  text-align: center;
+  font-weight: 500;
 }
 
 .slider {
   position: relative;
-  height: 38px;
+  height: 22px;
   border: 0.5px solid var(--dsw-alias-border-l2);
   border-radius: 999px;
   corner-shape: round;
   background: var(--dsw-alias-interactive-bg-hover);
   cursor: pointer;
   touch-action: none;
+  user-select: none;
   outline-offset: 2px;
 }
 
@@ -360,14 +344,23 @@
   transition: width 220ms cubic-bezier(0.22, 0.9, 0.26, 1);
 }
 
+/* The highest stop has no track left behind the knob: the pill reads as one
+   filled control, and the gradient's sparkles run under the knob to the end. */
 .slider[data-highest='true'] .sliderFill {
+  width: 100%;
   background: linear-gradient(100deg, var(--dsw-static-blue-600, #2563eb), #a460f9 72%, #b366ff);
+}
+
+/* Following the provider default fills nothing: the hollow knob parks on the
+   first stop of an empty track. */
+.slider[data-unset='true'] .sliderFill {
+  width: 0;
 }
 
 .slider[data-highest='true']::after {
   content: '';
   position: absolute;
-  inset: 2px 19px 2px 4px;
+  inset: 2px 3px;
   border-radius: inherit;
   background-image:
     radial-gradient(circle at 8% 43%, #fff 0 2px, transparent 2.5px),
@@ -389,8 +382,8 @@
   position: absolute;
   top: 50%;
   z-index: 1;
-  width: 6px;
-  height: 6px;
+  width: 3px;
+  height: 3px;
   border-radius: 50%;
   corner-shape: round;
   background: var(--dsw-alias-label-dimmed);
@@ -407,12 +400,12 @@
   top: 50%;
   left: var(--effort-pos);
   z-index: 2;
-  width: 38px;
-  height: 38px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
   corner-shape: round;
   background: #fff;
-  box-shadow: 0 1px 4px rgb(0 0 0 / 16%), 0 0 0 1px var(--dsw-alias-border-l2);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 22%);
   transform: translate(-50%, -50%);
   transition: left 220ms cubic-bezier(0.22, 0.9, 0.26, 1);
 }

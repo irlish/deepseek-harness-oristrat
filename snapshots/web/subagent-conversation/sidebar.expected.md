@@ -1,3 +1,5 @@
 - tree "Sessions":
+  - treeitem "Recent Sessions" [expanded]
+  - text: Sessions without a workspace appear here
   - treeitem "workspace" [expanded]
   - treeitem "Ask a research subagent to now"

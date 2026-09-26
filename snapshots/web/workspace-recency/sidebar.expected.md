@@ -1,4 +1,6 @@
 - tree "Sessions":
+  - treeitem "Recent Sessions" [expanded]
+  - text: Sessions without a workspace appear here
   - treeitem "{{workspace}}" [expanded]
   - treeitem "Newest conversation now" [selected]
   - treeitem "Middle conversation 1min"

@@ -599,10 +599,11 @@ export interface PiAiModelProfile {
   input?: PiAiModality[]
   /**
    * Selectable reasoning efforts. Absent inherits the installed catalog
-   * entry's capability (a hand-declared model has none and does not reason);
-   * `false` declares a non-reasoning model, which is how a profile strips
-   * reasoning from a catalog model its gateway cannot serve; a non-empty dict
-   * declares the offered levels and their wire spellings.
+   * entry's capability, and — for a model the catalog does not describe —
+   * keeps the route's `assumeReasoning`; `false` declares a non-reasoning
+   * model, which is how a profile strips reasoning from a catalog model its
+   * gateway cannot serve; a non-empty dict declares the offered levels and
+   * their wire spellings.
    */
   reasoningEfforts?: false | PiAiReasoningEfforts
   /** pi-ai wire-compatibility switches for this model, winning over the route's per field; one its protocol does not declare is refused. */
@@ -638,6 +639,8 @@ export interface RouteCatalogRequest {
   defaultMaxTokens: number
   /** Modalities for a model neither the entry nor the catalog declares. */
   defaultInput: Model<Api>['input']
+  /** Whether a model neither the entry nor the catalog describes is served as a reasoning model. */
+  assumeReasoning: boolean
 }
 
 /** An expected configuration failure that stored-catalog reads may retain for repair. */
@@ -685,21 +688,24 @@ interface ModelReasoning {
  * @param provider - provider route key, for diagnostics.
  * @param entry - the configured model entry.
  * @param base - the installed catalog entry of the same id, when one exists.
+ * @param assumeReasoning - the route's answer for a model the catalog does not describe.
  * @returns the reasoning fields the materialized model carries.
  */
 function resolveModelReasoning(
   provider: string,
   entry: PiAiModelProfile,
   base: Model<Api> | undefined,
+  assumeReasoning: boolean,
 ): ModelReasoning {
   const efforts = entry.reasoningEfforts
   if (efforts === undefined) {
-    // Reasoning rides the installed entry or is absent: a bare capability flag
-    // would make pi-ai advertise effort levels with no `thinkingLevelMap` to
-    // spell them, and no listing endpoint reports a model's reasoning
-    // protocol. The entry's map (when any) arrives through the `...base`
-    // spread in the model literal.
-    return { reasoning: base?.reasoning ?? false }
+    // Reasoning rides the installed entry, or the route's assumption for a
+    // model the catalog does not describe. Neither path synthesizes a map: the
+    // installed entry's own arrives through the `...base` spread in the model
+    // literal, and a model left without one keeps pi-ai's defaulting — the
+    // five base levels supported, `xhigh` and `max` not — which is the
+    // protocol's standard offer for a model nothing reports levels for.
+    return { reasoning: base?.reasoning ?? assumeReasoning }
   }
   // The installed entry's map may ride along through `...base`; pi-ai never
   // reads it on a non-reasoning model, so stripping it is not worth a field
@@ -925,7 +931,7 @@ export function resolveRouteModels(
       cost: base?.cost ?? NO_COST,
       contextWindow,
       maxTokens,
-      ...resolveModelReasoning(provider, entry, base),
+      ...resolveModelReasoning(provider, entry, base, request.assumeReasoning),
       ...resolveModelCompat(provider, entry, request.compat, base, api),
     }
   }

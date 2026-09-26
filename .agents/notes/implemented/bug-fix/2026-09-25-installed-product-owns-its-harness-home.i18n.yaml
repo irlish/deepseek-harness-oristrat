@@ -1,0 +1,22 @@
+# Bilingual-pair consistency record for 2026-09-25-installed-product-owns-its-harness-home.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write .agents/notes/implemented/bug-fix/2026-09-25-installed-product-owns-its-harness-home.md
+/agent-note-the-installed-product-owns-its-harness-home-and-provider-set:
+  en: a3ebc0738e804ab9
+  zh: 98a81e450191427d
+/agent-note-the-installed-product-owns-its-harness-home-and-provider-set/problem:
+  en: 386c6c0baa0fbdaa
+  zh: db7e754115854137
+/agent-note-the-installed-product-owns-its-harness-home-and-provider-set/decision:
+  en: d0375dda90791d93
+  zh: 7eb5cfd0c105c904
+/agent-note-the-installed-product-owns-its-harness-home-and-provider-set/alternatives-considered:
+  en: 7ecdcab2fd6801e1
+  zh: 752faca7ccba70f2
+/agent-note-the-installed-product-owns-its-harness-home-and-provider-set/consequences:
+  en: 3facd091ca51d4a8
+  zh: bc8e9494689cae7a
+/agent-note-the-installed-product-owns-its-harness-home-and-provider-set/testing:
+  en: 748953dc3e9d379a
+  zh: 301a47067a3485ad

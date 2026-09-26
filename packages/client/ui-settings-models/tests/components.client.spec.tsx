@@ -295,6 +295,7 @@ async function mountFace(scripted: ReturnType<typeof scriptedFace>) {
     useSnapshot: bindSnapshotSelector(controller.store),
     operations: operationsWith(face),
     schema: settingsSchema,
+    providerEditing: true,
     t,
     renderSlot: renderSlot as unknown as ModelsSectionProps['renderSlot'],
   }
@@ -331,6 +332,27 @@ async function mountDeepSeekCard(overrides: Parameters<typeof scriptedFace>[0] =
 }
 
 describe('ModelsSection', () => {
+  it('keeps the shipped provider readable while the page offers no provider editing', async () => {
+    const scripted = scriptedFace()
+    const ctx = ctxWith(scripted.face)
+    const controller = new ModelsSettingsStore(ctx, settingsSchema, new SettingsDescribeMirror(ctx))
+    await controller.load()
+    render(<ModelsSection
+      controller={controller}
+      useSnapshot={bindSnapshotSelector(controller.store)}
+      operations={operationsWith(scripted.face)}
+      schema={settingsSchema}
+      providerEditing={false}
+      t={t}
+      renderSlot={() => null}
+    />)
+    // The fixed provider stays visible and usable, without add or remove.
+    expect(screen.getByText('openai')).toBeTruthy()
+    expect(screen.getByRole('button', { name: openaiCopy(en.editProvider) })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: en.add })).toBeNull()
+    expect(screen.queryByRole('button', { name: openaiCopy(en.removeProvider) })).toBeNull()
+  })
+
   it('hides the add action when no settings namespace can open an editor', async () => {
     const scripted = scriptedFace()
     scripted.face.settings.describe.mockResolvedValue(remoteOk({ writable: true, hasDocument: false, namespaces: [] }))
@@ -486,6 +508,7 @@ describe('ModelsSection', () => {
       useSnapshot={bindSnapshotSelector(controller.store)}
       operations={operationsWith(face)}
       schema={settingsSchema}
+      providerEditing
       t={t}
       renderSlot={() => null}
     />)
@@ -511,6 +534,7 @@ describe('ModelsSection', () => {
       useSnapshot={bindSnapshotSelector(controller.store)}
       operations={operationsWith(face)}
       schema={settingsSchema}
+      providerEditing
       t={t}
       renderSlot={() => null}
     />)
@@ -1309,6 +1333,7 @@ describe('ModelsSection', () => {
       useSnapshot={bindSnapshotSelector(controller.store)}
       operations={operationsWith(face)}
       schema={settingsSchema}
+      providerEditing
       t={t}
       renderSlot={() => null}
     />)
@@ -1445,6 +1470,7 @@ describe('ModelsSection', () => {
       schema={settingsSchema}
       t={t}
       renderSlot={() => null}
+      providerEditing
     />)
     expect(screen.getByText(/directory down/)).toBeTruthy()
     fireEvent.click(screen.getByText(en.retry))
@@ -1466,6 +1492,7 @@ describe('ModelsSection', () => {
       useSnapshot={bindSnapshotSelector(controller.store)}
       operations={operationsWith(face)}
       schema={settingsSchema}
+      providerEditing
       t={t}
       renderSlot={() => null}
     />)
@@ -1775,6 +1802,7 @@ describe('ModelsSection', () => {
       useSnapshot={bindSnapshotSelector(controller.store)}
       operations={operationsWith(face)}
       schema={settingsSchema}
+      providerEditing
       t={t}
       renderSlot={() => null}
     />)

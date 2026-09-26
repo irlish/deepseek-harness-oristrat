@@ -79,6 +79,8 @@ export function apply(ctx: ClientContext): void {
   const payload = page[ONBOARDING_CONFIG_GLOBAL]
   const configured = Config(payload === undefined ? {} : payload)
   const credentialOnboarding = configured.credentialOnboarding && !('dshDesktop' in globalThis)
+  // The desktop product ships its provider set, so its Models page neither adds nor removes one.
+  const providerEditing = configured.providerEditing && !('dshDesktop' in globalThis)
   ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'ui-settings-models: copy dictionaries')
 
   const schema = createSettingsSchemaOperations(ctx.settingsSchema)
@@ -94,6 +96,7 @@ export function apply(ctx: ClientContext): void {
     hooks: { snapshot: controller.store },
     operations,
     schema,
+    providerEditing,
     t,
   })
   const deepSeekOnboardingInjected = (): DeepSeekOnboardingInjected => ({

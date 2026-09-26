@@ -1,0 +1,22 @@
+# Bilingual-pair consistency record for 2026-09-25-desktop-legacy-profile-link-migration.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write .agents/notes/implemented/bug-fix/2026-09-25-desktop-legacy-profile-link-migration.md
+/agent-note-migrate-the-desktop-profile-links-an-earlier-oristrat-release-projected:
+  en: b1ec147c2fb9f16b
+  zh: f3e5bce94dc93d22
+/agent-note-migrate-the-desktop-profile-links-an-earlier-oristrat-release-projected/problem:
+  en: 9a882f18eabfa11e
+  zh: fe67c00217a2e5f1
+/agent-note-migrate-the-desktop-profile-links-an-earlier-oristrat-release-projected/decision:
+  en: 1ad86bd428caaa66
+  zh: 5fb8a5eecea8eb62
+/agent-note-migrate-the-desktop-profile-links-an-earlier-oristrat-release-projected/alternatives-considered:
+  en: e9568c08daa0606a
+  zh: 832ccc3634a4730f
+/agent-note-migrate-the-desktop-profile-links-an-earlier-oristrat-release-projected/consequences:
+  en: f34f2ec3d11786fb
+  zh: f79e0933b66dacdc
+/agent-note-migrate-the-desktop-profile-links-an-earlier-oristrat-release-projected/testing:
+  en: b87eb6463a14f9fd
+  zh: bf03511e698761cd

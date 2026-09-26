@@ -61,6 +61,7 @@ async function bench() {
     get: () => stubConfigForm().scope,
   } as never)
   const connectWorkspace = vi.fn(async () => ROOT)
+  const connectUnassigned = vi.fn(async () => ROOT)
   const references = new Map<SessionId, SessionReference>()
   const opened = vi.fn<(id: SessionId) => void>()
   let mainReference: SessionReference | undefined
@@ -80,6 +81,10 @@ async function bench() {
   runtime.ctx.provide('uiWorkspace', {
     openWorkspace: async (_workspaceId: WorkspaceId, beforeOpen: (id: SessionId) => void) => {
       const id = await connectWorkspace()
+      replaceMain(id, beforeOpen)
+    },
+    openUnassigned: async (beforeOpen: (id: SessionId) => void) => {
+      const id = await connectUnassigned()
       replaceMain(id, beforeOpen)
     },
     openSession,
@@ -139,7 +144,8 @@ async function bench() {
     conversationApi(id).injected.hooks.conversationViews
   return {
     runtime, feature, slots: runtime.slots, entryOf, conversationApi, headerApi, residentApi, composerApi,
-    inputApi, viewSource, sessionFake, connectWorkspace, rootUpload, uploads, rootReference, references, opened,
+    inputApi, viewSource, sessionFake, connectWorkspace, connectUnassigned,
+    rootUpload, uploads, rootReference, references, opened,
   }
 }
 
@@ -555,6 +561,28 @@ describe('Conversation inject API', () => {
     await expect(b.residentApi(ROOT).selectWorkspace('workspace-4' as WorkspaceId))
       .rejects.toThrow('offline')
     expect(b.opened).toHaveBeenCalledTimes(opens)
+    await b.runtime.dispose()
+  })
+
+  it('carries the draft through unassigned navigation and reports its failure', async () => {
+    const b = await bench()
+    const resident = b.residentApi(ROOT)
+    const { state, actions } = b.inputApi(ROOT)
+    actions.setDraft('carry me unassigned')
+
+    // A refused unassigned connection leaves the current Session and its draft alone.
+    b.connectUnassigned.mockRejectedValueOnce(new Error('offline'))
+    await expect(resident.selectUnassigned()).rejects.toThrow('offline')
+    expect(b.opened).not.toHaveBeenCalled()
+    expect(state.getSnapshot().draft).toBe('carry me unassigned')
+
+    const other = 'other-2' as SessionId
+    await b.runtime.sessions.add({ id: other, session: {} })
+    b.connectUnassigned.mockResolvedValueOnce(other)
+    await resident.selectUnassigned()
+    expect(b.opened).toHaveBeenCalledExactlyOnceWith(other)
+    expect(state.getSnapshot().draft).toBe('')
+    expect(b.inputApi(other).state.getSnapshot().draft).toBe('carry me unassigned')
     await b.runtime.dispose()
   })
 

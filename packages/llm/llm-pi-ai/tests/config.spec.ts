@@ -41,6 +41,16 @@ describe('reasoning schema boundary', () => {
     expect(absent.providers['acme-gateway']?.models?.[0]?.reasoningEfforts).toBeUndefined()
   })
 
+  it('materializes the route assumption a route left unsaid', () => {
+    type Materialized = { providers: Record<string, { assumeReasoning?: unknown }> }
+    // The assumption answers for a model nothing describes, and a route that
+    // says nothing serves one: the schema's default is what makes it answer.
+    expect((routeWith({})() as Materialized).providers['acme-gateway']?.assumeReasoning).toBe(true)
+    expect((routeWith({ assumeReasoning: false })() as Materialized).providers['acme-gateway']?.assumeReasoning)
+      .toBe(false)
+    expect(routeWith({ assumeReasoning: 'yes' })).toThrow(/expected/)
+  })
+
   it('rejects a thinking format outside the offered set', () => {
     expect(configWith({ compat: { thinkingFormat: 'quantum' } })).toThrow(/expected/)
   })

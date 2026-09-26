@@ -330,8 +330,14 @@ function SessionTree({
   }, [currentGroup, parents])
   const expandedGroups = useMemo(() => {
     const ancestorKeys = new Set<string | undefined>(parents.values())
-    return [...workspaces.map(workspace => workspace.workspaceId), UNGROUPED_KEY]
+    const explicit = [...workspaces.map(workspace => workspace.workspaceId), UNGROUPED_KEY]
       .filter(key => groupExpansion[key] ?? ancestorKeys.has(key))
+    // The Recent Sessions column defaults open — it is the standing home for
+    // Sessions outside every Workspace — until the user collapses it, which
+    // records an own key in the persisted expansion map.
+    return Object.hasOwn(groupExpansion, UNGROUPED_KEY) || explicit.includes(UNGROUPED_KEY)
+      ? explicit
+      : [...explicit, UNGROUPED_KEY]
   }, [groupExpansion, parents, workspaces])
   const groups = useMemo(
     () => deriveGroups(list, workspaces, rowState, statuses, {
@@ -407,8 +413,11 @@ function SessionTree({
     return children
   }, [groups, parents])
   const rootGroups = childrenByParent.get(undefined) ?? []
-  const workspaceDropAtListStart = rootGroups[0]?.workspaceId !== undefined
-    && workspaceDrag?.over?.id === rootGroups[0].workspaceId
+  // The Recent Sessions column leads every Workspace, so "top of the Workspace
+  // list" anchors on the first real-workspace root group.
+  const firstWorkspaceGroup = rootGroups.find(group => group.workspaceId !== undefined)
+  const workspaceDropAtListStart = firstWorkspaceGroup?.workspaceId !== undefined
+    && workspaceDrag?.over?.id === firstWorkspaceGroup.workspaceId
     && workspaceDrag.over.half === 'before'
 
   const rowKeys: string[] = groups.length === 0 ? ['empty'] : []
@@ -506,10 +515,11 @@ function SessionTree({
             setGroupExpanded(group.key, !group.expanded)
           }}
           onCreate={() => {
-            if (group.workspaceId !== undefined) {
-              setGroupExpanded(group.key, true)
-              startSession(group.workspaceId)
-            }
+            setGroupExpanded(group.key, true)
+            // The Recent Sessions column starts the workspace-less New Session
+            // flow, which lands on the Host default directory.
+            if (group.workspaceId !== undefined) startSession(group.workspaceId)
+            else startSession()
           }}
           drag={workspaceDragProps}
           actions={group.workspaceId === undefined
@@ -529,6 +539,9 @@ function SessionTree({
           <div role="group">
             {childRows}
           </div>
+        )}
+        {group.key === UNGROUPED_KEY && group.expanded && group.sessionCount === 0 && (
+          <div className={css.empty}>{t('empty.unassigned')}</div>
         )}
         {sessions.map((node) => {
         // Session drag never leaves its browser-local account, and pinned

@@ -106,19 +106,38 @@ describe('hand-declared providers', () => {
     })
   })
 
-  it('offers no reasoning control it could not honour', async () => {
+  it('assumes reasoning for a model nothing describes, and offers no control it could not honour', async () => {
     const server = await mockServer([])
     const ctx = await harness(gateway(`${server.url}/v1`))
 
-    // pi-ai reports a model with no reasoning metadata as supporting the single
-    // level `off`, but `off` is translated to *omitting* the reasoning option —
-    // byte-for-byte the same request as naming no effort — so a provider whose
-    // own default is to think would keep thinking with `off` selected. The
-    // capability is reported unavailable instead of offering that control.
-    expect((await ctx.llm.resolveModelInfo('acme-gateway', 'acme-large')).reasoning).toBeUndefined()
+    // A hand-declared route's listing reports ids and capacities, never which
+    // levels a model reasons at, so `assumeReasoning` (on by default) answers
+    // for a model neither the entry nor the catalog describes: pi-ai's own
+    // defaulting offers the five base levels and leaves `xhigh`/`max` out.
+    await expect(ctx.llm.resolveModelInfo('acme-gateway', 'acme-large')).resolves.toMatchObject({
+      reasoning: {
+        efforts: ['off', 'minimal', 'low', 'medium', 'high']
+          .map(id => ({ id: ReasoningEffortId(id) })),
+      },
+    })
 
-    // A catalog route is unaffected: its models carry the metadata that makes
-    // `off` actually disable thinking.
+    // Declaring the model non-reasoning offers nothing. pi-ai reports such a
+    // model as supporting the single level `off`, but `off` is translated to
+    // *omitting* the reasoning option — byte-for-byte the same request as
+    // naming no effort — so a provider whose own default is to think would
+    // keep thinking with `off` selected. The capability is reported
+    // unavailable instead of offering that control.
+    const plain = await harness(gateway(`${server.url}/v1`, {
+      models: [{ id: 'acme-plain', name: 'Acme Plain', reasoningEfforts: false }],
+    }))
+    expect((await plain.llm.resolveModelInfo('acme-gateway', 'acme-plain')).reasoning).toBeUndefined()
+
+    // A route may refuse the offer for every model it lists.
+    const strict = await harness(gateway(`${server.url}/v1`, { assumeReasoning: false }))
+    expect((await strict.llm.resolveModelInfo('acme-gateway', 'acme-large')).reasoning).toBeUndefined()
+
+    // A catalog route is unaffected either way: its models carry the metadata
+    // that makes `off` actually disable thinking.
     const withCatalog = await harness({ providers: { deepseek: { baseURL: server.url } } })
     const [catalogModel] = getBuiltinModels('deepseek')
     if (catalogModel === undefined) throw new Error('the installed catalog ships no deepseek model')
@@ -706,6 +725,34 @@ describe('per-model reasoning efforts', () => {
 
     expect(model.reasoning).toBe(catalogModel.reasoning)
     expect(model.thinkingLevelMap).toEqual(catalogModel.thinkingLevelMap)
+  })
+
+  it('assumes the standard levels for a model the catalog does not describe', () => {
+    const model = modelOf(declared([{ id: 'acme-unknown' }]))
+
+    expect(model.reasoning).toBe(true)
+    // Nothing is synthesized into the map: the installed entry's own arrives
+    // through the spread, and a model with none keeps pi-ai's defaulting — the
+    // five base levels, with `xhigh` and `max` refused for want of a spelling.
+    expect(model.thinkingLevelMap).toBeUndefined()
+    expect(getSupportedThinkingLevels(model)).toEqual(['off', 'minimal', 'low', 'medium', 'high'])
+  })
+
+  it('refuses the assumed offer on the route or on one model entry', () => {
+    const route = modelOf({
+      'acme-gateway': {
+        api: 'openai-completions',
+        baseURL: 'https://acme.test',
+        assumeReasoning: false,
+        models: [{ id: 'acme-unknown' }],
+      },
+    })
+    expect(route.reasoning).toBe(false)
+    expect(getSupportedThinkingLevels(route)).toEqual(['off'])
+
+    const entry = modelOf(declared([{ id: 'acme-unknown', reasoningEfforts: false }]))
+    expect(entry.reasoning).toBe(false)
+    expect(getSupportedThinkingLevels(entry)).toEqual(['off'])
   })
 
   it('rejects a declaration that offers nothing or spells a level it cannot send', () => {

@@ -19,7 +19,7 @@ The fork's product owner asked for four user-visible capabilities in one round:
 
 ### Thinking-level slider (F1)
 
-- `apps/desktop/seed/settings.yaml` anchors one `reasoningEfforts` map (`low/medium/high/xhigh`) for all ten glm models and sets route `compat.thinkingFormat: openai`; `settings-thinking-migration.ts` applies the same facts to an existing `~/.oristrat/settings.yaml` idempotently at startup, preserving an explicit `false`.
+- `apps/desktop/seed/settings.yaml` anchors one `reasoningEfforts` map (`low/medium/high/xhigh`) for all ten glm models and sets route `compat.thinkingFormat: openai`; `settings-thinking-migration.ts` applies the same facts to an existing `~/.oristrat/settings.yaml` idempotently at startup, preserving an explicit `false`. A model the installed catalog does not describe no longer depends on this seed to reach the slider: the route's `assumeReasoning` serves it pi-ai's default levels ([assumed reasoning](../bug-fix/2026-09-25-assumed-reasoning-for-undescribed-models.md)).
 - `ModelSelect`'s root pane replaces the effort drill-in with `EffortSlider`: one stop per adapter-advertised level, filled track and gliding knob, hollow knob plus a provider-default caption while unset. Pointer drag (window-level listeners, refs against stale closures) and keyboard (arrows/Home/End, stopPropagation) commit through the same `directory.select` path; a successful effort commit still closes the menu via the existing settle behavior.
 
 ### WebSearch MCP (F2)

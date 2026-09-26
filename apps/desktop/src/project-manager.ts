@@ -23,6 +23,7 @@ import type { DesktopPaths } from './paths.ts'
 import type { DesktopRelease } from './release.ts'
 import { readDesktopRuntime } from './runtime-tree.ts'
 import { migrateOristratGatewayCompat } from './profile-compat-migration.ts'
+import { migrateDesktopProfileLinks } from './profile-packages.ts'
 import { migrateOristratThinkingLevels } from './settings-thinking-migration.ts'
 import {
   initProfile, PROFILE_TEMPLATES, removeLinkProjections, sanitizeProfile, type ProfileTemplate,
@@ -81,6 +82,8 @@ export class DesktopProjectManager {
 
   /**
    * Load application metadata and prepare the external plugin profile without installing packages.
+   * Releases before 0.1.7 linked bundle-carried packages into the profile, where they shadow the
+   * runtime bundled with the application; both link-era migrations run before the Host starts.
    */
   async applyRelease(): Promise<void> {
     await this.withLock(async () => {
@@ -90,6 +93,7 @@ export class DesktopProjectManager {
       createPluginProfile(this.paths.profile)
       await migrateOristratThinkingLevels(this.paths.home)
       await migrateOristratGatewayCompat(this.paths.profile)
+      migrateDesktopProfileLinks(this.paths.profile)
       removeLinkProjections(this.paths.profile)
     })
   }

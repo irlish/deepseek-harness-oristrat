@@ -3,6 +3,18 @@
     - text: DeepSeek
     - menuitemradio "DeepSeek-V4-Flash"
     - menuitemradio "DeepSeek-V4-Flash-Vision-Exp"
+  - group "Oristrat - official":
+    - text: Oristrat - official
+    - menuitemradio "GLM-4.5"
+    - menuitemradio "GLM-4.5-Air"
+    - menuitemradio "GLM-4.6"
+    - menuitemradio "GLM-4.7"
+    - menuitemradio "GLM-5"
+    - menuitemradio "GLM-5-Turbo"
+    - menuitemradio "GLM-5.1"
+    - menuitemradio "GLM-5.2"
+    - menuitemradio "GLM-5.3"
+    - menuitemradio "GLM-5.3-Flash"
   - group "Acme Gateway":
     - text: Acme Gateway
     - menuitemradio "Acme Think"

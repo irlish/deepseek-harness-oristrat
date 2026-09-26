@@ -211,6 +211,7 @@ async function mountSection(options: Parameters<typeof scriptedFace>[0] = {}) {
     useSnapshot: bindSnapshotSelector(controller.store),
     operations: operationsWith(scripted.face),
     schema: settingsSchema,
+    providerEditing: true,
     t,
     renderSlot: () => null,
   }
@@ -830,6 +831,7 @@ describe('provider rows', () => {
       useSnapshot={bindSnapshotSelector(controller.store)}
       operations={operationsWith(scripted.face)}
       schema={settingsSchema}
+      providerEditing
       t={t}
       renderSlot={() => null}
     />)

@@ -1,7 +1,8 @@
 /**
  * Derives the workspace browser tree from caller-projected Workspace and
- * Session order. Unassigned Sessions trail under Ungrouped; only the selected
- * blank Session remains visible.
+ * Session order. The Recent Sessions bucket of Sessions outside every
+ * Workspace leads the tree and keeps its group while its column is empty;
+ * only the selected blank Session remains visible.
  */
 import {
   type SessionListState, type SessionSearchResultItem, type SessionSummary,
@@ -326,9 +327,12 @@ function orderedUngrouped(
 
 /**
  * Group Sessions by Workspace: one group per caller-ordered entity, with
- * members resolved from caller-ordered sessionIds. Sessions outside every
- * Workspace trail in the browser-local Ungrouped order, which falls back to
- * recency before that order is initialized.
+ * members resolved from caller-ordered sessionIds. The bucket of Sessions
+ * outside every Workspace leads the result and keeps its group while its
+ * column is empty, except under the archives-only filter, where an empty
+ * bucket contributes no group; its members follow the browser-local
+ * Ungrouped order, which falls back to recency before that order is
+ * initialized.
  */
 function groupByWorkspace(
   list: SessionListState,
@@ -361,8 +365,13 @@ function groupByWorkspace(
     .map(id => list.byId[id])
     .filter((s): s is SessionSummary =>
       s !== undefined && !accounted.has(s.id) && sessionVisible(s, current, archived, archivedFilter))
-  if (stray.length > 0) {
-    groups.push(buildGroup(
+  // The bucket of Sessions outside every Workspace always renders and leads the
+  // tree: it is their standing home and where a New Session lands when no
+  // Workspace resolves. The archives-only view lists archives rather than that
+  // start surface, so an empty bucket contributes no group there — the same
+  // rule a Workspace group follows.
+  if (archivedFilter !== 'only' || stray.length > 0) {
+    groups.unshift(buildGroup(
       UNGROUPED_KEY,
       undefined,
       undefined,

@@ -4,8 +4,9 @@ import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 
 import type { IpcMainInvokeEvent } from 'electron'
 import { join } from 'node:path'
 import { mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs'
-import { tmpdir } from 'node:os'
+import { homedir, tmpdir } from 'node:os'
 import type { MenuItemConstructorOptions, MessageBoxOptions } from 'electron'
+import { resolveProductHome } from '../src/paths.ts'
 import { DESKTOP_IPC, type DesktopUpdateState } from '../src/ipc.ts'
 import { MANDATORY_IPC } from '../src/mandatory-update-ipc.ts'
 import { DesktopHostFatalError, DesktopHostUncleanExitError } from '../src/host-process.ts'
@@ -300,7 +301,10 @@ vi.mock('node:fs/promises', async (importOriginal) => {
   }) }
 })
 vi.mock('../src/runtime-tree.ts', () => ({ readDesktopRuntime: () => ({ release: { version: '1.0.0' } }) }))
-vi.mock('../src/paths.ts', () => ({ resolveDesktopPaths: () => ({ profile: 'desktop-test-profile' }) }))
+vi.mock('../src/paths.ts', async importOriginal => ({
+  ...await importOriginal<typeof import('../src/paths.ts')>(),
+  resolveDesktopPaths: () => ({ profile: 'desktop-test-profile' }),
+}))
 vi.mock('../src/project-manager.ts', () => ({
   DesktopProjectManager: class {
     readonly applyRelease = harness.applyRelease
@@ -1038,6 +1042,29 @@ describe('desktop main startup', () => {
     await harness.navigated.promise
     return harness.hosts[0]!
   }
+
+  it('replaces an inherited Harness home with the product home', async () => {
+    const foreign = mkdtempSync(join(tmpdir(), 'dsh-foreign-home-'))
+    onTestFinished(() => { rmSync(foreign, { recursive: true, force: true }) })
+    vi.stubEnv('DSH_HOME', foreign)
+    await import('../src/main.ts')
+    await harness.preparing.promise
+    expect(process.env.DSH_HOME).toBe(join(homedir(), '.oristrat'))
+  })
+
+  it('keeps the ambient Harness home while running from source', async () => {
+    harness.app.isPackaged = false
+    vi.stubEnv('DSH_HOME', '/source-checkout/home')
+    await import('../src/main.ts')
+    await harness.preparing.promise
+    expect(process.env.DSH_HOME).toBe('/source-checkout/home')
+  })
+
+  it('honours the explicit product-home override', () => {
+    expect(resolveProductHome({ ORISTRAT_HOME: '/opt/product/home' })).toBe('/opt/product/home')
+    expect(resolveProductHome({ ORISTRAT_HOME: '' })).toBe(join(homedir(), '.oristrat'))
+    expect(resolveProductHome({})).toBe(join(homedir(), '.oristrat'))
+  })
 
   it.each([
     ['win32', ['--updated'], true],

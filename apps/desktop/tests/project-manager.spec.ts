@@ -61,7 +61,7 @@ describe('desktop external plugin profile', () => {
     expect(provider.models[0]).toMatchObject({ id: 'custom-model', reasoningEfforts: { xhigh: 'xhigh' } })
   })
 
-  it('preserves installed packages, profile state, and the lockfile when preparing a launch', async () => {
+  it('preserves installed packages and the lockfile, and consumes the legacy link record, when preparing a launch', async () => {
     const { manager } = setup()
     await manager.applyRelease()
     seedPlugin(manager)
@@ -79,7 +79,6 @@ describe('desktop external plugin profile', () => {
     const files = [
       'package.json',
       'pnpm-workspace.yaml',
-      'desktop-runtime-state.json',
       'pnpm-lock.yaml',
       `node_modules/${name}/package.json`,
       'node_modules/plugin/package.json',
@@ -90,8 +89,31 @@ describe('desktop external plugin profile', () => {
     await expect(manager.applyRelease()).resolves.toBeUndefined()
 
     expect(files.map(file => readFileSync(join(profile, file), 'utf8'))).toEqual(before)
+    expect(existsSync(join(profile, 'desktop-runtime-state.json'))).toBe(false)
     expect(lstatSync(path).isDirectory()).toBe(true)
     expect(lstatSync(join(profile, 'node_modules/plugin')).isDirectory()).toBe(true)
+  })
+
+  it('unlinks the packages an earlier release projected into the profile before the Host starts', async () => {
+    const { manager } = setup()
+    await manager.applyRelease()
+    const profile = manager.paths.profile
+    const previous = join(dirname(manager.runtime.dsh), 'previous-install', 'dsh', 'node_modules')
+    const cordis = join(previous, '@deepseek-ai', 'cordis')
+    mkdirSync(cordis, { recursive: true })
+    writeFileSync(join(cordis, 'package.json'), JSON.stringify({ name: '@deepseek-ai/cordis', version: '0.1.5' }))
+    const projected = join(profile, 'node_modules', '@deepseek-ai', 'cordis')
+    mkdirSync(dirname(projected), { recursive: true })
+    symlinkSync(cordis, projected, process.platform === 'win32' ? 'junction' : 'dir')
+    writeFileSync(join(profile, 'desktop-runtime-state.json'), JSON.stringify({
+      links: [{ name: '@deepseek-ai/cordis', target: cordis }],
+    }))
+
+    await expect(manager.applyRelease()).resolves.toBeUndefined()
+
+    expect(existsSync(projected)).toBe(false)
+    expect(readFileSync(join(cordis, 'package.json'), 'utf8')).toContain('0.1.5')
+    expect(existsSync(join(profile, 'desktop-runtime-state.json'))).toBe(false)
   })
   it('reuses plugin files without scanning manifests and can disable them', async () => {
     const { manager } = setup()

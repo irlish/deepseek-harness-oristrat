@@ -87,36 +87,69 @@ describe.skipIf(MODE === 'record').each([
     await expect.poll(async () => slider.getAttribute('aria-valuenow')).toBe('0')
     await expect.poll(async () => slider.getAttribute('aria-valuetext')).toBe('跟随提供商默认')
     expect(await page.getByRole('menuitem', { name: /推理等级/ }).count()).toBe(0)
+    // The card stays a compact picker: one model row plus one slider row, with
+    // no caption block and no usage note to grow it.
+    const card = await page.getByRole('menu').boundingBox()
+    expect(card?.width ?? 0).toBeLessThanOrEqual(260)
+    expect(card?.height ?? 0).toBeLessThanOrEqual(120)
     const snapshot = await captureStableAria(page, '[role="menu"]', scaffold.workspaceCwd)
     await compareOrRefreshGolden(UI_EXPECTED, snapshot, MODE)
 
     await slider.focus()
     await page.keyboard.press('ArrowRight')
-    await page.keyboard.press('Tab')
     await expect.poll(
       async () => readFile(join(scaffold.harnessHome, 'profiles', 'scaffold', 'cordis.patch.yml'), 'utf8'),
       { timeout: 10_000 },
     ).toContain('reasoningEffort: high')
     await expect.poll(() => trigger.getAttribute('aria-label'), { timeout: 10_000 })
-      .toBe('选择模型，当前 Acme Think，推理等级 High')
+      .toBe('选择模型，当前 Acme Think，推理等级 高')
+    // The commit keeps the card: the slider it just moved is still there, on the
+    // level it committed, so the next stop stays one gesture away.
+    await expect.poll(() => slider.getAttribute('aria-valuetext'), { timeout: 10_000 }).toBe('高')
 
-    // Reopening the drilled pane parks the keyboard on the level in use, and
-    // Shift+Tab walks back out like Escape: to the drilled cell, then closed.
+    // A pointer drag holds the level it crosses and commits it once on release,
+    // which must not take the card away from the gesture that released it.
+    const box = await slider.boundingBox()
+    if (box === null) throw new Error('the effort slider has no box')
+    await page.mouse.move(box.x + box.width - 4, box.y + box.height / 2)
+    await page.mouse.down()
+    await page.mouse.move(box.x + box.width - 3, box.y + box.height / 2)
+    // The held level reads live on the card; the trigger follows the commit.
+    await expect.poll(
+      async () => (await page.getByRole('menu').innerText()).includes('最高'),
+      { timeout: 10_000 },
+    ).toBe(true)
+    await page.mouse.up()
+    await expect.poll(() => trigger.getAttribute('aria-label'), { timeout: 10_000 })
+      .toBe('选择模型，当前 Acme Think，推理等级 最高')
+    await expect.poll(() => page.getByRole('menu').count(), { timeout: 10_000 }).toBe(1)
+    await expect.poll(() => page.getByRole('slider').getAttribute('aria-valuenow'), { timeout: 10_000 }).toBe('2')
+
+    // A drag that reaches past the track and out of the card keeps both: the
+    // gesture owns its pointer, so only an explicit click, the trigger, or
+    // Escape dismisses the card.
+    const wide = await page.getByRole('slider').boundingBox()
+    if (wide === null) throw new Error('the effort slider has no box')
+    const viewport = page.viewportSize()
+    await page.mouse.move(wide.x + wide.width * 0.6, wide.y + wide.height / 2)
+    await page.mouse.down()
+    await page.mouse.move((viewport?.width ?? 1280) - 4, wide.y + wide.height / 2, { steps: 12 })
+    await page.mouse.up()
+    await expect.poll(() => page.getByRole('menu').count(), { timeout: 10_000 }).toBe(1)
+    await expect.poll(() => page.getByRole('slider').getAttribute('aria-valuenow'), { timeout: 10_000 }).toBe('2')
+    await expect.poll(() => trigger.getAttribute('aria-label'), { timeout: 10_000 })
+      .toBe('选择模型，当前 Acme Think，推理等级 最高')
+
+    // The slider sits in the pane the trigger opens, on the level in use, and
+    // Shift+Tab leaves the card like Escape.
+    await page.keyboard.press('Escape')
     await trigger.click()
-    await page.getByRole('menuitem', { name: /推理等级/ }).click()
-    const high = page.getByRole('menuitemradio', { name: 'High' })
-    await expect.poll(
-      () => high.evaluate(element => element === document.activeElement),
-      { timeout: 10_000 },
-    ).toBe(true)
-    await page.keyboard.press('Shift+Tab')
-    await expect.poll(
-      () => page.getByRole('menuitem', { name: /推理等级/ })
-        .evaluate(element => element === document.activeElement),
-      { timeout: 10_000 },
-    ).toBe(true)
+    const reopened = page.getByRole('slider')
+    await expect.poll(() => reopened.getAttribute('aria-valuetext'), { timeout: 10_000 }).toBe('最高')
+    await reopened.focus()
     await page.keyboard.press('Shift+Tab')
     await expect.poll(() => page.getByRole('menu').count(), { timeout: 10_000 }).toBe(0)
+    await expect.poll(() => trigger.evaluate(element => element === document.activeElement)).toBe(true)
     expect(tripwire.pageErrors).toEqual([])
   }, 60_000)
 
@@ -124,7 +157,7 @@ describe.skipIf(MODE === 'record').each([
     onTestFailed(() => saveFailureShot(page, `web-e2e-model-trigger-${engine.name()}`))
     const trigger = page.getByRole('button', { name: /^选择模型/ })
     const menu = page.getByRole('menu')
-    for (const pane of ['root', 'model', 'effort']) {
+    for (const pane of ['root', 'model']) {
       await page.locator('[data-composer-input][contenteditable="true"]').focus()
       await trigger.click()
       await expect.poll(() => trigger.evaluate(element => element === document.activeElement)).toBe(true)
@@ -133,7 +166,7 @@ describe.skipIf(MODE === 'record').each([
         await expect.poll(() => page.getByRole('menuitem', { name: /^模型/ })
           .evaluate(element => element === document.activeElement)).toBe(true)
       } else {
-        await page.getByRole('menuitem', { name: pane === 'model' ? /^模型/ : /推理等级/ }).click()
+        await page.getByRole('menuitem', { name: /^模型/ }).click()
         await expect.poll(() => page.locator('[role="menuitemradio"][aria-checked="true"]')
           .evaluate(element => element === document.activeElement)).toBe(true)
       }
@@ -186,9 +219,14 @@ describe.skipIf(MODE === 'record').each([
     await expect.poll(() => scaffold.ctx.agentDefaultModel.currentSelection().model, { timeout: 10_000 })
       .toBe('acme-swift')
 
+    // The effort end is the slider's own keyboard: `End` lands on the highest
+    // declared level and commits it, with no pane in between.
     await trigger.click()
-    await page.getByRole('menuitem', { name: /推理等级/ }).click()
-    await page.getByRole('menuitemradio', { name: 'Max', exact: true }).click()
+    await page.getByRole('slider').focus()
+    await page.keyboard.press('End')
+    await expect.poll(() => page.getByRole('slider').getAttribute('aria-valuenow'), { timeout: 10_000 }).toBe('2')
+    await expect.poll(() => page.getByRole('menu').count()).toBe(1)
+    await page.keyboard.press('Escape')
     await menu.waitFor({ state: 'detached' })
     expect(selections).toBe(2)
     await expect.poll(() => scaffold.ctx.agentDefaultModel.currentSelection().reasoningEffort, { timeout: 10_000 })
@@ -224,7 +262,11 @@ describe.skipIf(MODE === 'record').each([
 
     await trigger.click()
     await page.getByRole('menuitem', { name: /^模型/ }).click()
+    // Focus moving off the card is not a dismissal: the card waits for a click.
     await page.locator('[data-composer-input][contenteditable="true"]').focus()
+    await expect.poll(() => menu.count()).toBe(1)
+    // An explicit click outside is.
+    await page.mouse.click(0, 0)
     await menu.waitFor({ state: 'detached' })
     await trigger.click()
     await page.mouse.click(0, 0)

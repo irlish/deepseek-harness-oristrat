@@ -22,7 +22,7 @@
 import { MenuSurface } from '@deepseek-ai/dsh-client-ui-primitives'
 import {
   useEffect, useId, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore,
-  type CSSProperties, type KeyboardEvent, type FocusEvent,
+  type CSSProperties, type KeyboardEvent,
 } from 'react'
 import { createPortal } from 'react-dom'
 import clsx from 'clsx'
@@ -33,11 +33,11 @@ import {
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { PropsLocale } from '@deepseek-ai/dsh-client-ui-slots'
 import type { ModelSelectInjected } from './slots.ts'
-import { EffortSlider } from './EffortSlider.tsx'
+import { EffortSlider, type EffortLevel } from './EffortSlider.tsx'
 import css from './ModelSelect.module.css'
 
 /** Which pane the dropdown shows: the two-row root or the drilled-in model list. */
-type Pane = 'root' | 'model' | 'effort'
+type Pane = 'root' | 'model'
 
 /** Unplaced portal card: hidden but laid out at a fixed origin so offsetWidth/offsetHeight are real (Menu primitive's measure pass). */
 const MEASURE_STYLE: CSSProperties = { visibility: 'hidden', left: 0, top: 0 }
@@ -69,6 +69,8 @@ export function ModelSelect(
   const triggerRef = useRef<HTMLButtonElement | null>(null)
   const menuRef = useRef<HTMLDivElement | null>(null)
   const [menuPos, setMenuPos] = useState<CSSProperties | null>(null)
+  // The level an effort drag currently holds, before its release commits it.
+  const [preview, setPreview] = useState<EffortLevel | null>(null)
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([])
   const id = useId()
 
@@ -115,6 +117,9 @@ export function ModelSelect(
       ? t('effort.providerDefault')
       : sliderLevels.find(level => level.id === effectiveEffort)?.name ?? effectiveEffort
   const currentIndex = sliderLevels.findIndex(level => level.id === effectiveEffort)
+  // While a drag holds a level, the head value and the highest-level usage note
+  // follow the knob; the release commits whatever they show.
+  const shownEffort = preview === null ? effortLabel : preview.name
   const { pending } = state
   const busy = pending !== null
 
@@ -138,18 +143,13 @@ export function ModelSelect(
   // A pane switch unmounts the row that had focus, which drops focus onto the
   // page body — outside the card's subtree, where its key handling no longer
   // sees a keystroke. Every switch therefore names where the keyboard lands:
-  // drilling on the pane's current value, coming back on the cell that opened
-  // the pane left.
-  const paneFocus = useRef<'drill' | 'model' | 'effort' | null>(null)
+  // drilling on the list's checked row, coming back on the model cell.
+  const paneFocus = useRef<'drill' | 'model' | null>(null)
   useEffect(() => {
     const intent = paneFocus.current
     paneFocus.current = null
     if (!open || intent === null) return
     if (intent === 'drill') {
-      if (pane === 'effort') {
-        menuRef.current?.querySelector<HTMLElement>('[role="slider"]')?.focus()
-        return
-      }
       // The checked row is the value in use; a pane without one opens on its
       // first row.
       const checked = menuRef.current?.querySelector<HTMLElement>('[role="menuitemradio"][aria-checked="true"]:not([disabled])')
@@ -159,7 +159,7 @@ export function ModelSelect(
       ;(target ?? triggerRef.current)?.focus()
       return
     }
-    const cell = itemRefs.current[intent === 'effort' ? 1 : 0]
+    const cell = itemRefs.current[0]
     ;(cell !== null && cell !== undefined && !cell.disabled ? cell : triggerRef.current)?.focus()
   }, [open, pane])
 
@@ -199,33 +199,50 @@ export function ModelSelect(
 
   if (!available) return null
 
+  /**
+   * Show one pane, dropping the level an effort drag was holding: a held level
+   * belongs to the pane that showed it.
+   */
+  const enter = (next: Pane): void => {
+    setPreview(null)
+    setPane(next)
+  }
+
   const show = (): void => {
     triggerRef.current?.focus()
     if (state.current === null) paneFocus.current = 'drill'
-    setPane(state.current === null ? 'model' : 'root')
+    enter(state.current === null ? 'model' : 'root')
     setOpen(true)
     reload()
   }
 
   const close = (restoreFocus = false): void => {
     setOpen(false)
-    setPane('root')
+    enter('root')
     if (restoreFocus) queueMicrotask(() => { triggerRef.current?.focus() })
   }
 
-  const drill = (next: Pane): void => {
+  /** Show the model list, parking the keyboard on the value in use. */
+  const drill = (): void => {
     paneFocus.current = 'drill'
-    setPane(next)
+    enter('model')
   }
 
-  /** Leave a drilled pane for the root one, handing the keyboard back to its cell. */
-  const back = (from: Exclude<Pane, 'root'>): void => {
-    paneFocus.current = from
-    setPane('root')
+  /** Leave the drilled model list for the root pane, handing the keyboard back to its cell. */
+  const back = (): void => {
+    paneFocus.current = 'model'
+    enter('root')
   }
 
   const moveFocus = (offset: number): void => {
-    const items = itemRefs.current.filter(item => item !== null)
+    const items: HTMLElement[] = itemRefs.current.filter((item): item is HTMLButtonElement => item !== null)
+    // The effort slider is the root pane's other focus stop: Tab settles the
+    // row it is on, which drills into the list, so a walk that skipped the
+    // slider would leave the level reachable by pointer alone.
+    const slider = pane === 'root' && state.current !== null
+      ? menuRef.current?.querySelector<HTMLElement>('[role="slider"]:not([aria-disabled="true"])')
+      : null
+    if (slider != null) items.push(slider)
     if (items.length === 0) return
     const active = items.findIndex(item => item === document.activeElement)
     // Focus outside the rows (the trigger, which keeps it while the menu
@@ -241,7 +258,7 @@ export function ModelSelect(
     if (event.key === 'Escape' && open) {
       event.preventDefault()
       // Escape backs out of a drilled pane first, then closes.
-      if (pane !== 'root' && state.current !== null) back(pane)
+      if (pane !== 'root' && state.current !== null) back()
       else close(true)
       return
     }
@@ -252,7 +269,7 @@ export function ModelSelect(
     if (event.key === 'Tab') {
       if (event.shiftKey) {
         event.preventDefault()
-        if (pane !== 'root' && state.current !== null) back(pane)
+        if (pane !== 'root' && state.current !== null) back()
         else close(true)
         return
       }
@@ -279,18 +296,10 @@ export function ModelSelect(
     }
   }
 
-  const onBlur = (event: FocusEvent<HTMLDivElement>): void => {
-    if (event.relatedTarget instanceof Node && (
-      rootRef.current?.contains(event.relatedTarget) === true
-      || menuRef.current?.contains(event.relatedTarget) === true
-    )) return
-    close()
-  }
-
-  const settleSelection = (result: Awaited<ReturnType<ModelSelectInjected['select']>>): void => {
+  const settleSelection = (result: Awaited<ReturnType<ModelSelectInjected['select']>>, keepOpen: boolean): void => {
     if (result === undefined) return
     if (result.ok) {
-      if (rootRef.current !== null) close(true)
+      if (!keepOpen && rootRef.current !== null) close(true)
       return
     }
     const { error } = result
@@ -303,11 +312,12 @@ export function ModelSelect(
     })
   }
 
-  const submit = (selection: ModelSelection): void => {
+  const submit = (selection: ModelSelection, keepOpen = false): void => {
     lastActionRef.current = 'select'
-    // Disabled option rows cannot retain focus while a selection is pending.
-    triggerRef.current?.focus()
-    void select(selection).then(settleSelection)
+    // Disabled option rows cannot retain focus while a selection is pending. An
+    // effort commit leaves focus on the slider, the stop the gesture holds.
+    if (!keepOpen) triggerRef.current?.focus()
+    void select(selection).then((result) => { settleSelection(result, keepOpen) })
   }
 
   const choose = (selection: ModelSelection): void => {
@@ -320,16 +330,15 @@ export function ModelSelect(
 
   const chooseEffort = (effort: string | undefined): void => {
     if (state.current === null) return
-    if (effectiveEffort === effort) {
-      close(true)
-      return
-    }
+    // The stop already in use needs no commit, and the card stays either way: a
+    // settled effort keeps its slider on screen for the next gesture.
+    if (effectiveEffort === effort) return
     const selection: ModelSelection = {
       provider: state.current.provider,
       model: state.current.model,
       ...effort === undefined ? {} : { reasoningEffort: effort },
     }
-    submit(selection)
+    submit(selection, true)
   }
 
   const waiting = state.current === null && state.status === 'loading'
@@ -357,7 +366,6 @@ export function ModelSelect(
       ref={rootRef}
       className={css.root}
       onKeyDown={onRootKeyDown}
-      onBlur={onBlur}
       onMouseDown={(event) => {
         // WebKit blurs a focused row before click unless the button's mousedown keeps focus.
         if (event.target instanceof Element && event.target.closest('button') !== null) event.preventDefault()
@@ -392,7 +400,7 @@ export function ModelSelect(
 
       {/* Portaled to body (Menu primitive's portal mode) so the sidebar and
           column overflow clips cannot crop the card; synthetic events still
-          bubble through this React subtree, keeping onKeyDown/onBlur live. */}
+          bubble through this React subtree, keeping onKeyDown live. */}
       {open && createPortal(
         <MenuSurface
           ref={menuRef}
@@ -405,17 +413,27 @@ export function ModelSelect(
         >
           {pane === 'root' && (
             <>
-              <button ref={itemRef()} type="button" role="menuitem" className={css.cell} onClick={() => { drill('model') }}>
+              <button ref={itemRef()} type="button" role="menuitem" className={css.cell} onClick={drill}>
                 <span className={css.cellLabel}>{t('menu.model')}</span>
                 <span className={css.cellValue}>{modelLabel}</span>
                 <IconChevronRightOutlineRegular className={css.cellChevron} />
               </button>
-              {reasoning !== undefined && (
-                <button ref={itemRef()} type="button" role="menuitem" className={css.cell} onClick={() => { drill('effort') }}>
-                  <span className={css.cellLabel}>{t('menu.effort')}</span>
-                  <span className={css.cellValue}>{effortLabel}</span>
-                  <IconChevronRightOutlineRegular className={css.cellChevron} />
-                </button>
+              {reasoning !== undefined && sliderLevels.length > 0 && (
+                <div className={css.effortBlock}>
+                  <div className={css.effortHead}>
+                    <span className={css.effortCaption}>{t('menu.effort')}</span>
+                    <span className={css.effortValue}>{shownEffort}</span>
+                  </div>
+                  <EffortSlider
+                    levels={sliderLevels}
+                    currentIndex={currentIndex}
+                    ariaLabel={t('slider.aria', { effort: shownEffort ?? t('slider.unset') })}
+                    unsetLabel={t('slider.unset')}
+                    disabled={busy}
+                    onPreview={setPreview}
+                    onSelect={(index) => { chooseEffort(sliderLevels[index]?.id) }}
+                  />
+                </div>
               )}
             </>
           )}
@@ -478,36 +496,6 @@ export function ModelSelect(
             </>
           )}
 
-          {pane === 'effort' && (
-            <>
-              {state.error !== null && lastActionRef.current === 'load' && (
-                <div className={css.error}>
-                  <span>{t('error.action', { message: state.error })}</span>
-                  <button type="button" className={css.retry} onClick={reload}>{t('action.reload')}</button>
-                </div>
-              )}
-              {sliderLevels.length > 0 && (
-                <div className={css.effortBlock}>
-                  <div className={css.effortHead}>
-                    <span className={css.effortCaption}>{t('menu.effort')}</span>
-                    <span className={css.effortValue}>{effortLabel}</span>
-                    <span className={css.effortModel}>{modelLabel}</span>
-                  </div>
-                  <EffortSlider
-                    levels={sliderLevels}
-                    currentIndex={currentIndex}
-                    ariaLabel={t('slider.aria', { effort: effortLabel ?? t('slider.unset') })}
-                    unsetLabel={t('slider.unset')}
-                    disabled={busy}
-                    onSelect={(index) => { chooseEffort(sliderLevels[index]?.id) }}
-                  />
-                  {currentIndex === sliderLevels.length - 1 && sliderLevels.length > 1 && (
-                    <div className={css.effortHint}>{t('effort.highestHint')}</div>
-                  )}
-                </div>
-              )}
-            </>
-          )}
         </MenuSurface>,
         document.body,
       )}

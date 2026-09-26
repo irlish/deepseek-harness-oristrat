@@ -713,9 +713,13 @@ describe('UiWorkspaceService', () => {
     const warning = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
     b.uiWorkspace.startSession(wid('recent-home'))
     await vi.waitFor(() => { expect(warning).toHaveBeenCalledWith('new session failed:', expect.any(Error)) })
+    // With no Workspace at all, New Session lands in the Recent Sessions bucket.
     const empty = bench()
     empty.uiWorkspace.startSession()
-    expect(empty.selectPanel).toHaveBeenCalledWith(null)
+    await vi.waitFor(() => {
+      expect(empty.sessions.create).toHaveBeenCalledWith()
+      expect(empty.sessions.retain).toHaveBeenLastCalledWith(sid('created-none'), { source: 'mainView' })
+    })
 
     const missingMember = bench({
       sessions: sessionState(),
@@ -730,12 +734,131 @@ describe('UiWorkspaceService', () => {
     })
   })
 
-  it('opens nothing when a New Session request has no Workspace to open', () => {
+  it('lands a New Session outside every Workspace when none resolves', async () => {
     const b = bench()
 
     b.uiWorkspace.startSession()
 
+    await vi.waitFor(() => {
+      expect(b.sessions.create).toHaveBeenCalledWith()
+      expect(b.sessions.retain).toHaveBeenLastCalledWith(sid('created-none'), { source: 'mainView' })
+    })
     expect(b.selectPanel).toHaveBeenCalledWith(null)
+  })
+
+  it('reuses an unarchived unassigned blank instead of creating another', async () => {
+    const b = bench({
+      sessions: sessionState([
+        summary('archived-blank', { blank: true }),
+        summary('loose-blank', { blank: true }),
+      ]),
+      workspaces: workspaceState([], [sid('archived-blank')]),
+    })
+
+    b.uiWorkspace.startSession()
+
+    await vi.waitFor(() => {
+      expect(b.sessions.retain).toHaveBeenLastCalledWith(sid('loose-blank'), { source: 'mainView' })
+    })
+    expect(b.sessions.create).toHaveBeenCalledExactlyOnceWith({ sessionId: sid('loose-blank') })
+  })
+
+  it('coalesces concurrent unassigned creation on one in-flight request', async () => {
+    const b = bench({ workspaces: workspaceState([]) })
+    const creation = Promise.withResolvers<SessionId>()
+    b.sessions.create.mockImplementation(() => creation.promise)
+
+    b.uiWorkspace.startSession()
+    b.uiWorkspace.startSession()
+    await setImmediate()
+
+    expect(b.sessions.create).toHaveBeenCalledOnce()
+    creation.resolve(sid('fresh-unassigned'))
+    await vi.waitFor(() => {
+      expect(b.sessions.retain).toHaveBeenCalledExactlyOnceWith(sid('fresh-unassigned'), { source: 'mainView' })
+    })
+  })
+
+  it('skips Workspace-member blanks while the Workspace baseline is reconnecting', async () => {
+    // A pending baseline still carries the previous generation's membership:
+    // an unassigned start must not recycle a blank that a Workspace owns.
+    const b = bench({
+      sessions: sessionState([summary('member-blank', { blank: true })]),
+      workspaces: workspaceState([workspace('alpha', [sid('member-blank')])], [], 'pending'),
+    })
+
+    b.uiWorkspace.startSession()
+
+    await vi.waitFor(() => {
+      expect(b.sessions.create).toHaveBeenCalledWith()
+      expect(b.sessions.retain).toHaveBeenLastCalledWith(sid('created-none'), { source: 'mainView' })
+    })
+  })
+
+  it('runs unassigned preparation only while its navigation is current', async () => {
+    const superseded = bench({
+      sessions: sessionState([summary('current')]),
+      workspaces: workspaceState([]),
+    })
+    const stale = vi.fn()
+    const pending = superseded.uiWorkspace.openUnassigned(stale)
+    superseded.uiWorkspace.openSession(sid('current'))
+    await pending
+    expect(stale).not.toHaveBeenCalled()
+    expect(superseded.sessions.retain).toHaveBeenCalledExactlyOnceWith(sid('current'), { source: 'mainView' })
+
+    const prepared = bench({ workspaces: workspaceState([]) })
+    const preparation = vi.fn(() => { prepared.uiWorkspace.openSession(sid('other')) })
+    await prepared.uiWorkspace.openUnassigned(preparation)
+    // Preparation that navigates supersedes its own open: the unassigned
+    // Session is released and the prepared selection stands.
+    expect(preparation).toHaveBeenCalledExactlyOnceWith(sid('created-none'))
+    expect(prepared.sessions.retain).toHaveBeenNthCalledWith(1, sid('created-none'), { source: 'mainView' })
+    expect(prepared.sessions.retain).toHaveBeenNthCalledWith(2, sid('other'), { source: 'mainView' })
+    expect(prepared.sessions.retained[0]!.release).toHaveBeenCalledOnce()
+    expect(prepared.sessions.retained[1]!.release).not.toHaveBeenCalled()
+
+    const plain = bench({ workspaces: workspaceState([]) })
+    const ready = vi.fn()
+    await plain.uiWorkspace.openUnassigned(ready)
+    expect(ready).toHaveBeenCalledExactlyOnceWith(sid('created-none'))
+    expect(plain.sessions.retain).toHaveBeenCalledExactlyOnceWith(sid('created-none'), { source: 'mainView' })
+  })
+
+  it('reports nothing when a superseded unassigned creation fails', async () => {
+    const b = bench({
+      sessions: sessionState([summary('current')]),
+      workspaces: workspaceState([]),
+    })
+    const creation = Promise.withResolvers<SessionId>()
+    b.sessions.create.mockImplementation(() => creation.promise)
+    const warning = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+    const pending = b.uiWorkspace.openUnassigned()
+    b.uiWorkspace.openSession(sid('current'))
+    creation.reject(new SessionCreateError(new RemoteError('gateway/internal', 'no seat', {}), undefined))
+
+    // The superseded navigation owns no notice: the user is already elsewhere.
+    await expect(pending).rejects.toThrow('session create failed: gateway/internal: no seat')
+    expect(b.notify).not.toHaveBeenCalled()
+    expect(warning).not.toHaveBeenCalled()
+    expect(b.sessions.retain).toHaveBeenCalledExactlyOnceWith(sid('current'), { source: 'mainView' })
+  })
+
+  it('reports a refused unassigned creation through the Workspace notice', async () => {
+    const b = bench({ workspaces: workspaceState([]) })
+    b.sessions.create.mockRejectedValueOnce(
+      new SessionCreateError(new RemoteError('gateway/internal', 'no seat', {}), undefined),
+    )
+    const warning = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+    b.uiWorkspace.startSession()
+
+    await vi.waitFor(() => {
+      expect(warning).toHaveBeenCalledWith('new session failed:', expect.any(Error))
+    })
+    expect(b.notify).toHaveBeenCalledWith({ kind: 'createFailed', message: 'gateway/internal: no seat' })
+    expect(b.sessions.retain).not.toHaveBeenCalled()
   })
 
   it('releases a prepared Workspace target when synchronous preparation supersedes it', async () => {

@@ -79,6 +79,20 @@ export const DEFAULT_MAX_TOKENS = 32_768
  */
 export const DEFAULT_INPUT: readonly PiAiModality[] = ['text']
 
+/**
+ * Whether a model neither configuration nor the installed catalog describes is
+ * served as a reasoning model. On by default: a route's models reach the
+ * harness through whatever its listing reports, and a listing reports ids and
+ * capacities — never which levels a model reasons at — so the capability has
+ * to be assumed or declared, and the harness cannot interrogate the endpoint
+ * for it. The cost of being wrong stays bounded: an unset level sends no
+ * reasoning parameter, so nothing reaches the provider until a person picks a
+ * level, and a model that refuses the parameter refuses the choice that asked
+ * for reasoning. A route turns the offer off for all its models with
+ * `assumeReasoning: false`, one entry with `reasoningEfforts: false`.
+ */
+export const DEFAULT_ASSUME_REASONING = true
+
 export type {
   PiAiCompatProfile,
   PiAiModality,
@@ -148,6 +162,15 @@ export interface PiAiProviderProfile {
    * to answer instead.
    */
   defaultInput?: PiAiModality[]
+  /**
+   * Whether a model this route lists that nothing describes — no entry
+   * {@link PiAiModelProfile.reasoningEfforts}, no installed catalog entry — is
+   * served as a reasoning model (default `true`), offering pi-ai's standard
+   * levels. A fallback like the fields above, not an override: a catalog model
+   * keeps the capability the catalog records for it, and one entry declares
+   * `reasoningEfforts: false` to refuse the offer on its own.
+   */
+  assumeReasoning?: boolean
   /** Provider request headers, validated against Fetch when the profile resolves; Harness attribution wins reserved names. */
   headers?: Record<string, string>
   /** Provider-neutral pi-ai reasoning level. */
@@ -334,6 +357,7 @@ const profile = z.object({
   defaultContextWindow: z.number().step(1).min(1).default(DEFAULT_CONTEXT_WINDOW),
   defaultMaxTokens: z.number().step(1).min(1).default(DEFAULT_MAX_TOKENS),
   defaultInput: z.array(z.union(MODALITIES)).default([...DEFAULT_INPUT]),
+  assumeReasoning: z.boolean().default(DEFAULT_ASSUME_REASONING),
   headers: z.dict(z.string()),
   reasoning: z.union(THINKING_LEVELS),
   thinkingBudgets,
@@ -473,6 +497,7 @@ export function resolveProfiles(
         defaultInput,
         defaultContextWindow: source.defaultContextWindow ?? DEFAULT_CONTEXT_WINDOW,
         defaultMaxTokens: source.defaultMaxTokens ?? DEFAULT_MAX_TOKENS,
+        assumeReasoning: source.assumeReasoning ?? DEFAULT_ASSUME_REASONING,
       }, validation)
       catalogError = catalog.modelErrors.values().next().value
       piProvider = buildProvider({

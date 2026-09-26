@@ -23,7 +23,7 @@ export function ConversationContent(props: ConversationContentProps) {
   const {
     sessionId, phase, hero, useSession, useSessions, useSessionStatus,
     useWorkspaces, useInput, useComposerBlock, useWorkMode, renderSlot, renderSlotChain,
-    selectWorkspace, t, useFactorySlot,
+    selectWorkspace, selectUnassigned, t, useFactorySlot,
   } = props
   const session = useSession(snapshot => snapshot)
   const Views = useFactorySlot('views', ConversationSessionView)
@@ -93,20 +93,27 @@ export function ConversationContent(props: ConversationContentProps) {
   //   3. the blank session's workspace is in the list → its title;
   //   4. list still loading → cwd folder name bridges so the title does not
   //      flash on refresh (empty cwd → placeholder);
-  //   5. list ready but no owning workspace (deleted from the sidebar) →
-  //      placeholder, never the deleted folder's name via cwd.
+  //   5. list ready but no owning workspace (created outside every Workspace,
+  //      or deleted from the sidebar) → the unassigned label: such a Session
+  //      is conversable without a Workspace, so the composer stays live.
   // A title still automatic reads in the reader's language, matching the
   // sidebar row the same Workspace has there.
   const storedChipTitle = pendingWorkspace?.title
     ?? (sessionId === undefined
       ? undefined
       : sessionWorkspace?.title
-        ?? (workspaces.phase === 'ready' || cwd === undefined || cwd === ''
-          ? undefined
-          : workspaceLabel(cwd)))
+        ?? (workspaces.phase === 'ready'
+          ? t('hero.unassigned')
+          : cwd === undefined || cwd === ''
+            ? undefined
+            : workspaceLabel(cwd)))
   const chipTitle = storedChipTitle === undefined
     ? undefined
     : workspaceDisplayTitle(storedChipTitle, t('workspace.defaultName'))
+  // The picker checks its no-Workspace entry while the staged or current blank
+  // Session sits outside every Workspace.
+  const unassignedSelected = pendingWorkspaceId === undefined
+    && sessionId !== undefined && sessionWorkspace === undefined && workspaces.phase === 'ready'
 
   const heroWorkspaceRow = (
     <div className={css.heroWorkspaceRow}>
@@ -128,6 +135,13 @@ export function ConversationContent(props: ConversationContentProps) {
             setPendingWorkspaceId(current => current === workspaceId ? undefined : current)
           })
         },
+        onPickUnassigned: () => {
+          setPickerOpen(false)
+          void selectUnassigned().catch(
+            (reason: unknown) => { console.warn('unassigned session start failed:', reason) },
+          )
+        },
+        unassignedSelected,
         onClose: () => { setPickerOpen(false) },
       })}
       {renderSlot('conversation.hero.agentPreset', {})}
