@@ -234,9 +234,9 @@ export const InputBar = memo(function InputBar({
 
   const canAcceptDrop = subagent === null && !locked && !machineBusy && addFiles !== undefined
 
-  // Work-only extension seats: the point-in-time zone reaches the accessory
-  // and dock seats only while the deployment mode is Work; the owner-passed
-  // accessory node is mode-independent.
+  // Accessory extension entries reach the point-in-time zone only while the
+  // deployment mode is Work; the owner-passed accessory node is
+  // mode-independent, and the statistics dock follows the Session instead.
   const extensionSeatZone = workMode ? extensionZone : undefined
 
   const fileInputRef = useRef<HTMLInputElement | null>(null)
@@ -509,8 +509,8 @@ export const InputBar = memo(function InputBar({
         </div>
       </div>
       <div className={css.dock}>
-        {variant === 'composer' && input !== undefined && sessionId !== undefined && extensionSeatZone !== undefined
-          ? renderSlot('conversation.composer.dock', extensionSeatZone)
+        {variant === 'composer' && input !== undefined && sessionId !== undefined && extensionZone !== undefined
+          ? renderSlot('conversation.composer.dock', extensionZone)
           : null}
         {activity ? null : <ContextMeter useProjection={useProjection} t={t} />}
       </div>

@@ -1689,8 +1689,8 @@ describe('command launcher chrome and control seats', () => {
     // Capability absent (no permission slot entry): the chip renders nothing.
     expect(view.queryByLabelText(/^访问模式/)).toBeNull()
     // Every seat dispatched, nothing rendered (render passes may repeat; the
-    // seat set is the contract). The dock rides the extension zone like the
-    // accessory seat, so without a zone neither is dispatched.
+    // seat set is the contract). The dock and the accessory seat both need the
+    // point-in-time Session zone, so without one neither is dispatched.
     expect([...new Set(slotCalls.map(c => c.key))]).toEqual([
       'conversation.input.overlay', 'conversation.input.attachments',
       'conversation.input.permission', 'conversation.input.plan', 'conversation.input.left',
@@ -1712,15 +1712,18 @@ describe('command launcher chrome and control seats', () => {
     expect(dock?.owner).toBe(zone)
   })
 
-  it('keeps the extension seats unmounted outside Work mode', () => {
+  it('renders the statistics dock outside Work mode while accessory entries stay Work-only', () => {
     const zone = extensionZone()
     const { slotCalls, view } = bench({
       extensionZone: zone, accessorySlot: <i data-testid="acc-slot" />, footer: <i data-testid="foot" />,
     })
     expect(view.queryByTestId('acc-slot')).toBeNull()
-    expect(view.queryByTestId('foot')).toBeNull()
+    // Session statistics belong to every deployment mode; only the extension
+    // entries of the accessory seat are Work-only.
+    expect(view.getByTestId('foot')).toBeTruthy()
     expect(slotCalls.some(candidate => candidate.key === 'conversation.input.accessory')).toBe(false)
-    expect(slotCalls.some(candidate => candidate.key === 'conversation.composer.dock')).toBe(false)
+    const dock = slotCalls.find(candidate => candidate.key === 'conversation.composer.dock')
+    expect(dock?.owner).toBe(zone)
   })
 
   it('keeps an owner-passed accessory ahead of the extension slot', () => {

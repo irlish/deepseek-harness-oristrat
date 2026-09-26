@@ -381,7 +381,7 @@ export interface ComposerBarOwnerProps {
   accessory?: ReactNode
   /** Point-in-time zone for `conversation.input.accessory` entries; absent without a Session. */
   extensionZone?: InputZone | undefined
-  /** Whether the Work-only extension seats (dock chooser, accessory entries) render. */
+  /** Whether the Work-only accessory extension entries render; the statistics dock renders in every mode. */
   workMode?: boolean
 }
 
