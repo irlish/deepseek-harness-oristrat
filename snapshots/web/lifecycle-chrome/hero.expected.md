@@ -1,5 +1,6 @@
 - button "New session"
 - button "Collapse sidebar"
+- button "Work mode": Coding
 - button "New session": New Session
 - navigation "Global panels":
   - button "Plugins"

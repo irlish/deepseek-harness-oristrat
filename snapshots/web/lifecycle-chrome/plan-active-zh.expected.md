@@ -1,5 +1,6 @@
 - button "新建会话"
 - button "收起侧边栏"
+- button "工作模式": 编码
 - button "新建会话": 新会话
 - navigation "全局面板":
   - button "插件"
@@ -16,7 +17,7 @@
 - button "设置"
 - banner:
   - button "打开右侧边栏"
-- text: 探索未至之境 预览版
+- text: 让构想，落地生长 预览版
 - button "选择工作区": workspace
 - button "标准模式"
 - textbox "描述你想要构建的内容, / 调用指令, @ 文件或对话"
