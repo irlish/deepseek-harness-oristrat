@@ -1,10 +1,10 @@
-import { existsSync, lstatSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from 'node:fs'
+import { existsSync, lstatSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { parse } from 'yaml'
 import { resolveDesktopPaths } from '../src/paths.ts'
-import { DesktopProjectManager } from '../src/project-manager.ts'
+import { DesktopProjectManager, linkRuntimeBundles, migrateProfileBundles } from '../src/project-manager.ts'
 import { readProfilePlugins } from '@deepseek-ai/dsh-app-boot'
 import { runtimeFixture } from './runtime-fixture.ts'
 
@@ -389,5 +389,58 @@ describe('desktop link-backend projections', () => {
     expect(existsSync(join(profile, '.dsh-module-fallback'))).toBe(false)
     expect(lstatSync(join(profile, 'node_modules', 'bridge'), { throwIfNoEntry: false })).toBeUndefined()
     expect(existsSync(join(target, 'package.json'))).toBe(true)
+  })
+})
+
+describe('desktop built-in bundles', () => {
+  /** Write a profile manifest with the given bundle layer list. */
+  function profileWith(profile: string, bundles: readonly string[]): void {
+    mkdirSync(profile, { recursive: true })
+    writeFileSync(join(profile, 'package.json'), JSON.stringify({
+      name: 'dsh-profile-desktop', private: true, dependencies: { plugin: '1.0.0' }, dsh: { profile: { bundles } },
+    }))
+  }
+
+  it('heals a legacy two-bundle manifest into the built-in prefix and retires the unbundled route plugin', () => {
+    const profile = join(temporaryRoot(), 'profile')
+    profileWith(profile, ['@deepseek-ai/dsh-base', '@deepseek-ai/dsh-web-app', 'plugin', 'dsh-ppt'])
+    expect(migrateProfileBundles(profile)).toBe(true)
+    const manifest = JSON.parse(readFileSync(join(profile, 'package.json'), 'utf8')) as {
+      dependencies: Record<string, string>
+      dsh: { profile: { bundles: string[] } }
+    }
+    expect(manifest.dsh.profile.bundles).toEqual(
+      ['@deepseek-ai/dsh-base', '@deepseek-ai/dsh-web-app', 'dsh-ppt-composer', 'plugin'])
+    expect(manifest.dependencies).toEqual({ plugin: '1.0.0' })
+    expect(migrateProfileBundles(profile)).toBe(false)
+  })
+
+  it('leaves an unknown bundle prefix for plugin validation to reject', () => {
+    const profile = join(temporaryRoot(), 'profile')
+    profileWith(profile, ['other-base', 'plugin'])
+    expect(migrateProfileBundles(profile)).toBe(false)
+    const manifest = JSON.parse(readFileSync(join(profile, 'package.json'), 'utf8')) as { dsh: { profile: { bundles: string[] } } }
+    expect(manifest.dsh.profile.bundles).toEqual(['other-base', 'plugin'])
+  })
+
+  it('links the declared runtime bundle and repoints a link to an older runtime copy', async () => {
+    const { manager } = setup()
+    await manager.applyRelease()
+    const link = join(manager.paths.profile, 'node_modules', 'dsh-ppt-composer')
+    expect(realpathSync(link)).toBe(realpathSync(join(manager.runtime.dsh, 'node_modules', 'dsh-ppt-composer')))
+
+    const stale = join(temporaryRoot(), 'node_modules', 'dsh-ppt-composer')
+    mkdirSync(stale, { recursive: true })
+    unlinkSync(link)
+    symlinkSync(stale, link, 'dir')
+    linkRuntimeBundles(manager.paths.profile, manager.runtime.dsh)
+    expect(realpathSync(link)).toBe(realpathSync(join(manager.runtime.dsh, 'node_modules', 'dsh-ppt-composer')))
+
+    const foreign = join(temporaryRoot(), 'node_modules', 'other-package')
+    mkdirSync(foreign, { recursive: true })
+    unlinkSync(link)
+    symlinkSync(foreign, link, 'dir')
+    linkRuntimeBundles(manager.paths.profile, manager.runtime.dsh)
+    expect(realpathSync(link)).toBe(realpathSync(foreign))
   })
 })

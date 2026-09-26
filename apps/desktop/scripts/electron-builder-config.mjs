@@ -70,7 +70,12 @@ export function createElectronBuilderConfig(
   let dshDestination
   let windowsCode = []
   const unpack = ['**/*.{node,dylib,dll,so,exe}', '**/*.so.*', '**/spawn-helper', '**/@vscode/ripgrep-*/bin/rg',
-    `**/node_modules/@deepseek-ai/libreoffice-kit-${resolvedPlatform}-${resolvedArch}/**/*`]
+    `**/node_modules/@deepseek-ai/libreoffice-kit-${resolvedPlatform}-${resolvedArch}/**/*`,
+    // Fork: the Desktop profile links the vendored DSH PPTD bundles out of this
+    // runtime tree, and Node resolves a linked package's dependencies by walking
+    // up from its real directory. An in-archive runtime path fails that lookup,
+    // so the module tree ships unpacked like the native files it carries.
+    'dsh/node_modules/**']
   const windowsSigner = packagesWindows && !unsigned
     ? createWindowsTokenSigner({
         certificateFile: env.DSH_DESKTOP_WINDOWS_CER_FILE,
