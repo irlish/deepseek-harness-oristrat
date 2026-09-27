@@ -58,6 +58,7 @@ function extensionZone(): InputZone {
   return {
     session: snapshotOf(),
     input: { draft: '', attachmentIds: [], draftRev: 0, phase: 'plain', occurrences: [], queue: [] },
+    sessionId: SID,
   }
 }
 
@@ -1724,6 +1725,14 @@ describe('command launcher chrome and control seats', () => {
     expect(slotCalls.some(candidate => candidate.key === 'conversation.input.accessory')).toBe(false)
     const dock = slotCalls.find(candidate => candidate.key === 'conversation.composer.dock')
     expect(dock?.owner).toBe(zone)
+  })
+
+  it('dispatches the composer dock in the hero variant only in Work mode', () => {
+    const zone = extensionZone()
+    const work = bench({ variant: 'hero', workMode: true, extensionZone: zone })
+    expect(work.slotCalls.find(candidate => candidate.key === 'conversation.composer.dock')?.owner).toBe(zone)
+    const coding = bench({ variant: 'hero', extensionZone: zone })
+    expect(coding.slotCalls.some(candidate => candidate.key === 'conversation.composer.dock')).toBe(false)
   })
 
   it('keeps an owner-passed accessory ahead of the extension slot', () => {

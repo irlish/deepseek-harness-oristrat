@@ -508,12 +508,20 @@ export const InputBar = memo(function InputBar({
           </div>
         </div>
       </div>
+      {/* The dock seat rides the point-in-time session zone in both layout
+          variants. The composer outlet keeps the statistics pills inline with
+          the context meter in every mode; the hero outlet sits below the
+          resident card at full width, where the Work-only bundle choosers
+          mount their template panel. */}
       <div className={css.dock}>
-        {variant === 'composer' && input !== undefined && sessionId !== undefined && extensionZone !== undefined
+        {variant === 'composer' && extensionZone !== undefined
           ? renderSlot('conversation.composer.dock', extensionZone)
           : null}
         {activity ? null : <ContextMeter useProjection={useProjection} t={t} />}
       </div>
+      {variant === 'hero' && workMode && extensionZone !== undefined
+        ? renderSlot('conversation.composer.dock', extensionZone)
+        : null}
     </div>
   )
 })

@@ -663,7 +663,7 @@ export const CLIENT_SLOT_API: readonly ClientSlotEntry[] = [
       },
     ],
     ownerProps: [
-      '/** Point-in-time owner values for composer extension entries. */\nexport interface InputZone {\n  readonly session: SessionSnapshot\n  readonly input: InputState\n}',
+      '/** Point-in-time owner values for composer extension entries. */\nexport interface InputZone {\n  readonly session: SessionSnapshot\n  readonly input: InputState\n  /** Session the zone\'s extension entries address; Composer adapters key their per-session state on it. */\n  readonly sessionId: SessionSnapshot[\'sessionId\']\n}',
     ],
     ownerPropsReferences: [
       'InputState',
@@ -787,7 +787,7 @@ export const CLIENT_SLOT_API: readonly ClientSlotEntry[] = [
       },
     ],
     ownerProps: [
-      '/** Point-in-time owner values for composer extension entries. */\nexport interface InputZone {\n  readonly session: SessionSnapshot\n  readonly input: InputState\n}',
+      '/** Point-in-time owner values for composer extension entries. */\nexport interface InputZone {\n  readonly session: SessionSnapshot\n  readonly input: InputState\n  /** Session the zone\'s extension entries address; Composer adapters key their per-session state on it. */\n  readonly sessionId: SessionSnapshot[\'sessionId\']\n}',
     ],
     ownerPropsReferences: [
       'InputState',
@@ -928,7 +928,7 @@ export const CLIENT_SLOT_API: readonly ClientSlotEntry[] = [
       },
     ],
     ownerProps: [
-      '/** Point-in-time owner values for composer extension entries. */\nexport interface InputZone {\n  readonly session: SessionSnapshot\n  readonly input: InputState\n}',
+      '/** Point-in-time owner values for composer extension entries. */\nexport interface InputZone {\n  readonly session: SessionSnapshot\n  readonly input: InputState\n  /** Session the zone\'s extension entries address; Composer adapters key their per-session state on it. */\n  readonly sessionId: SessionSnapshot[\'sessionId\']\n}',
     ],
     ownerPropsReferences: [
       'InputState',

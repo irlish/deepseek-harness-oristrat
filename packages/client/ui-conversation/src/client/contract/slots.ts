@@ -313,6 +313,8 @@ export interface ConversationHeaderLineageOwnerProps {
 export interface InputZone {
   readonly session: SessionSnapshot
   readonly input: InputState
+  /** Session the zone's extension entries address; Composer adapters key their per-session state on it. */
+  readonly sessionId: SessionSnapshot['sessionId']
 }
 
 /** Conversation View entries obtain their data from registered standard hooks. */

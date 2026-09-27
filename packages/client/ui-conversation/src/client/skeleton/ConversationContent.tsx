@@ -85,7 +85,9 @@ export function ConversationContent(props: ConversationContentProps) {
   }, [pendingWorkspaceId, sessionWorkspace?.workspaceId, workspaces.phase, pendingWorkspace])
 
   const zone: InputZone | undefined =
-    session === undefined || inputState === undefined ? undefined : { session, input: inputState }
+    session === undefined || inputState === undefined
+      ? undefined
+      : { session, input: inputState, sessionId: session.sessionId }
 
   // The chip is a selector; label resolution walks the flow top-down:
   //   1. a just-picked workspace (pending) → its title;
@@ -146,7 +148,7 @@ export function ConversationContent(props: ConversationContentProps) {
       })}
       {renderSlot('conversation.hero.agentPreset', {})}
       <div className={css.heroModeCluster}>
-        {zone !== undefined && renderSlot('conversation.hero.modeActions', zone)}
+        {workMode && zone !== undefined && renderSlot('conversation.hero.modeActions', zone)}
       </div>
     </div>
   )

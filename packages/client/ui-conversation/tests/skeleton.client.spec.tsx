@@ -140,6 +140,8 @@ function mount(
     composerBlock?: { reason: string }
     /** Mutable view ledger used by registration-order regressions. */
     viewTabs?: ViewTab[]
+    /** Deployment Work mode: the hero mode cluster seat dispatches. */
+    workMode?: boolean
   } = {},
   retargetUnassigned = vi.fn(async () => {}),
 ) {
@@ -193,8 +195,10 @@ function mount(
   /** Owner share handed to the two composer tool-row seats, per render. */
   const seatOwners: { key: string; owner: unknown }[] = []
   let pickerOwner: unknown
+  const modeActionOwners: object[] = []
   const renderSlot = ((key: string, owner: object, opts?: { only?: string; fallback?: ReactNode }) => {
     slotCalls.push(key)
+    if (key === 'conversation.hero.modeActions') { modeActionOwners.push(owner); return null }
     if (key === 'conversation.input.model' || key === 'conversation.input.plan') {
       seatOwners.push({ key, owner })
     }
@@ -339,7 +343,7 @@ function mount(
       useWorkspaces: bindSnapshotSelector(workspaces),
       useProjection: (() => undefined),
       useComposerBlock: select => select(options.composerBlock),
-      useWorkMode: select => select(false),
+      useWorkMode: select => select(options.workMode === true),
       useInput,
       inputActions,
       renderSlot,
@@ -379,6 +383,7 @@ function mount(
     view, store, wiring, sink, retargetWorkspace, retargetUnassigned,
     session, conversation, slotCalls, lineageOwners, seatOwners, open,
     pickerOwner: () => pickerOwner,
+    modeActionOwner: () => modeActionOwners.at(-1),
     rerender: () => { view.rerender(<ConversationMainPanel {...props} />) },
   }
 }
@@ -706,6 +711,14 @@ describe('ConversationRoot resident composer', () => {
     // The agent-preset chip sits in the same row, for the same reason: both
     // choices are only open before the first message.
     expect(b.slotCalls).toContain('conversation.hero.agentPreset')
+  })
+
+  it('dispatches the hero mode cluster with the zone session id only in Work mode', () => {
+    const work = mount(sessionSnapshotOf({ blank: true }), undefined, undefined, { workMode: true })
+    expect(work.slotCalls).toContain('conversation.hero.modeActions')
+    expect(work.modeActionOwner()).toMatchObject({ sessionId: SID })
+    const coding = mount(sessionSnapshotOf({ blank: true }))
+    expect(coding.slotCalls).not.toContain('conversation.hero.modeActions')
   })
 
   it('prompt failure renders the promptError strip (ordinary failure, no transaction UI)', () => {
