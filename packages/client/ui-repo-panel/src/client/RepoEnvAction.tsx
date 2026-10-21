@@ -147,11 +147,10 @@ export function RepoEnvAction({
     return needle.length === 0 ? names : names.filter(name => name.toLowerCase().includes(needle))
   }, [listing, query])
 
-  const pick = (branch: string): void => {
-    /* v8 ignore next -- every live row is disabled without a workspace or while busy; the guard narrows cwd for the wire call. */
-    if (cwd === undefined || busy) return
+  /** Shared settlement for branch mutations: busy flag, close on success, surface the wire error otherwise. */
+  const settle = (mutation: Promise<GuiRepoBranchMutationValue>): void => {
     setBusy(true)
-    repoCheckout({ cwd, branch }).then(
+    mutation.then(
       (result) => {
         setBusy(false)
         if (result.ok) {
@@ -167,26 +166,18 @@ export function RepoEnvAction({
     )
   }
 
+  const pick = (branch: string): void => {
+    /* v8 ignore next -- every live row is disabled without a workspace or while busy; the guard narrows cwd for the wire call. */
+    if (cwd === undefined || busy) return
+    settle(repoCheckout({ cwd, branch }))
+  }
+
   const create = (event: FormEvent): void => {
     event.preventDefault()
     const name = draft.trim()
     /* v8 ignore next -- the submenu never renders without a workspace; the guard narrows cwd and stops empty-draft and busy submits. */
     if (cwd === undefined || busy || name.length === 0) return
-    setBusy(true)
-    repoCreateBranch({ cwd, name }).then(
-      (result) => {
-        setBusy(false)
-        if (result.ok) {
-          setOpen(false)
-          return
-        }
-        setError(result.error ?? t('error.fallback'))
-      },
-      () => {
-        setBusy(false)
-        setError(t('error.fallback'))
-      },
-    )
+    settle(repoCreateBranch({ cwd, name }))
   }
 
   const divergence = status !== null && status.repo ? divergenceText(status, t) : undefined

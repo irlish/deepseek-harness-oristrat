@@ -1,4 +1,5 @@
 /**
+/* jscpd:ignore-end */
  * Model-facing browser automation tools over the `ctx.browser` seam.
  *
  * The tool set is the observe → act → verify loop an end-to-end check needs:
@@ -527,6 +528,7 @@ function imageRefOf(image: {
  * @param ctx - context that may carry `llm`.
  * @param exec - the running tool execution.
  */
+/* jscpd:ignore-start -- fork-local copy of the fs image-route assertion; the wire messages differ per tool. */
 async function assertImageCapableRoute(ctx: Context, exec: ToolExecution): Promise<void> {
   const routed = exec.agent?.session.requestHeader()?.config
   const provider = routed?.provider ?? exec.agent?.options.provider
@@ -540,3 +542,4 @@ async function assertImageCapableRoute(ctx: Context, exec: ToolExecution): Promi
     throw new Error(`browser_screenshot cannot run: model "${model}" does not declare image input; switch to an image-capable model`)
   }
 }
+/* jscpd:ignore-end */
