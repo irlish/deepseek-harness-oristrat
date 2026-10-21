@@ -4,6 +4,7 @@
 - button "新建会话": 新会话
 - navigation "全局面板":
   - button "插件"
+  - button "自动化任务"
 - text: 工作区
 - button "搜索会话"
 - textbox "搜索会话名称"
@@ -14,7 +15,7 @@
   - text: 未关联工作区的会话会显示在这里
   - treeitem "workspace" [expanded]
   - treeitem "新会话" [selected]
-- button "设置"
+- button "账号菜单": 更多
 - banner:
   - button "打开右侧边栏"
 - text: 让构想，落地生长 预览版

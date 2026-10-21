@@ -150,6 +150,7 @@ export function ConversationContent(props: ConversationContentProps) {
       <div className={css.heroModeCluster}>
         {workMode && zone !== undefined && renderSlot('conversation.hero.modeActions', zone)}
       </div>
+      {sessionId === undefined ? null : <div className={css.heroOptions}>{renderSlot('conversation.hero.options', {})}</div>}
     </div>
   )
 

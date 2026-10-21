@@ -7,7 +7,7 @@ import type {
   WorkspaceId, WorkspaceSnapshot, WorkspaceView,
 } from '@deepseek-ai/dsh-api-workspace-controller/client'
 import type {} from '@deepseek-ai/dsh-client-locale/client'
-import { bindSnapshotSelector, makeTranslate } from '@deepseek-ai/dsh-client-test-runtime'
+import { allowAllAccess, bindSnapshotSelector, makeTranslate } from '@deepseek-ai/dsh-client-test-runtime'
 import { zh as commonZh } from '@deepseek-ai/dsh-client-locale/src/locales/zh.ts'
 import type { SessionStatusSnapshot } from '@deepseek-ai/dsh-client-ui-session/client'
 import type { DirectoryFlowOwnerProps, WorkspacePickerProps } from '../src/client/contract/slots.ts'
@@ -103,6 +103,7 @@ function mount(
       useSessionRetainInfo={() => undefined}
       usePanelInfo={usePanelInfo} useResource={useResource}
       useWorkspaces={hook(workspaceState(nextItems))}
+      {...allowAllAccess}
       onPick={onPick}
       onPickUnassigned={extra.onPickUnassigned}
       unassignedSelected={extra.unassignedSelected}
@@ -251,6 +252,7 @@ describe('WorkspacePicker', () => {
         useSessionStatus={hook(noPendingInteraction)}
         useSessionRetainInfo={() => undefined}
         usePanelInfo={usePanelInfo} useResource={useResource}
+        {...allowAllAccess}
         onPick={vi.fn()} onClose={vi.fn()} createWorkspace={vi.fn()}
         useDirectoryFlow={occupancySource().useDirectoryFlow} renderSlot={renderSlot} t={t}
       />,
@@ -269,6 +271,7 @@ describe('WorkspacePicker', () => {
         useSessionStatus={hook(noPendingInteraction)}
         useSessionRetainInfo={() => undefined}
         usePanelInfo={usePanelInfo} useResource={useResource}
+        {...allowAllAccess}
         onPick={vi.fn()} onClose={vi.fn()} createWorkspace={vi.fn()}
         useDirectoryFlow={occupancySource().useDirectoryFlow} renderSlot={renderSlot} t={t}
       />,

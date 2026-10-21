@@ -4,6 +4,7 @@
 - button "New session": New Session
 - navigation "Global panels":
   - button "Plugins"
+  - button "Automation tasks"
 - text: Workspaces
 - button "Search sessions"
 - textbox "Search session names"
@@ -14,7 +15,7 @@
   - text: Sessions without a workspace appear here
   - treeitem "workspace" [expanded]
   - treeitem "New Session" [selected]
-- button "Settings"
+- button "Account menu": More
 - banner:
   - button "Open right sidebar"
 - text: Into the Unknown Preview
