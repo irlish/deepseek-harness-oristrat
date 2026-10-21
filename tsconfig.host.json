@@ -272,6 +272,8 @@
     { "path": "./packages/experimental/browser-use-runtime" },
     { "path": "./packages/experimental/browser-use-playwright-mcp" },
     { "path": "./packages/experimental/browser-use-chrome-devtools-mcp" },
+    { "path": "./packages/oristrat/browser-use-runtime" },
+    { "path": "./packages/oristrat/browser-chrome-devtools-mcp" },
     { "path": "./packages/experimental/browser-use-stagehand-native" },
     { "path": "./packages/api/terminal-controller/tsconfig.host.json" },
     { "path": "./packages/computer-use/computer-use" },

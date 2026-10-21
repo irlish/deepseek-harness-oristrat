@@ -74,6 +74,9 @@ export function bundleRoster(
     }
     const declaration = parseDshClient(name, manifest.dsh?.client)
     if (declaration === undefined || declaration.platform !== 'web') continue
+    // Prebuilt client bundles self-register through the parser preload global in
+    // a real browser; the in-process whole-client tier cannot execute them.
+    if ((manifest.dsh?.client as { prebuilt?: unknown } | undefined)?.prebuilt === true) continue
     if (disabled.some(value => value !== undefined && value !== null && typeof value !== 'boolean'
       && !(disabledContext !== undefined && isJsExpr(value)))) {
       throw new Error(`client-test-runtime: browser row ${name} has a \`disabled\` value this reader cannot evaluate (a !!js expression)`)

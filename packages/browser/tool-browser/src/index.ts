@@ -1,5 +1,4 @@
 /**
-/* jscpd:ignore-end */
  * Model-facing browser automation tools over the `ctx.browser` seam.
  *
  * The tool set is the observe → act → verify loop an end-to-end check needs:

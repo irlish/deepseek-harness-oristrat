@@ -547,6 +547,14 @@ button.crumb:hover {
   margin-left: auto;
 }
 
+/* Full-width seat under the hero row; collapses when no occupant registers. */
+.heroDock {
+  display: flex;
+  flex: none;
+  width: 100%;
+  min-width: 0;
+}
+
 .heroOptions:empty {
   display: none;
 }

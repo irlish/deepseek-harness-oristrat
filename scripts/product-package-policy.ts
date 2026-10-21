@@ -16,11 +16,17 @@ export interface ProductPackagePolicy {
  * Optional integrations may be reached by an optional bundle without becoming default capabilities.
  */
 export const PRODUCT_PACKAGE_POLICY: Readonly<Record<string, ProductPackagePolicy>> = {
-  'packages/browser-use/browser-use': { category: 'optional', reason: 'Service definition used by explicitly selected browser providers.' },
   'packages/computer-use/computer-use': { category: 'optional', reason: 'Service definition used by explicitly selected computer providers.' },
   'packages/lsp/lsp': { category: 'optional', reason: 'Service definition for deployment-configured language servers.' },
   'packages/lsp/lsp-stdio': { category: 'optional', reason: 'Requires an explicit server list and language-server executables.' },
   'packages/lsp/tool-lsp': { category: 'optional', reason: 'Model tools selected together with a configured LSP provider.' },
+  'packages/browser/tool-browser': { category: 'optional', reason: 'Browser automation tools over the ctx.browser seam; the Oristrat product reaches browser automation through the mounted Chrome DevTools MCP provider instead.' },
+  'packages/browser/browser': { category: 'optional', reason: 'Service definition for the ctx.browser seam consumed by tool-browser and the legacy desktop provider.' },
+  'packages/browser/browser-desktop': { category: 'optional', reason: 'Legacy WebContentsView browser provider for compositions that supply the retired desktop bridge.' },
+  'packages/client/ui-brand-official': { category: 'optional', reason: 'Upstream brand occupant retained for compositions without the Oristrat brand fallback; the Desktop patch disables it.' },
+  'packages/client/ui-browser-panel': { category: 'optional', reason: 'Source-only panel for the retired WebContentsView bridge; kept for compositions that supply the legacy bridge.' },
+  'packages/client/ui-terminal-panel': { category: 'optional', reason: 'Source-only terminal panel superseded by ui-sidebar-terminal; kept for compositions that want the bottom-panel layout.' },
+  'packages/api/gui-terminal': { category: 'optional', reason: 'Source-only Remote namespace for the retired bottom-panel terminal; ui-sidebar-terminal owns the shipped surface.' },
   'packages/ssh/ssh': { category: 'optional', reason: 'Explicit remote connection and helper configuration.' },
   'packages/ssh/ssh-helper-runtime': { category: 'optional', reason: 'Private executable carrier for explicitly configured SSH connections.' },
   'packages/ssh/fs-ssh': { category: 'optional', reason: 'Remote filesystem provider selected in an SSH composition.' },

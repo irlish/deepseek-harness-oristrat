@@ -1,0 +1,37 @@
+# Bilingual-pair consistency record for README.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write packages/oristrat/browser-use-runtime/README.md
+/:
+  en: 5ea192473f3ddacf
+  zh: a1fe87da1ebf1213
+/oristrat-dsh-browser-use-runtime:
+  en: 806d8d03cdb24783
+  zh: 9b58153869c2dab3
+/oristrat-dsh-browser-use-runtime/summary:
+  en: ac29eb4a94d3cbff
+  zh: 66f2e800cabb19aa
+/oristrat-dsh-browser-use-runtime/table-of-contents:
+  en: d152484eb41ac6b4
+  zh: f14f34fce35a8d90
+/oristrat-dsh-browser-use-runtime/use-this-package:
+  en: c8bcbf0e4f764428
+  zh: bb8e4631628b44ce
+/oristrat-dsh-browser-use-runtime/understand-the-implementation:
+  en: ad923b17fcb5421c
+  zh: c2449382d6e0c7ff
+/oristrat-dsh-browser-use-runtime/further-exploration:
+  en: 2a8d2c9b217b9e95
+  zh: 084c9ad664e55498
+/oristrat-dsh-browser-use-runtime/model-experience:
+  en: b05ec94221da0296
+  zh: c7fca64315bb59bd
+/oristrat-dsh-browser-use-runtime/model-experience/kv-cache-effect:
+  en: 066ff4d955210cfe
+  zh: 74ad1b1444383493
+/oristrat-dsh-browser-use-runtime/known-limitations-and-deferred-work:
+  en: f1362dd4849fd9de
+  zh: 6cb5d973f8472e88
+/oristrat-dsh-browser-use-runtime/known-limitations-and-deferred-work/dev-note:
+  en: e67f633dc6fe7773
+  zh: 8ec3e73528ddb1a6

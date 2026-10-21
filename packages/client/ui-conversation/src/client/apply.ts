@@ -364,6 +364,7 @@ export function apply(ctx: Context, config: Config = Config({})): void {
       'conversation.hero.agentPreset': { kind: 'single', scope: 'session-maybe' },
       'conversation.hero.modeActions': { kind: 'list', scope: 'session' },
       'conversation.hero.options': { kind: 'list', scope: 'session' },
+      'conversation.hero.dock': { kind: 'list', scope: 'session' },
     },
     slots: {
       views: { scope: 'session' },

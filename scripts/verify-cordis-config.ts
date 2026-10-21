@@ -59,6 +59,13 @@ const CHOOSER_BACKEND_PACKAGES = [
 const errors: string[] = []
 const pluginReferences: PluginReference[] = []
 
+/**
+ * Vendored upstream distributions whose committed `lib/` JavaScript is their source plane.
+ * No tsconfig `paths` mapping can resolve them to a `.ts` file, and none should: they ship
+ * no TypeScript. They are exempt from the source-plane resolution check.
+ */
+const VENDORED_JS_BUNDLES: ReadonlySet<string> = new Set(['dsh-ppt', 'dsh-ppt-composer', 'dsh-desktop-office', 'dsh-desktop-workbenches', 'dsh-desktop-market-installer'])
+
 if (import.meta.main) {
   const files = cordisConfigFiles(root)
 
@@ -440,6 +447,7 @@ function validateSourcePlaneResolution(): string[] {
   for (const reference of pluginReferences) {
     const packageName = packageNameFromSpecifier(reference.name)
     if (packageName === undefined || !localPackages.has(packageName)) continue
+    if (VENDORED_JS_BUNDLES.has(packageName)) continue
     const locations = locationsBySpecifier.get(reference.name) ?? new Set<string>()
     locations.add(reference.file)
     locationsBySpecifier.set(reference.name, locations)

@@ -151,6 +151,7 @@ export function ConversationContent(props: ConversationContentProps) {
         ? <div className={css.heroModeCluster}>{renderSlot('conversation.hero.modeActions', zone)}</div>
         : null}
       {sessionId === undefined ? null : <div className={css.heroOptions}>{renderSlot('conversation.hero.options', {})}</div>}
+      {sessionId === undefined ? null : <div className={css.heroDock}>{renderSlot('conversation.hero.dock', {})}</div>}
     </div>
   )
 

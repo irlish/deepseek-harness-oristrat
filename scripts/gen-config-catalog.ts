@@ -712,7 +712,18 @@ export function collectConfigCatalog(scanRoot: string = root): CatalogEntry[] {
   }
   const world: World = { scanRoot, cache, pkgDirByName, pkgExportsByName }
 
+  /**
+   * Fork product packages vendored as distributed JavaScript (dataelement/dsh-desktop,
+   * MIT): their committed lib/ is the source plane, so no TS entry exists to
+   * classify. Their cordis rows stay config-literal; verify-cordis-config carries
+   * the matching resolution exemption.
+   */
+  const VENDORED_JS_ONLY_PACKAGES: ReadonlySet<string> = new Set([
+  ])
+
   for (const { dir, pkg } of manifests) {
+    if (VENDORED_JS_ONLY_PACKAGES.has(pkg)) continue
+
     const entryRel = `${dir}/src/index.ts`
     let ctx: FileCtx
     try {

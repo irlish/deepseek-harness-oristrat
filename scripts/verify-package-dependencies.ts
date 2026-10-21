@@ -363,6 +363,16 @@ function generatedHostSources(root: string, packages: readonly WorkspacePackageM
   return sources
 }
 
+/**
+ * Vendored upstream distributions whose committed `lib/` JavaScript is their source plane.
+ * They have no `src/` tree to read, so per-package dependency-use analysis has no input.
+ */
+const VENDORED_JS_ONLY_PACKAGES: ReadonlySet<string> = new Set([
+  'packages/oristrat/office',
+  'packages/oristrat/workbenches',
+  'packages/oristrat/market-installer',
+])
+
 /** Source-backed Node exports; generated Typert artifacts have no standalone source entry. */
 function hostSourceEntries(root: string, pkg: WorkspacePackageManifest): string[] {
   const entry = resolve(root, pkg.dir, 'src/index.ts')
@@ -673,6 +683,7 @@ export async function readPackageDependencyState(
   const generated = generatedHostSources(root, discovered.selected.filter(pkg => pkg.role !== 'client-only'))
   const facts: PackageDependencyFacts[] = []
   for (const pkg of discovered.selected) {
+    if (VENDORED_JS_ONLY_PACKAGES.has(normalizePath(pkg.dir))) continue
     facts.push(await readPackageDependencyFacts(root, pkg, pkg.role, workspaceNames, policy, generated.get(pkg.name)))
   }
   const selectedNames = new Set(facts.map(fact => fact.manifest.name))

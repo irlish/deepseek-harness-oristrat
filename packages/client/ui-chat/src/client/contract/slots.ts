@@ -375,7 +375,10 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
       scope: 'session'
       props: UserContentInput
       locale: 'chat'
-      children: { 'conversation.chat.user.images': { kind: 'single'; scope: 'session' } }
+      children: {
+        'conversation.chat.user.images': { kind: 'single'; scope: 'session' },
+        'conversation.chat.userMessageFooter': { kind: 'list'; scope: 'session' },
+      }
     }
     /** Session-independent reasoning Markdown with Chat labels and compact typography. */
     'conversation.chat.reasoning.content': {
@@ -415,6 +418,8 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
     'conversation.chat.message.images': { kind: 'single'; scope: 'session'; owner: MessageImagesOwnerProps }
     /** User-message images, including pending and local-echo previews, independently replaceable from output images. */
     'conversation.chat.user.images': { kind: 'single'; scope: 'session'; owner: MessageImagesOwnerProps }
+    /** Entries under each user message; the Office opening-template chip rides here. */
+    'conversation.chat.userMessageFooter': { kind: 'list'; scope: 'session' }
     /**
      * Command row keyed by the command name. The component receives the folded
      * command lifecycle and linked compaction when present. Reusing a key

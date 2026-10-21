@@ -99,10 +99,10 @@ describe('desktop external plugin profile', () => {
     await manager.applyRelease()
     const profile = manager.paths.profile
     const previous = join(dirname(manager.runtime.dsh), 'previous-install', 'dsh', 'node_modules')
-    const cordis = join(previous, '@deepseek-ai', 'cordis')
+    const cordis = join(previous, '@deepseek-ai', '@deepseek-ai/cordis')
     mkdirSync(cordis, { recursive: true })
     writeFileSync(join(cordis, 'package.json'), JSON.stringify({ name: '@deepseek-ai/cordis', version: '0.1.5' }))
-    const projected = join(profile, 'node_modules', '@deepseek-ai', 'cordis')
+    const projected = join(profile, 'node_modules', '@deepseek-ai', '@deepseek-ai/cordis')
     mkdirSync(dirname(projected), { recursive: true })
     symlinkSync(cordis, projected, process.platform === 'win32' ? 'junction' : 'dir')
     writeFileSync(join(profile, 'desktop-runtime-state.json'), JSON.stringify({

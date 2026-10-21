@@ -8,9 +8,8 @@
   "main": "lib/index.js",
   "files": [
     "lib/index.js",
-      "lib/index.js",
-      "lib/cli.js",
-      "config/desktop.cordis.patch.yml"
+    "lib/cli.js",
+    "config/desktop.cordis.patch.yml"
   ],
   "dependencies": {
     "koffi": "3.1.1",
@@ -30,7 +29,12 @@
     "@deepseek-ai/dsh-tool-workspace-dependencies": "workspace:*",
     "@deepseek-ai/dsh-skill-office": "workspace:*",
     "@deepseek-ai/dsh-deepseek-account": "workspace:*",
-    "@deepseek-ai/dsh-workspace": "workspace:*"
+    "@deepseek-ai/dsh-workspace": "workspace:*",
+    "@oristrat/dsh-browser-use-chrome-devtools-mcp": "workspace:*",
+    "dsh-desktop-workbenches": "workspace:*",
+    "dsh-desktop-market-installer": "workspace:*",
+    "dsh-desktop-office": "workspace:*",
+    "@deepseek-ai/dsh-browser-use": "workspace:*"
   },
   "devDependencies": {
     "@deepseek-ai/cordis-plugin-loader": "workspace:~",

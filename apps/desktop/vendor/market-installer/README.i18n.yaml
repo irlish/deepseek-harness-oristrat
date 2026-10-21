@@ -1,0 +1,31 @@
+# Bilingual-pair consistency record for README.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write packages/dsh-desktop/market-installer/README.md
+/:
+  en: 9e034f28710c5690
+  zh: b03cf99de6b81214
+/dsh-desktop-market-installer:
+  en: e43a4e3e08152fce
+  zh: 0bbf289637a209b7
+/dsh-desktop-market-installer/summary:
+  en: c420408f670928ca
+  zh: 2ddfd58e46625535
+/dsh-desktop-market-installer/table-of-contents:
+  en: 8f99c073d07bdc1b
+  zh: 1358ff3cb03208ad
+/dsh-desktop-market-installer/use-this-package:
+  en: c908bf12737a68df
+  zh: fc6a92fd89a8c8e0
+/dsh-desktop-market-installer/dev-note:
+  en: 3b2fdd756c229877
+  zh: fc40346ed3ba367f
+/dsh-desktop-market-installer/model-experience:
+  en: fa6779869d07b31b
+  zh: 80a94966e9c2c2c3
+/dsh-desktop-market-installer/model-experience/kv-cache-effect:
+  en: 0152edb6fdf82f35
+  zh: b5de2ff72b73c773
+/dsh-desktop-market-installer/known-limitations-and-deferred-work:
+  en: 6146c1a34c433fca
+  zh: 3970b18fc3c0cc75

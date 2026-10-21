@@ -66,6 +66,10 @@ function declare(slots: SlotRegistry): () => void {
   )
 }
 
+
+function isModelsSectionInjected(value: unknown): value is import('../src/client/ModelsSection.tsx').ModelsSectionInjected {
+  return typeof value === 'object' && value !== null && 'controller' in value && 'hooks' in value
+}
 describe('ui-settings-models apply', () => {
   it('keeps manual credential onboarding available when the native shell owns automatic onboarding', async () => {
     const { ctx, slots } = await bench()
@@ -351,10 +355,9 @@ describe('pushed invalidations', () => {
     await b.ctx.plugin({ inject: [...inject], apply }).await()
     const entry = b.slots.entries('settings.section')
       .find(candidate => candidate.options.id === 'models')!
-    const injected = (
-      entry.inject as unknown as
-      () => import('../src/client/ModelsSection.tsx').ModelsSectionInjected
-    )()
+    const produced: unknown = entry.inject?.()
+    if (!isModelsSectionInjected(produced)) throw new Error('models section entry carries no injected face')
+    const injected = produced
     await injected.controller.load()
     expect(injected.hooks.snapshot.getSnapshot().namespaces.get('llm-test')?.revision).toBe(1)
 

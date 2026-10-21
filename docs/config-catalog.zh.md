@@ -4664,6 +4664,21 @@ export interface Config {
 ```
 <!-- END GENERATED config-catalog:@deepseek-ai/dsh-workspace-changes -->
 
+<!-- BEGIN GENERATED config-catalog:@oristrat/dsh-browser-use-chrome-devtools-mcp -->
+<a id="oristratdsh-browser-use-chrome-devtools-mcp"></a>
+
+## `@oristrat/dsh-browser-use-chrome-devtools-mcp`
+
+- `inject`: `browserUse` · `agents` · `tools` · `systemPrompt` · `workingDirectory`
+- `refs`: `BrowserMcpConfig` (`@oristrat/dsh-browser-use-runtime/mcp`)
+- `source`: [`packages/oristrat/browser-chrome-devtools-mcp/src/index.ts:15`](../packages/oristrat/browser-chrome-devtools-mcp/src/index.ts)
+
+```ts config-catalog
+/** Fixed Chromium launch or existing-browser attachment settings. */
+export type Config = BrowserMcpConfig
+```
+<!-- END GENERATED config-catalog:@oristrat/dsh-browser-use-chrome-devtools-mcp -->
+
 ## 无配置的可加载插件
 
 这些插件通过 `cordis.yml` 中不含 `config:` 块的条目加载；它们未声明任何配置接口。
@@ -4887,4 +4902,5 @@ export interface Config {
 | `@deepseek-ai/dsh-util-values` | — | [`packages/util/values/src/index.ts`](../packages/util/values/src/index.ts) |
 | `@deepseek-ai/dsh-util-workspace-path` | — | [`packages/util/workspace-path/src/index.ts`](../packages/util/workspace-path/src/index.ts) |
 | `@deepseek-ai/dsh-win32-process` | — | [`packages/subprocess/win32-process/src/index.ts`](../packages/subprocess/win32-process/src/index.ts) |
+| `@oristrat/dsh-browser-use-runtime` | — | [`packages/oristrat/browser-use-runtime/src/index.ts`](../packages/oristrat/browser-use-runtime/src/index.ts) |
 <!-- END GENERATED config-catalog:library -->

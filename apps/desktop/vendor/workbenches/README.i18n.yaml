@@ -1,0 +1,31 @@
+# Bilingual-pair consistency record for README.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write packages/dsh-desktop/workbenches/README.md
+/:
+  en: 676b9319aef80e79
+  zh: b05a5c6c36463218
+/dsh-desktop-workbenches:
+  en: 52d9b6ac9f004253
+  zh: 0cc835077baeb3cf
+/dsh-desktop-workbenches/summary:
+  en: d94dbea9a72f3af4
+  zh: 41437fbfcf108dfa
+/dsh-desktop-workbenches/table-of-contents:
+  en: 8f99c073d07bdc1b
+  zh: 1358ff3cb03208ad
+/dsh-desktop-workbenches/use-this-package:
+  en: 533291e59632ca8e
+  zh: d146f82c0a898737
+/dsh-desktop-workbenches/dev-note:
+  en: 3b2fdd756c229877
+  zh: fc40346ed3ba367f
+/dsh-desktop-workbenches/model-experience:
+  en: 1fb8f577415232bc
+  zh: 9af8caca753de6a2
+/dsh-desktop-workbenches/model-experience/kv-cache-effect:
+  en: 0152edb6fdf82f35
+  zh: b5de2ff72b73c773
+/dsh-desktop-workbenches/known-limitations-and-deferred-work:
+  en: 6506339128f8463e
+  zh: cf49fe7691204abf

@@ -1,0 +1,65 @@
+{
+  "name": "dsh-desktop-market-installer",
+  "version": "0.2.1-rc.2",
+  "description": "DSH Desktop's fixed-target installer entry for the optional dsh-market community plugin.",
+  "type": "module",
+  "main": "./index.js",
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./generations/registry": {
+      "types": "./generations/registry.d.ts",
+      "default": "./generations/registry.mjs"
+    },
+    "./generations/installer": {
+      "types": "./generations/installer.d.ts",
+      "default": "./generations/installer.mjs"
+    },
+    "./generations/projection": {
+      "types": "./generations/projection.d.ts",
+      "default": "./generations/projection.mjs"
+    },
+    "./generations/package-backend": {
+      "types": "./generations/package-backend.d.ts",
+      "default": "./generations/package-backend.mjs"
+    },
+    "./plugin-state": {
+      "types": "./plugin-state.d.ts",
+      "default": "./plugin-state.mjs"
+    },
+    "./market-registry": {
+      "types": "./market-registry.d.ts",
+      "default": "./market-registry.mjs"
+    },
+    "./windows-hide-console": {
+      "types": "./windows-hide-console.d.ts",
+      "default": "./windows-hide-console.mjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-client-ui-settings",
+        "@deepseek-ai/dsh-client-ui-settings-plugins"
+      ],
+      "platform": "web",
+      "prebuilt": true
+    }
+  },
+  "license": "MIT",
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "workspace:~",
+    "@deepseek-ai/dsh-host-webserver": "workspace:*"
+  },
+  "dependencies": {
+    "pnpm": "10.34.5"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "directory": "packages/dsh-desktop/market-installer"
+  },
+  "private": true
+}

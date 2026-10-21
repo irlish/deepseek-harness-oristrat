@@ -662,3 +662,31 @@
   config:
     provider: oristrat-official
     model: glm-5.3
+
+# Oristrat: agent browser automation debugging through the official Chrome
+# DevTools MCP provider (the browser-use seam allows exactly one provider).
+# A visible Chromium per Session so the person can watch the agent debug.
+- insert:
+    - id: browser-use
+      name: '@deepseek-ai/dsh-browser-use'
+    - id: browser-use-chrome-devtools-mcp
+      name: '@oristrat/dsh-browser-use-chrome-devtools-mcp'
+      config:
+        mode: launch
+        headless: false
+
+# Oristrat product layer ported from dataelement/dsh-desktop (MIT): workbench
+# runtime and catalog, the optional market installer, and the Office authoring
+# plugin. Office and market stay off until their environment opts in, so a bare
+# boot never fails on missing installation-owned payloads.
+- insert:
+    - id: dsh-desktop-workbenches
+      name: 'dsh-desktop-workbenches'
+      config:
+        root: !!js process.env.ORISTRAT_WORKBENCHES_ROOT || ((process.env.DSH_HOME || process.env.USERPROFILE || process.env.HOME) + '/desktop-workbenches')
+    - id: dsh-desktop-office
+      name: 'dsh-desktop-office'
+      disabled: !!js "!process.env.DSH_DESKTOP_OFFICE_RESOURCES"
+      config:
+        resources: !!js process.env.DSH_DESKTOP_OFFICE_RESOURCES
+        cli: !!js process.env.DSH_DESKTOP_OFFICE_CLI

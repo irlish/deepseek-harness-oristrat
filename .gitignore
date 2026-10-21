@@ -5,6 +5,11 @@ apps/desktop/.env.macos
 apps/desktop/*.p12
 node_modules/
 lib/
+# Fork: the ported product packages ship their distributed JavaScript in lib/
+# beside the manifest and have no src/ build step, so their lib/ is committed
+# source rather than build output.
+!apps/desktop/vendor/*/lib/
+!apps/desktop/vendor/*/lib/
 *.tsbuildinfo
 pnpm-debug.log
 .pnpm-store/

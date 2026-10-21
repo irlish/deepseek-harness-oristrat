@@ -55,6 +55,7 @@ FactoryComponentPropsOf<'conversation.chat.user.content'>) {
           {t('message.referenceSummary', { labels: referenceLabels.join(t('message.referenceSeparator')) })}
         </div>
       )}
+      {renderSlot('conversation.chat.userMessageFooter', {})}
     </div>
   )
 }

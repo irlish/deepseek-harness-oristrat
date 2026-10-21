@@ -172,7 +172,10 @@ export function apply(ctx: Context): void {
   registerChatNodeRenderers(ctx, performanceUsage, presentation)
   ctx.slots.registerFactory({
     name: 'conversation.chat.user.content', scope: 'session', locale: NS,
-    children: { 'conversation.chat.user.images': { kind: 'single', scope: 'session' } },
+    children: {
+      'conversation.chat.user.images': { kind: 'single', scope: 'session' },
+      'conversation.chat.userMessageFooter': { kind: 'list', scope: 'session' },
+    },
   }, UserContent)
 
   ctx.slots.inject('settings.general.item', () => ctx.slots.register({

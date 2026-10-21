@@ -90,7 +90,10 @@ async function bench() {
   const mountContent = () => runtime.mount({ inject: ['slots'], apply: (ctx) => {
     ctx.slots.registerFactory({
       name: 'conversation.chat.user.content', scope: 'session', locale: NS,
-      children: { 'conversation.chat.user.images': { kind: 'single', scope: 'session' } },
+      children: {
+        'conversation.chat.user.images': { kind: 'single', scope: 'session' },
+        'conversation.chat.userMessageFooter': { kind: 'list', scope: 'session' },
+      },
     }, UserContent)
   } })
   const owner = await mountContent()
@@ -172,7 +175,9 @@ describe('user Content Factory', () => {
     expect(view.getAllByTestId('image')).toHaveLength(1)
     expect(b.imageCalls[0]).toMatchObject({ compact, align: 'end', loadImage: b.loadImage })
     expect(view.queryAllByRole('button')).toHaveLength(0)
-    expect(view.container.querySelector('[data-slot="root"]')?.firstElementChild?.children).toHaveLength(1)
+    const stack = view.container.querySelector('[data-slot="root"]')?.firstElementChild
+    const stackChildren = [...(stack?.children ?? [])].filter(child => child.getAttribute('data-slot') !== 'conversation.chat.userMessageFooter')
+    expect(stackChildren).toHaveLength(1)
   })
 
   it('reuses one prepared value in unrelated parents while nested images inherit each Session', async () => {
@@ -242,8 +247,9 @@ describe('user Content Factory', () => {
     const view = b.render(b.factory({ content: empty, facts: {}, loadImage: b.loadImage }))
     expect(view.container.textContent).toBe('')
     const root = view.container.querySelector('[data-slot="root"]')
-    expect(root?.children).toHaveLength(1)
-    expect(root?.firstElementChild?.children).toHaveLength(0)
+    const rootChildren = [...(root?.children ?? [])].filter(child => child.getAttribute('data-slot') !== 'conversation.chat.userMessageFooter')
+    expect(rootChildren).toHaveLength(1)
+    expect([...(rootChildren[0]?.children ?? [])].filter(child => child.getAttribute('data-slot') !== 'conversation.chat.userMessageFooter')).toHaveLength(0)
     expect(view.container.querySelector('[data-message-attachments]')).toBeNull()
     expect(view.queryAllByRole('button')).toHaveLength(0)
     expect(b.imageCalls).toHaveLength(0)

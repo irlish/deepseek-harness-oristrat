@@ -106,8 +106,18 @@ export function verifyProductUse(
     if (/(?:^|\/)lib\//.test(display(path)) || path.endsWith('.d.ts')) return undefined
     return path
   }
+  /**
+   * Fork product packages vendored as distributed JavaScript: their committed
+   * lib/ is the source plane, so local lib specifiers never resolve to TS.
+   */
+  const VENDORED_JS_ONLY_DIRECTORIES: readonly string[] = [
+    'apps/desktop/vendor/office',
+    'apps/desktop/vendor/ppt-core',
+    'apps/desktop/vendor/ppt-composer',
+  ]
   const scanSource = (path: string, reach: Reachability): void => {
     if (reach.sources.has(path)) return
+    if (VENDORED_JS_ONLY_DIRECTORIES.some(dir => display(path).startsWith(dir + '/'))) return
     if (!existsSync(path)) { failures.push(`${display(path)}: missing product source entry`); return }
     reach.sources.add(path)
     const owner = ownerOf(path)
