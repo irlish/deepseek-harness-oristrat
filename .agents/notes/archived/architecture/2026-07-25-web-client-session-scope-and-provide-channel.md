@@ -73,7 +73,7 @@ A session "materialized but with no first prompt" is governed by the summary-der
 - List discipline: the store retains every row; the Workspace browser's grouping, flat view, search, and counts share one visible projection — every non-blank session shows, while blank sessions show only the row retained by the `mainView` source, with its title forced to `New Session`. After a Workspace switch, the old blank entity stays in the mirror but is hidden from the list while the target Workspace's main blank shows; the user-visible surface therefore holds at most one blank row globally.
 - Blank Sessions can persist through creation checkpoints and command events, and have no automatic garbage collection: browser reloads, Host restarts, and Workspace connections reuse eligible blanks after acquiring their writer and skip occupied candidates, while list-loading and multi-tab races can still create additional blank Sessions, whose old logs remain on disk.
 
-### connectWorkspace: the Workspace entry point of New Session
+### connectWorkspace: the sole entry point of New Session
 
 `workspaces.connectWorkspace(workspaceId): Promise<SessionId>` (owned by WorkspaceRuntime — it holds both the workspace canonical path and the sessions reference):
 

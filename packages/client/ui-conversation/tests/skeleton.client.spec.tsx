@@ -485,7 +485,7 @@ describe('ConversationRoot resident composer', () => {
     expect(box.getAttribute('aria-disabled')).toBeNull()
     expect(box.getAttribute('contenteditable')).toBe('true')
     act(() => { b.wiring.setDraft('unassigned draft') })
-    expect(b.store.store.getSnapshot().draft).toBe('unassigned draft')
+    expect(b.store.store.getSnapshot().draft).toEqual({ text: 'unassigned draft', references: [] })
     const owner = b.pickerOwner() as {
       open: boolean
       unassignedSelected?: boolean

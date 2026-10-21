@@ -68,10 +68,7 @@ export function createElectronBuilderConfig(
   const policy = packagesMacOS && unsigned ? undefined : resolveDesktopPolicyEnvironment(env)
   if (resolvedPlatform === 'win32') installWindowsDirectoryInstaller()
   const macOSSigning = packagesMacOS && !unsigned ? resolveMacOSSigningEnvironment(env) : undefined
-    artifactName: unsigned
-      ? `oristrat-ai-stem-${version}-${os}-${arch}-unsigned.${ext}`
-      : `oristrat-ai-stem-${version}-${os}-${arch}${output.suffix}.${ext}`,
-    directories: { output: output.directory },
+  if (packagesMacOS && !unsigned && !skipNotarization) resolveMacOSNotarizationEnvironment(env)
   const buildPaths = desktopTargetBuildPaths(resolveDesktopBuildTarget(env, hostPlatform, hostArch))
   const output = desktopArtifactOutput(buildPaths, { unsigned, skipNotarization })
   let primaryRuntimeDestination
@@ -116,17 +113,15 @@ export function createElectronBuilderConfig(
     protocols: [{ name: 'Oristrat AI Stem', schemes: ['dsh'] }],
     extraMetadata: {
       dshDesktopAppId: appId,
-  if (packagesMacOS && !unsigned && !skipNotarization) resolveMacOSNotarizationEnvironment(env)
+      dshDesktopUpdateChannel: update?.channel ?? 'nightly',
       ...(policy === undefined ? {} : { dshMandatoryUpdatePolicy: policy }),
       ...buildVersion === productVersion ? {} : { version: buildVersion },
       ...packaged === undefined ? {} : { dshBuildCommit: packaged.commit, dshBuildDirty: packaged.dirty },
     },
     productName: 'Oristrat AI Stem',
     // Unsigned builds carry their own suffix so a shared file can never pass for a release artifact.
-      if (skipNotarization) {
-        verifyMacOSDiskImageSignature(artifact.file, macOSSigning ?? resolveMacOSSigningEnvironment(env))
-        return
-      }
+    artifactName: `oristrat-ai-stem-\${version}-\${os}-\${arch}${output.suffix}.\${ext}`,
+    directories: { output: output.directory },
     asar: true,
     electronDist: buildPaths.electron,
     electronFuses: { runAsNode: true },
@@ -170,7 +165,22 @@ export function createElectronBuilderConfig(
       icon: fileURLToPath(new URL('../build/icon.icns', import.meta.url)),
       category: 'public.app-category.developer-tools',
       // macOS matches the application locale against this bundle, not Electron Framework resources.
-      dshDesktopUpdateChannel: update?.channel ?? 'nightly',
+      extendInfo: {
+        CFBundleLocalizations: ['en', 'zh_CN'],
+        NSMicrophoneUsageDescription: 'Oristrat AI Stem uses your microphone to transcribe speech into message drafts.',
+      },
+      identity: unsigned ? null : macOSSigning?.signingIdentity,
+      forceCodeSigning: !unsigned,
+      hardenedRuntime: true,
+      entitlements: fileURLToPath(new URL('./macos-entitlements.plist', import.meta.url)),
+      entitlementsInherit: fileURLToPath(new URL('./macos-entitlements.plist', import.meta.url)),
+      // Prepared runtime files retain their signatures; PAK resources are sealed by their enclosing bundle.
+      signIgnore: ['/Contents/Resources/app\\.asar\\.unpacked/dsh(?:/|$)', '/Contents/Resources/runtime/primary-runtime(?:/|$)', '\\.pak$'],
+      notarize: !unsigned && !skipNotarization,
+      target: ['dmg', 'zip'],
+    },
+    dmg: {
+      format: 'ULMO',
       sign: !unsigned,
       writeUpdateInfo: false,
     },
@@ -221,21 +231,10 @@ export function createElectronBuilderConfig(
     },
     artifactBuildCompleted: artifact => {
       if (unsigned || !artifact.file.endsWith('.dmg')) return
-      extendInfo: {
-        CFBundleLocalizations: ['en', 'zh_CN'],
-        NSMicrophoneUsageDescription: 'Oristrat AI Stem uses your microphone to transcribe speech into message drafts.',
-      },
-      identity: unsigned ? null : macOSSigning?.signingIdentity,
-      forceCodeSigning: !unsigned,
-      hardenedRuntime: true,
-      entitlements: fileURLToPath(new URL('./macos-entitlements.plist', import.meta.url)),
-      entitlementsInherit: fileURLToPath(new URL('./macos-entitlements.plist', import.meta.url)),
-      // ASAR-unpacked native runtime files are pre-signed; PAK resources are sealed by their enclosing bundle.
-      signIgnore: ['/Contents/Resources/app\\.asar\\.unpacked/dsh(?:/|$)', '/Contents/Resources/runtime/primary-runtime(?:/|$)', '\\.pak$'],
-      notarize: !unsigned && !skipNotarization,
-      target: ['dmg', 'zip'],
-    },
-    dmg: {
+      if (skipNotarization) {
+        verifyMacOSDiskImageSignature(artifact.file, macOSSigning ?? resolveMacOSSigningEnvironment(env))
+        return
+      }
       return notarizeMacOSDiskImageArtifact(
         artifact,
         env,

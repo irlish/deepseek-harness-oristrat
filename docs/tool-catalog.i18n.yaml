@@ -9,8 +9,8 @@
   en: 6cc2cd9ced70bb09
   zh: 1c0e6cb4ba2ed637
 /tool-schema-catalog/tool-package-map:
-  en: e72ad7af437fa362
-  zh: d8f3683a4efe01b0
+  en: dab8a2299faa56ea
+  zh: 276f6c8e0de0cdad
 /tool-schema-catalog/deepseek-ai-dsh-plugin-manager:
   en: e0143916bb634762
   zh: e0143916bb634762
@@ -327,5 +327,29 @@
   en: 8673f203aea9bdf2
   zh: 4e17783ffdf34c83
 /tool-schema-catalog/deepseek-ai-dsh-tool-web/web-search:
-  en: cc1ad38bf0006710
-  zh: 324eacb827a09e93
+  en: 3c68f76235a9b9af
+  zh: 48444bbab7cc6409
+/tool-schema-catalog/deepseek-ai-dsh-tool-browser:
+  en: c44a74e0f9e21ab4
+  zh: c44a74e0f9e21ab4
+/tool-schema-catalog/deepseek-ai-dsh-tool-browser/browser-act:
+  en: c6f0c0be61a57d19
+  zh: 484cbea5c5ac5df4
+/tool-schema-catalog/deepseek-ai-dsh-tool-browser/browser-console:
+  en: 085f0cd480d4628c
+  zh: a5229addee6e0179
+/tool-schema-catalog/deepseek-ai-dsh-tool-browser/browser-eval:
+  en: e3b0c19d603c5b8e
+  zh: 39cd76824b5522ce
+/tool-schema-catalog/deepseek-ai-dsh-tool-browser/browser-navigate:
+  en: d46102863555ca0a
+  zh: 9185bcf672416d1e
+/tool-schema-catalog/deepseek-ai-dsh-tool-browser/browser-observe:
+  en: c5ed834697c0bf0c
+  zh: 2d26357dd49adba6
+/tool-schema-catalog/deepseek-ai-dsh-tool-browser/browser-screenshot:
+  en: 68c015039820d339
+  zh: 9d212290bca9f08b
+/tool-schema-catalog/deepseek-ai-dsh-tool-browser/browser-state:
+  en: 04da2845d0c51cce
+  zh: 6c603b4810171b22

@@ -139,6 +139,8 @@ export interface DeepSeekModelsEditorProps {
   disabled: boolean
   /** Replace the user-owned array after one visible edit. */
   onChange: (models: DeepSeekModelDraft[]) => void
+  /** Remove the user-owned array and return to inheritance. */
+  onReset: () => void
   /** Wire face for upstream model discovery. */
   operations: ModelsOperations
   /** Endpoint and one-shot credential the fetch interrogates. */
@@ -201,6 +203,12 @@ export function DeepSeekModelsEditor(props: DeepSeekModelsEditorProps): ReactNod
     props.onChange(props.models.filter((_model, at) => at !== index).map(model => ({ ...model })))
   }
 
+
+  const reset = (): void => {
+    setEditing(new Map())
+    setExpanded(new Set())
+    props.onReset()
+  }
 
   const toggle = (index: number): void => {
     setExpanded((current) => {
@@ -301,6 +309,18 @@ export function DeepSeekModelsEditor(props: DeepSeekModelsEditorProps): ReactNod
         >
           {busy ? props.t('fetching') : props.t('fetchUpstream')}
         </button>
+        {props.overridden
+          ? (
+            <button
+              type="button"
+              className={styles['linkButton']}
+              disabled={props.disabled}
+              onClick={reset}
+            >
+              {props.t('resetModels')}
+            </button>
+          )
+          : null}
       </div>
       {note === undefined ? null : <p className={styles['modelEmpty']}>{note}</p>}
       {props.models.length === 0

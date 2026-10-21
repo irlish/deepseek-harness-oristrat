@@ -73,7 +73,7 @@ Session 实例与 scope 同生命周期；catalog 只报告可发现性，不持
 - 列表纪律：store 保留全部行；Workspace browser 的分组、平铺、搜索和计数共用同一可见投影——所有非 blank 会话都显示，blank 会话只显示由 `mainView` 来源持有的一行，并强制标题为 `New Session`。切换 Workspace 后，旧 blank 实体仍在镜像中但从列表隐藏，目标 Workspace 的主 blank 显示；因此用户可见面全局至多一条 blank 行。
 - blank Session 可以通过创建检查点与命令事件持久化，且没有自动垃圾回收：浏览器刷新、Host 重启与工作区连接会在取得写锁后复用符合条件的空白会话并跳过被占用的候选；但列表加载与多 tab 竞态仍可能创建额外的 blank Session，其旧日志保留在磁盘上。
 
-### connectWorkspace：New Session 的 Workspace 入口
+### connectWorkspace：New Session 的唯一入口
 
 `workspaces.connectWorkspace(workspaceId): Promise<SessionId>`（归属 WorkspaceRuntime——它同时持有 workspace 规范 path 与 sessions 引用）：
 

@@ -1826,12 +1826,14 @@ describe('command launcher chrome and control seats', () => {
     // Capability absent (no permission slot entry): the chip renders nothing.
     expect(view.queryByLabelText(/^访问模式/)).toBeNull()
     // Every seat dispatched, nothing rendered (render passes may repeat; the
-    // seat set is the contract). The dock and the accessory seat both need the
-    // point-in-time Session zone, so without one neither is dispatched.
+    // seat set is the contract). The accessory seat needs the point-in-time
+    // Session zone, so without one it is not dispatched; the composer dock is
+    // the official zone-less seat and rides the input alone.
     expect([...new Set(slotCalls.map(c => c.key))]).toEqual([
       'conversation.input.overlay', 'conversation.input.attachments',
       'conversation.input.permission', 'conversation.input.plan', 'conversation.input.left',
       'conversation.input.right', 'conversation.input.model', 'conversation.input.activity',
+      'conversation.composer.dock',
     ])
     expect(view.queryByLabelText('Plan mode')).toBeNull()
     expect(view.queryByLabelText('Model')).toBeNull()
@@ -1846,7 +1848,7 @@ describe('command launcher chrome and control seats', () => {
     const call = slotCalls.find(candidate => candidate.key === 'conversation.input.accessory')
     expect(call?.owner).toBe(zone)
     const dock = slotCalls.find(candidate => candidate.key === 'conversation.composer.dock')
-    expect(dock?.owner).toBe(zone)
+    expect(dock?.owner).toEqual({})
   })
 
   it('renders the statistics dock outside Work mode while accessory entries stay Work-only', () => {
@@ -1860,7 +1862,7 @@ describe('command launcher chrome and control seats', () => {
     expect(view.getByTestId('foot')).toBeTruthy()
     expect(slotCalls.some(candidate => candidate.key === 'conversation.input.accessory')).toBe(false)
     const dock = slotCalls.find(candidate => candidate.key === 'conversation.composer.dock')
-    expect(dock?.owner).toBe(zone)
+    expect(dock?.owner).toEqual({})
   })
 
   it('dispatches the composer dock in the hero variant only in Work mode', () => {

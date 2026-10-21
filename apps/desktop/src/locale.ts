@@ -391,7 +391,7 @@ export function desktopUpdateReadyConfirmation(
   platform: string,
 ): { message: string; detail: string } {
   return {
-    message: formatDesktopMessage(messages.updateDownloadedTitle, { version }),
+    message: formatDesktopMessage(platform === 'win32' ? messages.updateDownloadedTitleWindows : messages.updateDownloadedTitle, { version }),
     detail: platform === 'win32' ? messages.updateDownloadedDetailWindows : messages.updateDownloadedDetail,
   }
 }

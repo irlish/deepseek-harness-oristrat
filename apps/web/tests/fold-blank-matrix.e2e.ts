@@ -399,7 +399,7 @@ async function placeReader(page: Page, root: string, reader: Reader): Promise<vo
 }
 
 async function openSessionBySearch(page: Page, query: string): Promise<void> {
-  await page.getByText('Ungrouped', { exact: true }).waitFor({ timeout: 30_000 })
+  await page.getByText('Recent Sessions', { exact: true }).waitFor({ timeout: 30_000 })
   const searchButton = page.getByRole('button', { name: 'Search sessions' })
   if (await searchButton.getAttribute('aria-expanded') !== 'true') await searchButton.click()
   await page.getByRole('textbox', { name: 'Search session names', exact: true }).fill(query)

@@ -324,6 +324,7 @@ async function mountFace(scripted: ReturnType<typeof scriptedFace>) {
     useSnapshot: bindSnapshotSelector(controller.store),
     operations: operationsWith(face),
     schema: settingsSchema,
+    providerEditing: true,
     t,
     renderSlot: renderSlot as unknown as ModelsSectionProps['renderSlot'],
   }
@@ -393,6 +394,7 @@ describe('ModelsSection', () => {
         useSnapshot={bindSnapshotSelector(controller.store)}
         operations={operationsWith(face)}
         schema={settingsSchema}
+        providerEditing
         t={t}
         renderSlot={() => null}
       />)
@@ -754,6 +756,7 @@ describe('ModelsSection', () => {
       useSnapshot={bindSnapshotSelector(controller.store)}
       operations={operationsWith(face)}
       schema={settingsSchema}
+      providerEditing
       t={t}
       renderSlot={() => null}
     />)
@@ -779,6 +782,7 @@ describe('ModelsSection', () => {
       useSnapshot={bindSnapshotSelector(controller.store)}
       operations={operationsWith(face)}
       schema={settingsSchema}
+      providerEditing
       t={t}
       renderSlot={() => null}
     />)
@@ -1311,6 +1315,8 @@ describe('ModelsSection', () => {
       disabled={true}
       onChange={vi.fn()}
       onReset={vi.fn()}
+      operations={operationsWith(scriptedFace().face)}
+      probe={{ settingsNs: 'llm-deepseek', provider: DEEPSEEK_TARGET.provider }}
     />)
     expect(screen.getByLabelText<HTMLInputElement>(`${en.modelId} 1`).value).toBe('')
     expandRow(1)
@@ -1586,6 +1592,7 @@ describe('ModelsSection', () => {
       useSnapshot={bindSnapshotSelector(controller.store)}
       operations={operationsWith(face)}
       schema={settingsSchema}
+      providerEditing
       t={t}
       renderSlot={() => null}
     />)
@@ -1709,6 +1716,7 @@ describe('ModelsSection', () => {
       useSnapshot={bindSnapshotSelector(controller.store)}
       operations={operationsWith(face.face)}
       schema={settingsSchema}
+      providerEditing
       t={t}
       renderSlot={() => null}
     />)
@@ -1732,6 +1740,7 @@ describe('ModelsSection', () => {
       useSnapshot={bindSnapshotSelector(controller.store)}
       operations={operationsWith(face)}
       schema={settingsSchema}
+      providerEditing
       t={t}
       renderSlot={() => null}
     />)
@@ -2055,6 +2064,7 @@ describe('ModelsSection', () => {
       useSnapshot={bindSnapshotSelector(controller.store)}
       operations={operationsWith(face)}
       schema={settingsSchema}
+      providerEditing
       t={t}
       renderSlot={() => null}
     />)

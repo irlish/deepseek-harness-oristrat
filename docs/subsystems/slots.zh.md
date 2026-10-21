@@ -175,6 +175,7 @@ Factory: conversation.content [ConversationContent]
 ├─ conversation.hero.workspace
 │  └─ conversation.hero.workspace.directoryFlow
 ├─ conversation.hero.agentPreset
+├─ conversation.hero.modeActions
 └─ conversation.hero.options
 
 Factory: conversation.chat.user.content [UserContent]

@@ -535,6 +535,8 @@ button.crumb:hover {
   align-items: center;
   gap: 2px;
   min-width: 0;
+}
+
 /* Plugin options share the row, pushed to its right edge. */
 .heroOptions {
   display: flex;
@@ -547,7 +549,6 @@ button.crumb:hover {
 
 .heroOptions:empty {
   display: none;
-
 }
 
 /* Hero: the composer sits inside the session scroll body; center there so

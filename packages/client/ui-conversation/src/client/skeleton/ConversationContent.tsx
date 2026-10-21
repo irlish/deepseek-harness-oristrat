@@ -147,9 +147,9 @@ export function ConversationContent(props: ConversationContentProps) {
         onClose: () => { setPickerOpen(false) },
       })}
       {renderSlot('conversation.hero.agentPreset', {})}
-      <div className={css.heroModeCluster}>
-        {workMode && zone !== undefined && renderSlot('conversation.hero.modeActions', zone)}
-      </div>
+      {workMode && zone !== undefined
+        ? <div className={css.heroModeCluster}>{renderSlot('conversation.hero.modeActions', zone)}</div>
+        : null}
       {sessionId === undefined ? null : <div className={css.heroOptions}>{renderSlot('conversation.hero.options', {})}</div>}
     </div>
   )
