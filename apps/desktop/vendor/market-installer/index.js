@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process'
-import { existsSync, readFileSync } from 'node:fs'
+import { existsSync, readFileSync, statSync } from 'node:fs'
 import { chmod, copyFile, lstat, mkdir, readFile, readdir, rename, rm, writeFile } from 'node:fs/promises'
 import { createRequire } from 'node:module'
 import { homedir } from 'node:os'
@@ -36,7 +36,7 @@ const OPERATION_TIMEOUT_MS = 15 * 60 * 1000
 const MAX_LOG_BYTES = 32 * 1024
 
 export const name = 'dsh-desktop-market-installer'
-export const inject = []
+export const inject = ['profileContext']
 
 function dshHome() {
   return process.env.DSH_HOME || join(homedir(), '.dsh')
@@ -239,11 +239,9 @@ export async function ensurePnpmShim(home = dshHome(), options = {}) {
     throw new Error('The generation-aware pnpm runner is unavailable; refusing to mutate the projected Profile.')
   }
   const pnpmCommand = runnerPath === undefined ? [pnpmEntry] : [runnerPath, pnpmEntry]
-  process.stdout.write(
-    runnerPath === undefined
-      ? 'dsh-desktop: pnpm shim written without the lock-recovery runner\n'
-      : `dsh-desktop: pnpm shim written via ${runnerPath}\n`
-  )
+  if (runnerPath === undefined) {
+    process.stderr.write('dsh-desktop: pnpm shim written without the lock-recovery runner\n')
+  }
 
   // The packaged executable is Electron on macOS, where Harness runs as a
   // utility process. Anything invoked through these shims expects Node
@@ -850,7 +848,25 @@ export function createDesktopPnpmService(options) {
   })
 }
 
-export function resolveDshEntry(argv = process.argv) {
+/**
+ * Resolve the launcher declared by the active profile, or the running CLI.
+ * @param {string[]} argv Process arguments for callers without a profile.
+ * @param {string} [installAnchor] Active profile's launcher package manifest.
+ * @returns {string} Absolute path to the supported dsh executable.
+ */
+export function resolveDshEntry(argv = process.argv, installAnchor) {
+  if (installAnchor !== undefined) {
+    const manifest = JSON.parse(readFileSync(installAnchor, 'utf8'))
+    const binary = typeof manifest.bin === 'string' ? manifest.bin : manifest.bin?.dsh
+    if (typeof binary !== 'string' || binary.trim() === '') {
+      throw new Error(`The DSH launcher manifest does not declare a dsh binary: ${installAnchor}`)
+    }
+    const entry = resolve(dirname(installAnchor), binary)
+    if (!existsSync(entry) || !statSync(entry).isFile()) {
+      throw new Error(`The DSH launcher binary is missing; build or reinstall the application: ${entry}`)
+    }
+    return entry
+  }
   const entry = argv[1]
   if (!entry || !/[/\\]bin\.js$/u.test(entry)) {
     throw new Error('The running DSH entry could not be identified.')
@@ -942,10 +958,11 @@ export async function apply(ctx) {
   // packaged Node/pnpm pair.
   const binDirectory = await ensurePnpmShim(home)
   const desktopProfiles = createDesktopProfilesService(home)
-  const desktopPnpm = createDesktopPnpmService({ binDirectory })
+  const dshEntryPath = resolveDshEntry(process.argv, ctx.profileContext.installAnchor)
+  const desktopPnpm = createDesktopPnpmService({ binDirectory, dshEntryPath })
   const profileBundlePackageBackend = createGenerationPackageBackend({
     dshHome: home,
-    dshEntryPath: resolveDshEntry(),
+    dshEntryPath,
     nodeExecutablePath: process.execPath,
     pnpmEntryPath: resolvePnpmEntry()
   })

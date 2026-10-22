@@ -1,0 +1,25 @@
+# Bilingual-pair consistency record for README.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write packages/oristrat/README.md
+/:
+  en: 3fb0a18d2b58775f
+  zh: 1e464f3e366ce679
+/packages-oristrat:
+  en: e8345fbfe935e170
+  zh: 5f9d68055c5efc8b
+/packages-oristrat/summary:
+  en: 7a8d8cd9b5bef633
+  zh: be6b32d0e563b827
+/packages-oristrat/table-of-contents:
+  en: 1eb35b015a6c423f
+  zh: a8a3dceee2c9e943
+/packages-oristrat/packages:
+  en: 3c5019d14bf1945b
+  zh: 8e0328b3904899dd
+/packages-oristrat/related-documentation:
+  en: 293287203690df3a
+  zh: 88a81869ed30052b
+/packages-oristrat/dev-note:
+  en: b75c8458928b72b9
+  zh: 003ba4e17b4b5269

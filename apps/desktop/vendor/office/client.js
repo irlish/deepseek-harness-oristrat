@@ -4,27 +4,33 @@ window.__ModuleLoader__.load({ id: 'dsh-desktop-office', factory: require => {
   const zh = { templates: '选择案例', preview: '查看案例', use: '做同款', close: '关闭预览', previous: '上一页', next: '下一页',
     select: '选用案例', loading: '正在加载…', retry: '重新加载', remove: '取消选择案例', selected: '已选案例',
     page: '第 {page} 页，共 {total} 页', spread: '第 {start}–{end} 页，共 {total} 页', pageNumber: '第 {page} 页', previousSpread: '上一组', nextSpread: '下一组', expired: '案例已更新，请重新选择',
-    empty: '暂无案例' }
+    empty: '暂无案例', create: '新建 Office 文件', files: 'Office 文件', title: '标题', content: '内容', format: '文件格式', save: '保存文件', saving: '正在保存…',
+    closeCreate: '关闭文件创建', chooseSession: '请先选择工作区并打开会话', saved: '文件已保存', openFile: '打开预览', download: '下载',
+    noFiles: '此工作区尚未创建 Office 文件', wordHelp: '每一行将保存为一个段落', excelHelp: '从表格粘贴数据：制表符分列，换行分行', pptHelp: '用空行分隔幻灯片；每页第一行为标题，其余行为正文',
+    createFailed: '未能保存文件，请检查工作区后重试', uncertainSave: '文件可能已保存。请先刷新文件列表或检查工作区中的 office-files，再决定是否重新保存。', refreshFiles: '刷新文件列表', downloadFailed: '未能下载文件，请从工作区打开', history: '最近创建的文件' }
   const en = { templates: 'Choose an example', preview: 'Preview example', use: 'Use this example', close: 'Close preview', previous: 'Previous page', next: 'Next page',
     select: 'Select example', loading: 'Loading…', retry: 'Retry', remove: 'Remove example', selected: 'Selected example',
     page: 'Page {page} of {total}', spread: 'Pages {start}–{end} of {total}', pageNumber: 'Page {page}', previousSpread: 'Previous spread', nextSpread: 'Next spread', expired: 'This example was updated. Choose it again.',
-    empty: 'No examples available' }
-  const empty = Object.freeze({ templates: [], mode: null, selectedTemplateId: null, loaded: false, loading: false, busy: false, error: '' })
+    empty: 'No examples available', create: 'New Office file', files: 'Office files', title: 'Title', content: 'Content', format: 'File format', save: 'Save file', saving: 'Saving…',
+    closeCreate: 'Close document creation', chooseSession: 'Choose a workspace and open a session first', saved: 'File saved', openFile: 'Open preview', download: 'Download',
+    noFiles: 'No Office files have been created in this workspace', wordHelp: 'Each line becomes a paragraph', excelHelp: 'Paste table data: tabs separate columns and newlines separate rows', pptHelp: 'Separate slides with a blank line; each first line is a heading and the remaining lines are body text',
+    createFailed: 'Could not save the file; check the workspace and try again', uncertainSave: 'The file may have been saved. Refresh the file list or check office-files in the workspace before saving again.', refreshFiles: 'Refresh file list', downloadFailed: 'Could not download the file; open it from the workspace', history: 'Recently created files' }
+  const empty = Object.freeze({ templates: [], documents: [], mode: null, selectedTemplateId: null, loaded: false, loading: false, busy: false, error: '' })
   const keyOf = id => id || staged
   const announce = (sessionId, mode) => window.dispatchEvent(new CustomEvent(EVENT, { detail: { sessionId, mode, origin: 'office' } }))
 
   class OfficeStore {
-    constructor(connection) { this.connection = connection; this.states = new Map(); this.listeners = new Map(); this.revisions = new Map(); this.requests = new Map(); this.adopted = new Set() }
+    constructor(connection, sidebar) { this.connection = connection; this.sidebar = sidebar; this.states = new Map(); this.listeners = new Map(); this.revisions = new Map(); this.requests = new Map(); this.adopted = new Set() }
     snapshot(id) { return this.states.get(keyOf(id)) ?? empty }
     subscribe(id, listener) { const key = keyOf(id); const set = this.listeners.get(key) ?? new Set(); set.add(listener); this.listeners.set(key, set); return () => { set.delete(listener); if (!set.size) this.listeners.delete(key) } }
     update(id, change) { const key = keyOf(id); this.states.set(key, { ...this.snapshot(id), ...change }); for (const listener of this.listeners.get(key) ?? []) listener() }
     bump(id) { const key = keyOf(id), value = (this.revisions.get(key) ?? 0) + 1; this.revisions.set(key, value); return value }
     async call(id, endpoint, payload = {}, signal) {
-      const timeout = AbortSignal.timeout(10_000)
+      const timeout = AbortSignal.timeout(endpoint === 'create' ? 60_000 : 15_000)
       const combined = signal ? AbortSignal.any([timeout, signal]) : timeout
-      const result = await this.connection.rpc.call('/api', 'office-templates', { endpoint, ...(id ? { sessionId: id } : {}), ...payload }, combined)
+      const result = await this.connection.rpc.call('/office', endpoint, { ...(id ? { sessionId: id } : {}), ...payload }, combined)
       combined.throwIfAborted()
-      if (!result.ok) throw new Error(result.error.message)
+      if (!result.ok) throw Object.assign(new Error(result.error.message), { code: result.error.code })
       return result.value
     }
     async load(id, force = false) {
@@ -72,6 +78,7 @@ window.__ModuleLoader__.load({ id: 'dsh-desktop-office', factory: require => {
     }
     reset() { for (const request of this.requests.values()) request.abort(); this.requests.clear(); for (const key of this.states.keys()) { this.bump(key); this.update(key, { loaded: false, loading: false, busy: false }); void this.load(key === staged ? undefined : key, true) } }
     dispose() { for (const request of this.requests.values()) request.abort(); this.requests.clear(); this.listeners.clear() }
+    open(sessionId, item) { this.sidebar.openResource(`dsh-resource://file/session/${encodeURIComponent(sessionId)}/${item.path.split('/').map(encodeURIComponent).join('/')}`) }
   }
   function useOffice(store, sessionId) {
     const state = React.useSyncExternalStore(listener => store.subscribe(sessionId, listener), () => store.snapshot(sessionId), () => store.snapshot(sessionId))
@@ -193,6 +200,54 @@ window.__ModuleLoader__.load({ id: 'dsh-desktop-office', factory: require => {
         h('path', { d: mode === 'word' ? 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M8 13h8M8 17h6' : 'M4 3h16a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1ZM3 9h18M3 15h18M9 3v18M15 3v18' })), mode === 'word' ? 'Word' : 'Excel')),
       state.error ? h('span', { role: 'alert' }, state.error, h('button', { type: 'button', onClick: () => store.load(sessionId, true) }, t('retry'))) : null)
   }
+  function CreateAction({ store, sessionId, t }) {
+    const [opened, setOpened] = React.useState(false)
+    return h(React.Fragment, null,
+      h('button', { type: 'button', className: 'dso-mode-action', 'data-office-create': '', onClick: () => setOpened(true) }, t('create')),
+      opened ? h(CreateDialog, { key: sessionId, store, sessionId, t, close: () => setOpened(false) }) : null)
+  }
+  function CreateDialog({ store, sessionId, t, close }) {
+    const dialog = React.useRef(), lifetime = React.useRef(new AbortController())
+    const state = useOffice(store, sessionId)
+    const [format, setFormat] = React.useState(state.mode || 'word'), [title, setTitle] = React.useState(''), [content, setContent] = React.useState('')
+    const [busy, setBusy] = React.useState(false), [failure, setFailure] = React.useState(''), [saved, setSaved] = React.useState(null)
+    React.useEffect(() => { const element = dialog.current, controller = new AbortController(); lifetime.current = controller; element.showModal(); return () => { controller.abort(); element.close() } }, [])
+    const submit = async event => {
+      event.preventDefault(); setBusy(true); setFailure(''); setSaved(null)
+      try {
+        const item = await store.call(sessionId, 'create', { format, title, content }, lifetime.current.signal)
+        setSaved(item); await store.load(sessionId, true)
+      } catch (error) { if (!lifetime.current.signal.aborted) setFailure(t(['invalid-request', 'limit-exceeded', 'session-unavailable', 'creation-failed'].includes(error.code) ? 'createFailed' : 'uncertainSave')) }
+      finally { if (!lifetime.current.signal.aborted) setBusy(false) }
+    }
+    const download = async item => {
+      setFailure('')
+      try {
+        const result = await store.call(sessionId, 'download', { id: item.id }, lifetime.current.signal)
+        const url = URL.createObjectURL(new Blob([Uint8Array.from(atob(result.data), char => char.charCodeAt(0))]))
+        const link = document.createElement('a'); link.href = url; link.download = result.name; link.click(); URL.revokeObjectURL(url)
+      } catch (error) { if (!lifetime.current.signal.aborted) setFailure(t('downloadFailed')) }
+    }
+    const rows = saved && !state.documents.some(item => item.id === saved.id) ? [saved, ...state.documents] : state.documents
+    return h('dialog', { ref: dialog, className: 'dso-create-dialog', 'data-office-dialog': '', 'aria-label': t('create'), onCancel: event => { event.preventDefault(); if (!busy) close() }, onClick: event => { if (event.target === dialog.current && !busy) close() } },
+      h('header', null, h('h2', null, t('create')), h('button', { type: 'button', disabled: busy, onClick: close, 'aria-label': t('closeCreate') }, '×')),
+      !sessionId ? h('p', { role: 'status' }, t('chooseSession')) : null,
+      h('form', { onSubmit: submit },
+        h('label', null, t('format'), h('select', { 'data-office-format': '', value: format, disabled: busy, onChange: event => setFormat(event.target.value) }, ['word', 'excel', 'ppt'].map(value => h('option', { key: value, value }, { word: 'Word (.docx)', excel: 'Excel (.xlsx)', ppt: 'PowerPoint (.pptx)' }[value])))),
+        h('label', null, t('title'), h('input', { 'data-office-title': '', value: title, maxLength: 160, required: true, disabled: busy, onChange: event => setTitle(event.target.value) })),
+        h('label', null, t('content'), h('textarea', { 'data-office-content': '', value: content, required: true, disabled: busy, rows: 8, onChange: event => setContent(event.target.value) })),
+        h('p', { className: 'dso-create-help' }, t(`${format}Help`)),
+        h('button', { type: 'submit', 'data-office-save': '', disabled: !sessionId || busy || !title.trim() || !content.trim() }, t(busy ? 'saving' : 'save'))),
+      failure ? h('div', null, h('p', { role: 'alert', 'data-office-error': '' }, failure), h('button', { type: 'button', disabled: busy, onClick: () => store.load(sessionId, true) }, t('refreshFiles'))) : null,
+      saved ? h('p', { role: 'status', 'data-office-saved': saved.path }, `${t('saved')}: ${saved.path}`) : null,
+      h('section', { 'aria-label': t('history'), className: 'dso-created-files' }, h('h3', null, t('history')),
+        rows.length ? rows.map(item => h('div', { key: item.id, 'data-office-file': item.path }, h('span', { title: item.path }, item.path.split('/').at(-1)),
+          h('button', { type: 'button', 'data-office-open': '', onClick: () => { store.open(sessionId, item); close() } }, t('openFile')),
+          h('button', { type: 'button', 'data-office-download': '', onClick: () => download(item) }, t('download')))) : h('p', null, t('noFiles'))))
+  }
+  function DocumentActions({ store, sessionId, session, t }) {
+    return session?.blank === false ? h(CreateAction, { store, sessionId, t }) : null
+  }
   function Dock({ store, sessionId, session, t }) {
     const state = useOffice(store, sessionId), [opened, setOpened] = React.useState(null)
     const root = React.useRef(), panel = React.useRef(), visible = !!state.mode && (session == null || session.blank === true)
@@ -201,6 +256,7 @@ window.__ModuleLoader__.load({ id: 'dsh-desktop-office', factory: require => {
     React.useEffect(() => { if (opened && state.templates.find(item => item.id === opened.id)?.revision !== opened.revision) setOpened(null) }, [state.templates, opened])
     if (!visible) return null
     const items = state.templates.filter(item => item.mode === state.mode)
+    if (!items.length && !state.loading && !state.error && !state.selectionExpired) return null
     return h('div', { ref: root, className: 'dso-dock-root' }, h('section', { ref: panel, className: 'dso-dock', 'data-office-dock': state.mode, 'aria-label': t('templates') },
       h('div', { className: 'dso-viewport', 'data-native-wheel-owner': '' },
       state.error ? h('div', { role: 'alert' }, state.error, h('button', { type: 'button', onClick: () => store.load(sessionId, true) }, t('retry'))) : null,
@@ -269,15 +325,21 @@ window.__ModuleLoader__.load({ id: 'dsh-desktop-office', factory: require => {
 .dso-spread img{display:block;width:100%;object-fit:contain;box-shadow:0 2px 12px color-mix(in srgb,var(--dsw-alias-label-primary) 10%,transparent)}
 .dso-spread figcaption{width:100%;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--dsw-alias-label-secondary);font-size:12px;line-height:20px;flex:none}
 .dso-selected{display:flex;align-items:flex-start}.dso-selected button{cursor:pointer}.dso-selected-frame{position:relative;display:block;flex:none;width:clamp(76px,10vw,92px);aspect-ratio:16/9;transform:rotate(-3deg);transform-origin:center}.dso-selected-preview{font:inherit;display:block;box-sizing:border-box;width:100%;height:100%;padding:0;border:2px solid var(--dsw-alias-state-business-primary);border-radius:9px;overflow:hidden;background:var(--dsw-alias-bg-base);box-shadow:0 4px 14px color-mix(in srgb,var(--dsw-alias-label-primary) 18%,transparent)}.dso-selected .dso-thumbnail{width:100%;height:100%;border-radius:0}.dso-selected .dso-thumbnail img{height:100%;object-fit:cover;object-position:top}.dso-selected-remove{position:absolute;top:-8px;right:-8px;z-index:2;display:grid;place-items:center;width:20px;height:20px;padding:0;border:1px solid var(--dsw-alias-border-l2);border-radius:50%;background:var(--dsw-alias-label-primary);color:var(--dsw-alias-bg-base);font:500 15px/1 ui-sans-serif,system-ui,sans-serif;opacity:0;pointer-events:none;transform:rotate(3deg);transition:opacity 120ms ease}.dso-selected-frame:hover .dso-selected-remove,.dso-selected-frame:focus-within .dso-selected-remove{opacity:1;pointer-events:auto}.dso-selected-remove:disabled{cursor:default}.dso-selected .dso-selected-preview:focus-visible{outline-offset:2px}@media(hover:none){.dso-selected-remove{opacity:1;pointer-events:auto}}@media(prefers-reduced-motion:reduce){.dso-selected-frame{transform:none}.dso-selected-remove{transform:none;transition:none}}.dso-mode-action:focus-visible,.dso-card-select:focus-visible,.dso-card-preview:focus-visible,.dso-modal button:focus-visible,.dso-selected button:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary);outline-offset:3px}@media(max-width:540px){.dso-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.dso-modal{padding:10px}.dso-modal footer{gap:12px}.dso-pagination{gap:8px}}`
+  const createCss = `
+.dso-create-dialog{box-sizing:border-box;width:min(680px,calc(100vw - 32px));max-height:calc(100dvh - 48px);overflow:auto;padding:24px;border:1px solid var(--dsw-alias-border-l2);border-radius:16px;background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary);font:inherit}
+.dso-create-dialog::backdrop{background:rgba(0,0,0,.4)}.dso-create-dialog header{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:16px}.dso-create-dialog h2,.dso-create-dialog h3{margin:0;font-size:16px;font-weight:500}.dso-create-dialog form{display:grid;gap:12px}.dso-create-dialog label{display:grid;gap:6px;font-size:13px}.dso-create-dialog input,.dso-create-dialog textarea,.dso-create-dialog select{box-sizing:border-box;width:100%;padding:10px;border:1px solid var(--dsw-alias-border-l2);border-radius:8px;background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary);font:inherit}.dso-create-dialog textarea{resize:vertical;min-height:120px}.dso-create-dialog button{padding:8px 12px;border:1px solid var(--dsw-alias-border-l2);border-radius:8px;background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary);font:inherit;cursor:pointer}.dso-create-dialog button:disabled{opacity:.5;cursor:default}.dso-create-help{margin:0;font-size:13px;color:var(--dsw-alias-label-secondary)}.dso-created-files{margin-top:24px;display:grid;gap:10px}.dso-created-files>div{display:flex;align-items:center;gap:8px}.dso-created-files span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.dso-create-dialog [role=alert],.dso-create-dialog [role=status]{font-size:13px;overflow-wrap:anywhere}.dso-create-dialog :focus-visible{outline:2px solid var(--dsw-alias-state-business-primary);outline-offset:2px}
+@media(max-width:540px){.dso-create-dialog{padding:16px}.dso-created-files>div{flex-wrap:wrap}.dso-created-files span{flex-basis:100%}}
+`
   function apply(ctx) {
-    const store = new OfficeStore(ctx.get('connection'))
+    const store = new OfficeStore(ctx.get('connection'), ctx.get('sidebarRight'))
     ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'Office dictionaries')
-    ctx.effect(() => { if (document.querySelector('style[data-plugin-css="desktop-office/styles"]')) return; const tag = document.createElement('style'); tag.dataset.plugin = NS; tag.dataset.pluginCss = 'desktop-office/styles'; tag.textContent = css; document.head.append(tag); return () => tag.remove() }, 'Office styles')
+    ctx.effect(() => { if (document.querySelector('style[data-plugin-css="desktop-office/styles"]')) return; const tag = document.createElement('style'); tag.dataset.plugin = NS; tag.dataset.pluginCss = 'desktop-office/styles'; tag.textContent = css + createCss; document.head.append(tag); return () => tag.remove() }, 'Office styles')
     ctx.effect(() => { const listener = event => store.syncPpt(event.detail ?? {}); window.addEventListener(EVENT, listener); return () => { window.removeEventListener(EVENT, listener); store.dispose() } }, 'Office mode synchronization')
     ctx.on('connection/reset', () => store.reset())
-    for (const [seat, component] of [['conversation.hero.modeActions', ModeActions], ['conversation.input.accessory', Accessory], ['conversation.chat.userMessageFooter', OpeningTemplate], ['conversation.hero.dock', Dock], ['conversation.composer.dock', Dock]]) {
+    for (const [seat, component] of [['conversation.hero.options', CreateAction], ['conversation.hero.modeActions', ModeActions], ['conversation.input.accessory', Accessory], ['conversation.chat.userMessageFooter', OpeningTemplate], ['conversation.hero.dock', Dock], ['conversation.composer.dock', Dock]]) {
       ctx.slots.inject(seat, () => ctx.slots.register({ name: seat, id: NS, order: seat === 'conversation.hero.modeActions' ? 30 : 10, locale: NS, inject: () => ({ store }) }, component))
     }
+    ctx.slots.inject('conversation.input.accessory', () => ctx.slots.register({ name: 'conversation.input.accessory', id: `${NS}-files`, order: 30, locale: NS, inject: () => ({ store }) }, DocumentActions))
   }
-  return { apply, inject: ['slots', 'locale', 'connection'] }
+  return { apply, inject: ['slots', 'locale', 'connection', 'sidebarRight'] }
 } })

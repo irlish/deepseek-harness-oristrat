@@ -269,6 +269,8 @@
       "@oristrat/dsh-browser-use-runtime": ["./packages/oristrat/browser-use-runtime/src/index.ts"],
       "@oristrat/dsh-browser-use-runtime/mcp": ["./packages/oristrat/browser-use-runtime/src/mcp.ts"],
       "@oristrat/dsh-browser-use-chrome-devtools-mcp": ["./packages/oristrat/browser-chrome-devtools-mcp/src/index.ts"],
+      "@oristrat/dsh-browser-use-chrome-devtools-mcp/types": ["./packages/oristrat/browser-chrome-devtools-mcp/src/types.ts"],
+      "@oristrat/dsh-browser-use-chrome-devtools-mcp/remote": ["./packages/oristrat/browser-chrome-devtools-mcp/lib/typert.remote-client.d.ts"],
       "dsh-desktop-workbenches": ["./apps/desktop/vendor/workbenches/index.js"],
       "dsh-desktop-workbenches/client": ["./apps/desktop/vendor/workbenches/client.js"],
       "dsh-desktop-market-installer": ["./apps/desktop/vendor/market-installer/index.js"],

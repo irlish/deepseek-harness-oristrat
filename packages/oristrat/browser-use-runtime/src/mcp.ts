@@ -95,6 +95,7 @@ interface ClientState {
  * Await one MCP client during each future Agent's creation.
  * A busy attachment leaves that activation without browser tools; its other turns continue.
  * Calls are serialized per Session; unload closes every server before releasing registration.
+ * Each connection advertises its initial working directory as its sole MCP workspace root.
  * @param ctx - provider context supplying browser use, Agents, tools, prompt assembly, and working directories.
  * @param options - provider identity, attachment exclusivity, and executable configuration.
  * @throws when the working-directory provider is absent, before browser resources are registered.
@@ -145,13 +146,15 @@ export function mountSessionMcp(ctx: Context, options: SessionMcpOptions): void 
             }
             return next()
           })
+          const cwd = await workingDirectory.ensure(agent, signal)
           await scope.ctx.plugin(McpClient, McpClient.Config({
             transport: 'stdio',
             serverName: options.name,
             command: options.command,
             args: options.args,
             ...options.env === undefined ? {} : { env: options.env },
-            cwd: await workingDirectory.ensure(agent, signal),
+            cwd,
+            workspaceRoots: [cwd],
             ...options.toolCallTimeoutMs === undefined ? {} : { toolCallTimeoutMs: options.toolCallTimeoutMs },
             failOnStartupError: true,
             reconnect: { enabled: false },

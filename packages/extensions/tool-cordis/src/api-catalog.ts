@@ -598,6 +598,25 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
     ],
   },
   {
+    key: 'browserAutomation',
+    summary: 'Browser control Remote owner; no independent browser or model runtime is created.',
+    description: 'Browser control Remote owner; no independent browser or model runtime is created.',
+    methods: [
+      {
+        signature: '@Remote configuration(): BrowserAutomationConnection',
+        description: 'Inspect the profile-selected connection without starting Chromium.',
+        parameters: [],
+        returns: 'the deployment-owned launch or attachment settings.',
+      },
+      {
+        signature: '@Remote async perform(agent: Agent, action: BrowserAutomationAction, signal: AbortSignal): Promise<BrowserAutomationResult>',
+        description: 'Operate the Session browser and return fresh text from Chromium. Agent turns and other Sessions retain their ownership.',
+        parameters: [{ name: 'agent', description: 'live Session owner resolved by the Web Session controller.' }, { name: 'action', description: 'one explicit page operation.' }, { name: 'signal', description: 'cancels queued work; an already delivered browser action may have taken effect.' }],
+        returns: 'a verified response or visible failure; failures retain the browser for inspection.',
+      },
+    ],
+  },
+  {
     key: 'browserUse',
     summary: 'Owns one optional provider registration in the shared browser-use service.',
     description: 'Owns one optional provider registration in the shared browser-use service.',
@@ -5105,6 +5124,18 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'BrowserActRequest',
     declaration: 'export interface BrowserActRequest {\n    readonly owner: BrowserOwner;\n    readonly action: BrowserActionName;\n    readonly target?: BrowserElementTarget;\n    readonly value?: string;\n    readonly key?: string;\n    readonly button?: \'left\' | \'middle\' | \'right\';\n    readonly clickCount?: number;\n    readonly deltaY?: number;\n    readonly timeoutMs?: number;\n}',
+  },
+  {
+    name: 'BrowserAutomationAction',
+    declaration: 'export type BrowserAutomationAction = {\n    readonly kind: \'pages\';\n} | {\n    readonly kind: \'observe\' | \'back\' | \'forward\' | \'reload\';\n    readonly pageId: number;\n} | {\n    readonly kind: \'navigate\';\n    readonly url: string;\n} | {\n    readonly kind: \'select\';\n    readonly pageId: number;\n} | {\n    readonly kind: \'click\';\n    readonly pageId: number;\n    readonly uid: string;\n} | {\n    readonly kind: \'fill\';\n    readonly pageId: number;\n    readonly uid: string;\n    readonly value: string;\n};',
+  },
+  {
+    name: 'BrowserAutomationConnection',
+    declaration: 'export interface BrowserAutomationConnection {\n    readonly mode: \'launch\' | \'attach\';\n    readonly endpoint?: string;\n    readonly headless?: boolean;\n}',
+  },
+  {
+    name: 'BrowserAutomationResult',
+    declaration: 'export interface BrowserAutomationResult {\n    readonly connection: BrowserAutomationConnection;\n    readonly status: \'connected\' | \'failed\' | \'unavailable\' | \'busy\' | \'invalid-address\';\n    readonly text: string;\n}',
   },
   {
     name: 'BrowserConsoleEntry',

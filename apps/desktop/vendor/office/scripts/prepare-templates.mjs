@@ -4,12 +4,15 @@ import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import { join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { electronExecutable } from '../electron-node-loader.mjs'
-import { createTemplateLibrary } from '../../packages/dsh-desktop-office/lib/templates.js'
+import { createRequire } from 'node:module'
+import { createTemplateLibrary } from '../lib/templates.js'
 
 const exec = promisify(execFile)
-const project = resolve(import.meta.dirname, '../..')
-const sources = join(project, 'packages/dsh-desktop-office/sources')
+const project = resolve(import.meta.dirname, '../../../../..')
+const sources = fileURLToPath(new URL('../sources', import.meta.url))
+const require = createRequire(import.meta.url)
+const skillRequire = createRequire(require.resolve('@deepseek-ai/dsh-skill-office/package.json'))
+const kitManifest = skillRequire.resolve('@deepseek-ai/libreoffice-kit/package.json')
 const hash = bytes => createHash('sha256').update(bytes).digest('hex')
 
 /**
@@ -61,10 +64,10 @@ async function files(root, prefix = '') {
 }
 
 /** Generate all previews with the same installed Kit used by Office tasks. */
-export async function prepareOfficeTemplates({ runtime = join(project, '.build/office-runtime'), cache = join(project, '.build/office-template-cache') } = {}) {
+export async function prepareOfficeTemplates({ runtime = join(project, '.dsh-dev/office-runtime'), cache = join(project, '.dsh-dev/office-template-cache') } = {}) {
   const manifest = JSON.parse(await readFile(join(runtime, 'primary-runtime/runtime.json'), 'utf8'))
   const python = join(runtime, 'primary-runtime/dependencies/python', ...(manifest.platform === 'win32' ? ['python.exe'] : ['bin/python3']))
-  const kit = JSON.parse(await readFile(join(project, 'node_modules/@deepseek-ai/libreoffice-kit/package.json'), 'utf8'))
+  const kit = JSON.parse(await readFile(kitManifest, 'utf8'))
   const inputs = await files(sources)
   const fingerprint = hash(Buffer.concat([
     Buffer.from(JSON.stringify({ format: 1, python: manifest.python, kit: kit.version })),
@@ -92,7 +95,7 @@ export async function prepareOfficeTemplates({ runtime = join(project, '.build/o
         const produced = outputFlag >= 0 ? args[outputFlag + 1] : directoryFlag >= 0 ? args[directoryFlag + 1] : undefined
         // A timed-out helper may leave the exclusive output behind; the next call opens it with wx.
         if (produced) await rm(produced, { recursive: true, force: true })
-        const command = officeCliCommand(electronExecutable(project), join(project, 'build/office-cli.mjs'), args)
+        const command = officeCliCommand(process.execPath, join(kitManifest, '../lib/cli.js'), args)
         const { stdout } = await exec(command.file, command.args,
           { env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' }, timeout: command.timeout, maxBuffer: 4 * 1024 * 1024, windowsHide: true })
         return JSON.parse(stdout.trim())
@@ -100,6 +103,7 @@ export async function prepareOfficeTemplates({ runtime = join(project, '.build/o
       for (const source of ordered) {
         const { source: sourcePath, previewPages, ...item } = source
         const directory = join(staging, item.id)
+        await cp(join(sources, sourcePath), directory, { recursive: true })
         const sampleFile = item.sampleFile ?? (item.mode === 'word' ? 'example.docx' : 'example.xlsx')
         const sample = join(directory, sampleFile)
         if (item.id === 'government-notice') { item.title = '公文写作 · 通知'; item.titleEn = 'Official notice' }

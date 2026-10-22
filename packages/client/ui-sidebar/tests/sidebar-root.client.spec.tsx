@@ -68,6 +68,7 @@ function mountShell({
         if (key === 'sidebar.brand.mark') return brandMark
         if (key === 'sidebar.brand.name') return brandName
         if (key === 'sidebar.toggle.badge') return null
+        if (key === 'sidebar.quickSwitcher') return <div data-testid="product-navigation" data-wide={owner.wide} />
         if (key === 'sidebar.settings') {
           settingsOwner = owner
           return <div data-testid="settings-seat" data-wide={owner.wide} />
@@ -106,6 +107,11 @@ function mountShell({
 }
 
 describe('SidebarRoot shell', () => {
+  it('renders product navigation with the current column width mode', () => {
+    mountShell()
+    expect(screen.getByTestId('product-navigation').getAttribute('data-wide')).toBe('true')
+  })
+
   it('advertises the effective new-session binding', () => {
     const shortcut: ShortcutCatalogEntry = { id: 'session.new' as ShortcutCommandId, label: 'New', aliases: [],
       binding: null, modified: true, conflicts: [], issue: null, keys: ['Ctrl', 'N'], aria: 'Control+N' }

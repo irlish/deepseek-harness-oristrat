@@ -5,6 +5,7 @@ import { selectMarketFetch } from './market-fetch.mjs'
 import { awaitHandle, createMarketInstallStore, MarketInstallError, resolveInstallTarget } from './market-install.mjs'
 import { readSubmissionStatus, SubmissionStatusError } from './submission-status.mjs'
 import { createStateStore, MAX_STATE_BYTES, StateError } from './state.mjs'
+import { createLocalWorkbenchStore, LocalWorkbenchError } from './local-workbenches.mjs'
 import { readFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -64,6 +65,7 @@ async function readPayload(request, maximum = MAX_STATE_BYTES, tooLarge = 'Workb
 
 export function apply(ctx, config) {
   const store = createStateStore(config.root)
+  const localWorkbenches = createLocalWorkbenchStore(config.root)
   const readCatalog = createCatalogReader({
     fetch: selectMarketFetch(),
     cachePath: join(config.root, 'workbench-catalog-cache.json'),
@@ -125,6 +127,25 @@ export function apply(ctx, config) {
       } catch (error) {
         return Response.json({ error: error instanceof CatalogError ? error.message : 'Could not read the workbench catalog.' }, {
           status: error instanceof CatalogError ? error.status : 500,
+          headers: { 'cache-control': 'no-store' }
+        })
+      }
+    }
+  })
+  for (const [path, methods, operation] of [
+    ['/api/desktop-workbenches/local', ['GET'], () => localWorkbenches.list()],
+    ['/api/desktop-workbenches/local/create', ['POST'], async request => localWorkbenches.create(await readPayload(request, 8192, 'Request is too large.'))]
+  ]) ctx.connection.fetch.register({
+    path, methods, requestBody: 'buffered',
+    async fetch(request) {
+      try {
+        const result = await operation(request)
+        return Response.json(methods[0] === 'GET' ? { workbenches: result } : { workbench: result }, { headers: { 'cache-control': 'no-store' } })
+      } catch (error) {
+        if (!(error instanceof LocalWorkbenchError || error instanceof StateError) || error.status >= 500) ctx.logger.warn(error)
+        return Response.json({ code: error instanceof LocalWorkbenchError ? error.code : 'local_workbench_failed',
+          error: error instanceof LocalWorkbenchError || error instanceof StateError ? error.message : 'Could not access local workbenches.' }, {
+          status: error instanceof LocalWorkbenchError || error instanceof StateError ? error.status : 500,
           headers: { 'cache-control': 'no-store' }
         })
       }

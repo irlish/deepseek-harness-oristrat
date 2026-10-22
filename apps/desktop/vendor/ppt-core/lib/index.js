@@ -3147,7 +3147,7 @@ function hasActiveSkill(agent) {
 	return agent.session.deriveMessages().some((message) => {
 		if (message.role !== "user") return false;
 		if (message.source.kind === "skill-invocation") return message.source.name === DSH_PPT_SKILL_NAME;
-		return message.source.kind === "plugin" && message.source.plugin === SKILL_PLUGIN && message.source.form === "snapshot" && message.source.sections.some((section) => section.name === "dsh-ppt");
+		return message.source.kind === `plugin:${SKILL_PLUGIN}` && message.source.plugin === SKILL_PLUGIN && message.source.form === "snapshot" && message.source.sections.some((section) => section.name === "dsh-ppt");
 	});
 }
 async function automaticSkill(ctx, agent, signal) {
@@ -3165,7 +3165,7 @@ async function automaticSkill(ctx, agent, signal) {
 			text: skillText
 		}],
 		source: {
-			kind: "plugin",
+			kind: `plugin:${SKILL_PLUGIN}`,
 			plugin: SKILL_PLUGIN,
 			form: "snapshot",
 			sections: [{
@@ -3185,12 +3185,12 @@ function clearAutomaticPptContext(agent, staleOnly = false) {
 		const event = agent.session.eventAt(seq);
 		if (event?.type !== "user/message") continue;
 		const source = event.data.source;
-		if (source.kind !== "plugin" || source.form !== "snapshot") continue;
+		if (!source.kind.startsWith("plugin:") || source.form !== "snapshot") continue;
 		if (![SKILL_PLUGIN, "dsh-ppt-composer", "kimi-ppt-skill", "kimi-ppt-composer"].includes(source.plugin)) continue;
         if (staleOnly && source.plugin !== "kimi-ppt-skill" && source.plugin !== "kimi-ppt-composer" && (source.plugin !== SKILL_PLUGIN || event.data.content.some(part => part.type === "text" && part.text.includes("DSH-PPT-AUTHORING-20260907-V3")))) continue;
 		agent.session.append("user/message", createUserMessage({
 			content: [{ type: "text", text: "[Retired automatic PPT instructions cleared.]" }],
-			source: { kind: "plugin", plugin: "dsh-ppt-context-cleared" }
+			source: { kind: "plugin:dsh-ppt-context-cleared", plugin: "dsh-ppt-context-cleared" }
 		}), {
 			surfaceOp: { op: "replace", startSeq: seq, endSeq: seq },
 			sourceEventSeqs: [seq]
@@ -3227,6 +3227,7 @@ function registerPptTools(ctx, service) {
 		if (step !== 1) return decision;
 		const skill = await automaticSkill(ctx, agent, signal);
 		return {
+			...decision,
 			kind: "enter",
 			messages: [
 				...decision.messages,
@@ -3237,7 +3238,7 @@ function registerPptTools(ctx, service) {
 						text: context
 					}],
 					source: {
-						kind: "plugin",
+						kind: "plugin:dsh-ppt-composer",
 						plugin: "dsh-ppt-composer",
 						form: "snapshot",
 						sections: [{
@@ -3593,6 +3594,7 @@ const name = "dsh-ppt";
 /** Required host services. */
 const inject = [
 	"connection",
+	"webServer",
 	"tools",
 	"systemPrompt",
 	"skills"
@@ -3607,62 +3609,6 @@ const Config = z.object({
 	pptSkillRoot: z.string()
 });
 /** Compose storage, browser RPC, and bounded model tools. */
-function registerPptRpcRoute(webCtx, channel, rpcHandler) {
-	webCtx.effect(() => webCtx.webServer.register({
-		kind: "prefix",
-		path: channel,
-		handler: async (req, res) => {
-			if (req.method !== "POST") {
-				res.setHeader("Allow", "POST");
-				res.writeHead(405);
-				res.end();
-				return;
-			}
-			const connection = webCtx.get("connection");
-			const rejection = connection?.requestRejection?.(req);
-			if (rejection !== void 0) {
-				res.writeHead(rejection);
-				res.end(rejection === 401 ? "unauthorized" : "forbidden");
-				return;
-			}
-			const chunks = [];
-			for await (const chunk of req) chunks.push(chunk);
-			let body;
-			try {
-				body = JSON.parse(Buffer.concat(chunks).toString("utf8"));
-			} catch {
-				res.writeHead(400);
-				res.end("body is not JSON");
-				return;
-			}
-			const rawPath = new URL(req.url ?? "/", "http://localhost").pathname;
-			const endpoint = rawPath.startsWith(`${channel}/`) ? rawPath.slice(channel.length + 1) : "";
-			try {
-				const result = await rpcHandler(endpoint, body?.payload);
-				res.writeHead(200, { "Content-Type": "application/json" });
-				res.end(JSON.stringify({
-					type: "server-response",
-					rpcId: body?.rpcId,
-					result
-				}));
-			} catch (err) {
-				res.writeHead(500, { "Content-Type": "application/json" });
-				res.end(JSON.stringify({
-					type: "server-response",
-					rpcId: body?.rpcId,
-					result: {
-						ok: false,
-						error: {
-							code: "internal",
-							message: err instanceof Error ? err.message : String(err)
-						}
-					}
-				}));
-			}
-		}
-	}), `dsh-ppt: ${channel} rpc route`);
-}
-
 async function apply(ctx, config) {
 	const bundledPptSkillRoot = fileURLToPath(new URL("../skills/dsh-ppt", import.meta.url));
 	registerPreviewAssets(ctx, previewFiles, path.join(bundledPptSkillRoot, "references"));
@@ -3672,15 +3618,17 @@ async function apply(ctx, config) {
 		maxActivities: config.maxActivities ?? 200
 	}), { maxSlides: config.maxSlides ?? 40 });
 	const rpcHandler = pptRpc(service);
-	ctx.inject(["webServer"], (webCtx) => {
-		registerPptRpcRoute(webCtx, "/dsh-ppt", rpcHandler);
-		// Older loaded clients can finish their in-flight requests after upgrade.
-		registerPptRpcRoute(webCtx, "/kimi-ppt", rpcHandler);
-		try {
-			webCtx.connection?.rpc?.handle?.("/dsh-ppt", rpcHandler, { authority: "trusted-host" });
-			webCtx.connection?.rpc?.handle?.("/kimi-ppt", rpcHandler, { authority: "trusted-host" });
-		} catch {}
-	});
+	ctx.effect(() => ctx.reflect.provide("officePresentation", service));
+	const handle = async (endpoint, payload, signal) => {
+		signal.throwIfAborted();
+		if (endpoint === "template/select" || (endpoint === "presentation/mode" && payload?.mode === "ppt")) {
+			const modes = ctx.get("officeModes");
+			if (modes) await modes.select(sessionIdOf(payload), null);
+		}
+		return rpcHandler(endpoint, payload);
+	};
+	ctx.effect(() => ctx.connection.rpc.handle("/dsh-ppt", handle));
+	ctx.effect(() => ctx.connection.rpc.handle("/kimi-ppt", handle));
 	registerPptTools(ctx, service);
 }
 //#endregion

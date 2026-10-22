@@ -320,6 +320,82 @@ function lastOpening(open: MockInstance<UiWorkspaceService['openWorkspace']>): P
 }
 
 describe('UiWorkspaceService', () => {
+  it('delegates Session navigation until a handler claims it and releases handlers with their plugin', async () => {
+    const b = bench()
+    const delegate = vi.fn(() => false)
+    const handled = vi.fn(() => true)
+    const unreachable = vi.fn(() => true)
+    const plugin = b.ctx.plugin((ctx) => {
+      ctx.uiWorkspace.registerSessionOpener(delegate)
+      ctx.uiWorkspace.registerSessionOpener(handled)
+      ctx.uiWorkspace.registerSessionOpener(unreachable)
+    })
+    await plugin.await()
+    b.uiWorkspace.openSession(sid('owned'))
+    expect(delegate).toHaveBeenCalledWith(sid('owned'), 'explicit-session')
+    expect(handled).toHaveBeenCalledWith(sid('owned'), 'explicit-session')
+    expect(unreachable).not.toHaveBeenCalled()
+    expect(b.sessions.retain).not.toHaveBeenCalled()
+    await plugin.dispose()
+    b.uiWorkspace.openSession(sid('ordinary'))
+    expect(b.sessions.retain).toHaveBeenCalledExactlyOnceWith(sid('ordinary'), { source: 'mainView' })
+    expect(handled).toHaveBeenCalledOnce()
+  })
+
+  it('keeps the current Session when an opener fails', () => {
+    const b = bench()
+    b.uiWorkspace.openSession(sid('current'))
+    b.uiWorkspace.registerSessionOpener(() => { throw new Error('owner failed') })
+    expect(() => { b.uiWorkspace.openSession(sid('owned')) }).toThrow('owner failed')
+    expect(b.sessions.retained[0]!.release).not.toHaveBeenCalled()
+    expect(b.sessions.retain).toHaveBeenCalledOnce()
+  })
+
+  it('lets a product own New Session while preserving explicit draft preparation', async () => {
+    const b = bench({ workspaces: workspaceState([workspace('a')]) })
+    const start = vi.fn(() => true)
+    const plugin = b.ctx.plugin((ctx) => { ctx.uiWorkspace.registerSessionStarter(start) })
+    await plugin.await()
+    b.uiWorkspace.startSession(wid('a'))
+    expect(start).toHaveBeenCalledExactlyOnceWith(wid('a'))
+    expect(b.sessions.create).not.toHaveBeenCalled()
+    b.uiWorkspace.startSession(wid('a'), { prompt: 'explicit draft' })
+    await vi.waitFor(() => { expect(b.requestDraftInitialization).toHaveBeenCalledOnce() })
+    expect(start).toHaveBeenCalledOnce()
+    await plugin.dispose()
+    b.uiWorkspace.startSession(wid('a'))
+    await vi.waitFor(() => { expect(b.sessions.create).toHaveBeenCalledTimes(2) })
+    expect(start).toHaveBeenCalledOnce()
+  })
+
+  it('passes Workspace navigation to the owning product before changing selection', async () => {
+    const b = bench({ workspaces: workspaceState([workspace('a')]) })
+    const handle = vi.fn(() => true)
+    const dispose = b.uiWorkspace.registerSessionOpener(handle)
+    await b.uiWorkspace.openWorkspace(wid('a'))
+    expect(handle).toHaveBeenCalledExactlyOnceWith(sid('created-a'), 'workspace', { workspaceId: wid('a') })
+    expect(b.sessions.retain).not.toHaveBeenCalled()
+    dispose()
+    await b.uiWorkspace.openWorkspace(wid('a'))
+    expect(b.sessions.retain).toHaveBeenCalledOnce()
+  })
+
+  it.each(['workspace', 'unassigned'])('does not reuse an owned %s blank until its filter unloads', async (source) => {
+    const owned = summary('owned', { blank: true, cwd: '/w/a' })
+    const b = bench({
+      sessions: sessionState([owned], 'pending'),
+      workspaces: workspaceState(source === 'workspace' ? [workspace('a', [owned.id])] : []),
+    })
+    const plugin = b.ctx.plugin((ctx) => { ctx.uiWorkspace.registerSessionReuseFilter(id => id !== owned.id) })
+    await plugin.await()
+    const connect = () => source === 'workspace' ? b.uiWorkspace.connectWorkspace(wid('a')) : b.uiWorkspace.openUnassigned()
+    await connect()
+    expect(b.sessions.create.mock.calls[0]?.[0]?.sessionId).toBeUndefined()
+    await plugin.dispose()
+    await connect()
+    expect(b.sessions.create.mock.calls[1]?.[0]?.sessionId).toBe(owned.id)
+  })
+
   it('prepares and selects the default Workspace after both startup baselines', async () => {
     const b = bench({ configureWorkspaces: (workspaces) => {
       workspaces.initializeDefault.mockImplementation(async () => {

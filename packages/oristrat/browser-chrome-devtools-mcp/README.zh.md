@@ -59,7 +59,14 @@ kind: "package-reference"
 
 提供方解析固定版本 npm 包的可执行入口，并使用当前 Node 启动。服务进程之前可能运行临时协议探测进程。[共享运行时](../browser-use-runtime/README.zh.md)负责等待 Agent 初始化、逐 Session 串行执行与清理；[MCP 客户端](../../mcp/mcp-client/README.zh.md)负责传输、发现和结果投影。
 
-只要活动 Session 保持连接，浏览器状态就会跨轮次保留。MCP 服务器在经验证的 Session 当前工作目录中启动；Session 后续改变目录时，服务器保留启动目录。销毁会等待服务器关闭，再释放资源。重新加载后恢复 Session 会创建新的浏览器运行状态；已保存的对话历史不会还原 Cookie 或页面。
+只要活动 Session 保持连接，浏览器状态就会跨轮次保留。MCP 服务器在经验证的 Session 当前工作目录中启动；Session 后续改变目录时，服务器保留启动目录。客户端将该目录声明为唯一工作区根目录，允许在其中保存截图及其他文件输出。上游路径验证也允许操作系统临时目录，并拒绝其他位置。销毁会等待服务器关闭，再释放资源。重新加载后恢复 Session 会创建新的浏览器运行状态；已保存的对话历史不会还原 Cookie 或页面。
+
+
+### 人工浏览器控制
+
+挂载 Typert 后，提供方暴露 `browserAutomation.configuration` 和按 Session 调用的 `browserAutomation.perform` Remote 方法。侧栏使用这些方法验证真实连接、打开 HTTP(S) 页面、列出页面、读取无障碍快照、选择页面，并点击或填写最新快照标识的元素。页面操作需要显式页面编号。这些方法复用 Session 的工具和资源队列，不创建额外的模型或浏览器运行时。agent 运行期间拒绝人工操作。上游工具失败返回可见的失败状态；传输失败需要重新检查，因为已发送的动作可能已完成。显示的 endpoint 去除凭据、查询参数和片段。
+
+在 Web profile 的 `cordis.patch.yml` 中修改 `browser-use-chrome-devtools-mcp` 条目以配置 launch 或 attach；修改后新建或恢复 Session。附加模式保留既有的独占规则。侧栏返回内容只保留为 UI 状态，不插入模型对话。
 
 </details>
 

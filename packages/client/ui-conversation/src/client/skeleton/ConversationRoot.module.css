@@ -519,6 +519,7 @@ button.crumb:hover {
 
 .heroWorkspaceRow {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 2px;
   min-width: 0;
@@ -532,6 +533,8 @@ button.crumb:hover {
 /* Trailing cluster of extra hero mode actions (the PPT entry rides here). */
 .heroModeCluster {
   display: flex;
+  flex: none;
+  flex-wrap: wrap;
   align-items: center;
   gap: 2px;
   min-width: 0;
@@ -555,7 +558,8 @@ button.crumb:hover {
   min-width: 0;
 }
 
-.heroOptions:empty {
+.heroOptions:empty,
+.heroDock:empty {
   display: none;
 }
 

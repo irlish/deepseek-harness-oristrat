@@ -2511,6 +2511,21 @@
       "doc": "docs/subsystems/boot.md",
       "symbol": "PendingModule",
       "source": "packages/boot/hmr/src/index.ts"
+    },
+    {
+      "doc": "docs/subsystems/browser-use.md",
+      "symbol": "BrowserAutomationConnection",
+      "source": "packages/oristrat/browser-chrome-devtools-mcp/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/browser-use.md",
+      "symbol": "BrowserAutomationAction",
+      "source": "packages/oristrat/browser-chrome-devtools-mcp/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/browser-use.md",
+      "symbol": "BrowserAutomationResult",
+      "source": "packages/oristrat/browser-chrome-devtools-mcp/src/types.ts"
     }
   ]
 }

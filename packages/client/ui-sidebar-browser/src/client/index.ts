@@ -6,6 +6,7 @@ import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 import type {} from '@deepseek-ai/dsh-client-ui-session/client'
 import type {} from '@deepseek-ai/dsh-client-ui-sidebar-right/client'
 import type {} from '@deepseek-ai/dsh-api-workspace-controller/client'
+import type {} from '@deepseek-ai/dsh-api-remotes/client'
 import { BrowserBody, type BrowserBodyProps } from './view/BrowserBody.tsx'
 import { BrowserTitle } from './view/BrowserTitle.tsx'
 import { createBrowserControllers } from './browser/BrowserController.ts'
@@ -43,6 +44,11 @@ export const inject = ['slots', 'locale', 'sidebarRight', 'sidebarRightTabs']
 export function apply(ctx: Context): void {
   const namespace = 'sidebarBrowser'
   const t = ctx.locale.bind(namespace)
+  let automationContext: Context | undefined
+  ctx.inject(['remote', 'remote.browserAutomation'], (scope) => {
+    automationContext = scope
+    scope.effect(() => () => { automationContext = undefined }, 'ui-sidebar-browser.automation')
+  })
   ctx.inject(['shortcuts'], (ctx) => {
     ctx.effect(() => ctx.shortcuts.register({
       id: 'browser.new' as ShortcutCommandId, label: () => t('guide.title'), aliases: ['browser', 'new browser tab'],
@@ -89,6 +95,21 @@ export function apply(ctx: Context): void {
         }
         const controller = createBrowserControllers(actions, factory(sessionId), tabId =>
           openTabs.getSnapshot().some(tab => tab.sessionId === sessionId && tab.tabId === tabId))
+        controller.automationConfiguration = async (signal) => {
+          const remote = automationContext?.remote
+          if (remote === undefined) return undefined
+          signal.throwIfAborted()
+          const result = await remote.browserAutomation.configuration()
+          if (!result.ok) throw result.error
+          return result.value
+        }
+        controller.performAutomation = async (action, signal) => {
+          const remote = automationContext?.remote
+          if (remote === undefined) return undefined
+          const result = await remote.browserAutomation.perform(sessionId, action, signal)
+          if (!result.ok) throw result.error
+          return result.value
+        }
         controllers.set(sessionId, controller)
         return controller
       },

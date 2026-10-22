@@ -85,7 +85,7 @@ async function load(exclusive = false, mode?: string, toolCallTimeoutMs?: number
   await ctx.plugin(Loader)
   ctx.loader.builtins.include = Include
   const realLoader = ctx.loader.internal
-  if (realLoader === undefined || realLoader.version !== 'v2') throw new Error('expected the v2 internal module loader')
+  if (realLoader === undefined) throw new Error('expected a supported internal module loader')
   ctx.loader.internal = {
     ...realLoader,
     async import(specifier: string) {
@@ -516,7 +516,7 @@ describe('Session MCP Loader composition', () => {
     await expect(readFile(join(root, 'events.ndjson'))).rejects.toMatchObject({ code: 'ENOENT' })
   })
 
-  it('retains a live server directory and starts the resumed server in the current Session directory', async () => {
+  it('retains a live server directory and roots, and resumes both in the current Session directory', async () => {
     const { ctx, root } = await load()
     await ctx.plugin(JsonlSessionPersistence, { root: join(root, 'sessions') })
     await mkdir(join(root, 'original'))
@@ -527,6 +527,7 @@ describe('Session MCP Loader composition', () => {
     const first = await ctx.agents.create({ sessionId, meta: { cwd: original } })
     expect((await execute(ctx, first.agent)).isError).toBe(false)
     const initial = await events(root)
+    expect(initial.findLast(event => event.event === 'roots')).toMatchObject({ roots: [{ uri: pathToFileURL(original).href }] })
     const firstCall = initial.findLast(event => event.event === 'call')
     expect(firstCall).toMatchObject({ cwd: original })
     const starts = initial.filter(event => event.event === 'start').length
@@ -535,6 +536,7 @@ describe('Session MCP Loader composition', () => {
     expect(first.agent.session.header.cwd).toBe(original)
     expect((await execute(ctx, first.agent)).isError).toBe(false)
     const changed = await events(root)
+    expect(changed.findLast(event => event.event === 'roots')).toMatchObject({ roots: [{ uri: pathToFileURL(original).href }] })
     expect(changed.findLast(event => event.event === 'call')).toMatchObject({ cwd: original, pid: firstCall?.pid })
     expect(changed.filter(event => event.event === 'start')).toHaveLength(starts)
     await first.dispose()
@@ -543,6 +545,7 @@ describe('Session MCP Loader composition', () => {
     expect(resumed.agent.session.header.cwd).toBe(original)
     expect((await execute(ctx, resumed.agent)).isError).toBe(false)
     const reopened = await events(root)
+    expect(reopened.findLast(event => event.event === 'roots')).toMatchObject({ roots: [{ uri: pathToFileURL(selected).href }] })
     expect(reopened.findLast(event => event.event === 'call')).toMatchObject({ cwd: selected })
     expect(reopened.filter(event => event.event === 'start').length).toBeGreaterThan(starts)
     await resumed.dispose()

@@ -25,7 +25,7 @@ kind: "package-reference"
 <a id="use-this-package"></a>
 ## 使用本包
 
-通过组合 patch 挂载 `dsh-desktop-market-installer` 行；客户端半区经 bundle 依赖加入 Web 模块名册。状态与安装路由位于 `/dsh-desktop/market-installer/` 下。
+通过组合 patch 挂载 `dsh-desktop-market-installer` 行；客户端半区经 bundle 依赖加入 Web 模块名册。状态与安装路由位于 `/dsh-desktop/market-installer/` 下。Profile 启动器提供 `profileContext`；包操作从其 `installAnchor` 清单解析 `bin.dsh` 入口，因此 Web 组合不依赖宿主进程的参数布局。启动器二进制文件缺失时，启动会失败并提示构建或重新安装。shim 初始化成功时不写入控制台，以保留 Profile 帮助输出；恢复运行器不可用时向 stderr 输出诊断。
 
 
 <a id="dev-note"></a>

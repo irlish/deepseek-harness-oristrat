@@ -19,7 +19,7 @@ Owns the fixed-target install, update, and uninstall flow for the optional commu
 
 ## Use this package
 
-Mount the row `dsh-desktop-market-installer` through a composition patch; the client half joins the Web module roster through the bundle dependency. Status and install routes live under `/dsh-desktop/market-installer/`.
+Mount the row `dsh-desktop-market-installer` through a composition patch; the client half joins the Web module roster through the bundle dependency. Status and install routes live under `/dsh-desktop/market-installer/`. The profile launcher supplies `profileContext`; package operations resolve its `installAnchor` manifest's `bin.dsh` entry, so Web compositions do not depend on the host process argument layout. A missing launcher binary fails startup with a build or reinstall instruction. Successful shim initialization writes no console output, preserving profile help; an unavailable recovery runner reports a diagnostic on stderr.
 
 ## Dev Note
 

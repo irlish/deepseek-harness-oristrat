@@ -15,6 +15,8 @@
  * @module
  */
 
+import { isAbsolute } from 'node:path'
+import { pathToFileURL } from 'node:url'
 import { Client, type Transport } from '@modelcontextprotocol/client'
 import type { Context } from '@deepseek-ai/cordis'
 import { credentialRef } from '@deepseek-ai/dsh-credentials'
@@ -126,6 +128,10 @@ export interface ConnectionHandle extends ServerContext {
  * @returns Handle with a `ready` promise for startup-await and a `dispose` for teardown.
  */
 export function startConnection(ctx: Context, config: Config, policy: ResolvedReconnectPolicy): ConnectionHandle {
+  const roots = config.workspaceRoots?.map((directory) => {
+    if (!isAbsolute(directory)) throw new Error(`mcp-client(${config.serverName}): workspaceRoots must contain absolute directories`)
+    return { uri: pathToFileURL(directory).href }
+  })
   const versionNegotiation = config.transport === 'streamable-http' && config.versionNegotiation === 'legacy' ? 'legacy' : 'auto'
   const label = `mcp-client(${config.serverName})`
   const incompleteDisposalMessage = `${label}: transport closure could not be confirmed during disposal — server shutdown may be incomplete`
@@ -279,7 +285,7 @@ export function startConnection(ctx: Context, config: Config, policy: ResolvedRe
     const generation = new Client(
       { name: 'dsh-mcp-client', version: '0.0.1' },
       {
-        capabilities: {},
+        capabilities: roots === undefined ? {} : { roots: {} },
         versionNegotiation: { mode: versionNegotiation },
         listChanged: {
           tools: {
@@ -290,6 +296,7 @@ export function startConnection(ctx: Context, config: Config, policy: ResolvedRe
         },
       },
     )
+    if (roots !== undefined) generation.setRequestHandler('roots/list', () => ({ roots }))
     const closed: PromiseWithResolvers<void> = Promise.withResolvers()
     let attemptSettled = false
     let closeObserved = false

@@ -17,6 +17,7 @@ import { emptyBrowserFrame } from '../browser/BrowserFrame.ts'
 import { currentBrowserTarget } from '../browser/BrowserPersistence.ts'
 import type { BrowserStore } from '../browser/store.ts'
 import css from './Browser.module.css'
+import { BrowserAutomation } from './BrowserAutomation.tsx'
 
 const EMPTY_FRAME = emptyBrowserFrame()
 
@@ -108,6 +109,9 @@ export function BrowserBody(props: BrowserBodyProps): ReactNode {
           onClick={() => { setSandbox(tab.id, !sandboxed) }}
         ><SandboxPolicyIcon sandboxed={sandboxed} /></button>}
       </form>
+      <BrowserAutomation t={t} url={draft} signal={tab.signal}
+        {...props.automationConfiguration === undefined ? {} : { automationConfiguration: props.automationConfiguration }}
+        {...props.performAutomation === undefined ? {} : { performAutomation: props.performAutomation }} />
       {sandboxed === false && <div className={css.sandboxWarning} role="status">{t('sandbox.warning')}</div>}
       {error !== undefined && <div className={css.failure} role="status">{error.code !== undefined && error.description !== undefined
         ? t('load.failed.detail', { code: String(error.code), description: error.description })

@@ -47,6 +47,8 @@ Connection 拥有请求 URL 解析、request correlation、`/api` carrier、trus
 
 持久 event 路径打开 `follow()`，其首帧包含当前 header、tail page、cursor 与完整 projection baseline。历史 record 带有显式 `event` 或 `chunks` 判别字段和字段对齐的内部 `event`；journal 先校验每条 record 的逻辑 seq 闭区间，Client 再直接把这些 record 保留为 `SessionEventLikeEntry`，无需逐 record 转换。每个物理 generation 都根据该 snapshot 原子替换保留窗口，随后按 seq append 标准实时 event。`page()` 只用于更早历史与 gap repair。瞬态 control stream 每代以完整 baseline 开始，随后应用 projection update。
 
+产品框架占用 root `main` 中 key 为 `conversation` 的入口 时复用完整的 `conversation.main` 工厂，标题栏和输入框仍由对话模块持有。`uiWorkspace.registerSessionOpener`、`registerSessionStarter` 和 `registerSessionReuseFilter` 允许产品插件接管导航并保留有归属的空白 Session。注册是可释放的 effect；未被接管的操作保持普通导航，显式草稿准备不经过 starter。
+
 ### Workspaces
 
 [`api/workspace-controller`](../../packages/api/workspace-controller/README.zh.md)把 Workspace 变更策略与权威 follow feed 留在 Host。`ClientWorkspaceModel` 拥有浏览器行、Workspace 顺序、归档与置顶 Session id 数组、命令回显，以及流与一元调用的竞态合并。每代 stream 先给出完整 baseline，再给出 `upsert`、`remove`、`order`、`archived` 和 `pinned` increment；重连时以新 baseline 替换 model。`WorkspaceController` 把该 model 作为 `ctx.workspaces` 公开，`ui-workspace` 则提供 `useWorkspaces` 与导航回调。侧边栏的 `ArchivedFilter` 控制列表与搜索中的默认隐藏、显示已归档或仅显示已归档。归档行保留排序位置、置灰展示，必须通过行菜单或搜索结果的取消归档操作恢复后才能打开。恢复调用 `workspace.unarchiveSession`，完整归档集合通过一元响应及 `archived` increment 到达 Client。Session 显示顺序保存在浏览器本地，包含隐藏归档项；置顶在该完整顺序内移动 Session，取消置顶不恢复先前位置。

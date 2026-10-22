@@ -25,7 +25,7 @@ Browse HTTP(S) pages, including loopback services, inside independent right-Side
 <a id="use-this-package"></a>
 ## Use this package
 
-Browser is disabled by default in Web profiles and enabled on Desktop. Enable the shipped entry through the Web profile patch to use it. Open **Browser** from the right-Sidebar guide and enter an HTTP(S) URL. Chat HTTP(S) links open here when the [link preference](../ui-chat/README.md) selects **In-App Sidebar**. A host name without a scheme becomes HTTPS. Public and loopback targets use the same default sandbox. Each guide action or delegated message-link activation creates another Browser tab.
+The shipped Web and Desktop profiles enable Browser. Open **Browser** from the right-Sidebar guide and enter an HTTP(S) URL. Chat HTTP(S) links open here when the [link preference](../ui-chat/README.md) selects **In-App Sidebar**. A host name without a scheme becomes HTTPS. Public and loopback targets use the same default sandbox. Each guide action or delegated message-link activation creates another Browser tab.
 
 ### When to choose it
 
@@ -33,7 +33,7 @@ Choose Browser for a Web page that should remain beside the current Session. Cho
 
 ### Minimal configuration
 
-The package has no plugin configuration. A Web profile enables the shipped entry through its profile patch:
+The package has no plugin configuration. A profile can enable its entry explicitly:
 
 ```yaml
 - id: ui-sidebar-browser
@@ -64,6 +64,12 @@ Web uses `sandbox="allow-scripts allow-forms allow-same-origin allow-popups allo
 
 Web records toolbar submissions and typed tab opens. A navigation state machine treats the first iframe load for each controlled revision as known and a later load as proof that the page changed to an unreadable URL. In that unknown state the address is marked, Back, Forward, and external-open are disabled, and Reload returns to the last controlled URL. A remounted body reloads the latest application-known URL and uses its optional initial URL only before the first controlled target. History API and fragment changes that emit no iframe load remain invisible. An iframe `error` event displays a transient load-failure notice until the next controlled load without changing URL history.
 
+### Automation controls
+
+Expand **Browser automation** to inspect the configured launch or CDP attachment mode. **Connect / check pages** verifies the current Session’s real Chromium connection; **Open address in automation browser** opens the address-bar URL there. Enter a page ID from the returned list, read its snapshot, then use its element UIDs for explicit click or fill actions. These operations share the agent’s Session connection and are refused while the agent runs. The iframe preview is independent and may be blocked by the visited site; Chromium automation does not depend on iframe embedding. A failed operation keeps its response visible and requests a fresh connection/page check, because cancellation or disconnection cannot undo delivered input.
+
+Launch and attachment settings belong to the [Chrome DevTools provider](../../oristrat/browser-chrome-devtools-mcp/README.md). Configuration changes require a newly created or resumed Session; the sidebar does not seize another Session’s browser.
+
 ### Controller
 
 Each tab's `BrowserController` owns address validation, commands and explicit restoration. `BrowserFrame` supplies carrier-neutral navigation state; `IframeImpl` uses `BrowserNavigation`, while `ElectronWebViewImpl` observes Chromium history. `BrowserPresentation` owns physical DOM attachment. Slot injection supplies `useBrowserState` and plain callbacks, keeping provider objects and observables out of the React body.
@@ -89,7 +95,7 @@ The page refresh shortcut calls the same reload operation as the toolbar. Its to
 <a id="model-experience"></a>
 ## Model Experience
 
-None, as Browser tabs are user-facing presentation state and register no tool, prompt section, or Session event.
+None, as Browser tabs register no tool, prompt section, or Session event, and their human automation responses stay in the sidebar without entering a model request.
 
 #### KV Cache effect
 

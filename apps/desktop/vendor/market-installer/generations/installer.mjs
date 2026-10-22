@@ -260,7 +260,7 @@ export async function installGeneration(options) {
   const { dshHome, pluginSpec, onTrace } = options
   const trace = (line) => onTrace?.(`generation-install: ${line}`)
   const layout = await ensureRegistryDirectories(dshHome)
-  // Known registry/path names make staging provenance readable; generic git and
+  // Known registry/path names identify the staging source; generic git and
   // tarball specs are resolved to their actual direct dependency after pnpm runs.
   let pluginName = options.expectedPluginName ?? (pluginSpec.replace(/@[^@/]+$/u, '') || pluginSpec)
 

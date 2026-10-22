@@ -66,6 +66,8 @@ export interface StdioConfig {
   env: Record<string, string>
   /** Working directory for the child process. */
   cwd: string
+  /** Absolute directories advertised through MCP roots/list; omission disables roots negotiation. */
+  workspaceRoots?: string[]
   /** Timeout per tool call or resource request in milliseconds. */
   toolCallTimeoutMs: number
   /** Fail plugin activation when the initial connection or tool synchronization fails. */
@@ -94,6 +96,8 @@ export interface StreamableHttpConfig {
   authorizationEnv?: string
   /** SDK protocol handshake; use `legacy` for servers that reject the modern discovery probe. */
   versionNegotiation?: 'auto' | 'legacy'
+  /** Absolute directories advertised through MCP roots/list; omission disables roots negotiation. */
+  workspaceRoots?: string[]
   /** Timeout per tool call or resource request in milliseconds. */
   toolCallTimeoutMs: number
   /** Fail plugin activation when the initial connection or tool synchronization fails. */
@@ -128,6 +132,7 @@ export const Config = z.union([
     args: z.array(String).default([]),
     env: z.dict(String).default({}),
     cwd: z.string().default(''),
+    workspaceRoots: z.array(String),
     toolCallTimeoutMs: z.number().default(DEFAULT_TOOL_CALL_TIMEOUT_MS),
     failOnStartupError: z.boolean().default(false),
     maxInstructionBytes: z.number().step(1).min(1).default(DEFAULT_MAX_INSTRUCTION_BYTES),
@@ -140,6 +145,7 @@ export const Config = z.union([
     headers: z.dict(String).default({}),
     authorizationEnv: z.string().role('credential-ref'),
     versionNegotiation: z.union(['auto', 'legacy']).default('auto'),
+    workspaceRoots: z.array(String),
     toolCallTimeoutMs: z.number().default(DEFAULT_TOOL_CALL_TIMEOUT_MS),
     failOnStartupError: z.boolean().default(false),
     maxInstructionBytes: z.number().step(1).min(1).default(DEFAULT_MAX_INSTRUCTION_BYTES),

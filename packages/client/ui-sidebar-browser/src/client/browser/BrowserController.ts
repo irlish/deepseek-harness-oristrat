@@ -6,6 +6,7 @@ import type { BrowserFrameState } from './BrowserFrame.ts'
 import type { BrowserPage, BrowserPageFactory } from './BrowserPage.ts'
 import { currentBrowserTarget, type BrowserTabState } from './BrowserPersistence.ts'
 import type { BrowserStore } from './store.ts'
+import type { BrowserAutomationAction, BrowserAutomationConnection, BrowserAutomationResult } from '@oristrat/dsh-browser-use-chrome-devtools-mcp/types'
 import { parseBrowserAddress, type BrowserAddressFailure, type BrowserTarget } from './url.ts'
 
 /** Live tab state; navigation comes from its provider and draft validation stays local. */
@@ -181,6 +182,10 @@ export interface BrowserMountRequest {
 
 /** Plain Slot callbacks and a framework-bound state source, not a desktop protocol. */
 export interface BrowserInjected {
+  /** @param signal - requesting tab lifetime. @returns the configured Chromium connection when the provider is mounted. */
+  automationConfiguration?(signal: AbortSignal): Promise<BrowserAutomationConnection | undefined>
+  /** @param action - explicit operation on this Session's browser. @param signal - requesting tab lifetime. @returns actual MCP output. */
+  performAutomation?(action: BrowserAutomationAction, signal: AbortSignal): Promise<BrowserAutomationResult | undefined>
   readonly keyedHooks: {
     readonly browserState: (key: string) => HostObservable<BrowserControllerState> | undefined
   }

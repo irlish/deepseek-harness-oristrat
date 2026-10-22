@@ -59,7 +59,14 @@ When configuring the system prompt's `toolOrder` for the whole process, leave br
 
 The provider resolves its pinned npm entry and starts it under the current Node executable. A temporary protocol probe may precede the serving process. The [shared runtime](../browser-use-runtime/README.md) owns awaited Agent initialization, per-Session serialization, and cleanup; the [MCP client](../../mcp/mcp-client/README.md) owns transport, discovery, and result projection.
 
-Browser state survives turns while its live Session remains attached. The MCP server starts in the Session's validated current working directory and retains that launch directory after later Session directory changes. Disposal waits for server shutdown before releasing resources. Resume after reload starts fresh browser runtime state; stored conversation history does not restore cookies or pages.
+Browser state survives turns while its live Session remains attached. The MCP server starts in the Session's validated current working directory and retains that launch directory after later Session directory changes. The client advertises that directory as its sole workspace root, allowing screenshots and other file outputs there. Upstream path validation also permits the operating system temporary directory and rejects other locations. Disposal waits for server shutdown before releasing resources. Resume after reload starts fresh browser runtime state; stored conversation history does not restore cookies or pages.
+
+
+### Human browser controls
+
+When Typert is mounted, the provider exposes `browserAutomation.configuration` and the Session-scoped `browserAutomation.perform` Remote methods. The sidebar uses them to verify the actual connection, open HTTP(S) pages, list pages, read accessibility snapshots, select a page, and click or fill an element identified by its latest snapshot. Page-scoped actions require an explicit page ID. These methods reuse the Session’s tools and resource queue; they start no additional model or browser runtime. The provider refuses human operations during an agent turn. Upstream tool failures return a visible failed status, while transport failures require a fresh check because a delivered action may have completed. Displayed endpoints omit credentials, query parameters, and fragments.
+
+Configure launch or attach in the Web profile’s `cordis.patch.yml` by patching entry `browser-use-chrome-devtools-mcp`; create or resume a Session after changing configuration. Attachment retains the existing exclusive ownership rules. Sidebar responses remain UI state and are not inserted into the model’s conversation.
 
 </details>
 

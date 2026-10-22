@@ -323,6 +323,8 @@ export function SidebarRoot({
         </button>
       </Tooltip>
 
+      {renderSlot('sidebar.quickSwitcher', { wide })}
+
       {panels.length > 0 && (
         <nav className={css.panelList} aria-label={t('panels.label')}>
           {panels.map(({ id, label }) => (

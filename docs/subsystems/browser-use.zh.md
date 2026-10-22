@@ -38,6 +38,39 @@ MCP 提供方为其加载后创建的每个活动 Agent 初始化一个客户端
 
 [决策记录](../../.agents/notes/implemented/architecture/2026-09-12-browser-use-provider-registration.zh.md)解释只注册名称的服务与按 Session 管理的所有权。
 
+## 人工浏览器控制
+
+[Oristrat Chrome DevTools 提供方](../../packages/oristrat/browser-chrome-devtools-mcp/README.zh.md)向 Web 侧边栏提供限定在 Session 内的浏览器控制。以下连接、动作和结果类型描述该 Remote API；操作语义和失败处理由提供方负责。
+
+```ts type-equiv
+/** Browser connection selected by the deployment profile. */
+interface BrowserAutomationConnection {
+  readonly mode: 'launch' | 'attach'
+  readonly endpoint?: string
+  readonly headless?: boolean
+}
+```
+
+```ts type-equiv
+/** Explicit browser operation requested by a person in a Session. */
+type BrowserAutomationAction =
+  | { readonly kind: 'pages' }
+  | { readonly kind: 'observe' | 'back' | 'forward' | 'reload'; readonly pageId: number }
+  | { readonly kind: 'navigate'; readonly url: string }
+  | { readonly kind: 'select'; readonly pageId: number }
+  | { readonly kind: 'click'; readonly pageId: number; readonly uid: string }
+  | { readonly kind: 'fill'; readonly pageId: number; readonly uid: string; readonly value: string }
+```
+
+```ts type-equiv
+/** A browser response verified by the Session's MCP connection. */
+interface BrowserAutomationResult {
+  readonly connection: BrowserAutomationConnection
+  readonly status: 'connected' | 'failed' | 'unavailable' | 'busy' | 'invalid-address'
+  readonly text: string
+}
+```
+
 <!-- BEGIN GENERATED cordis-surface (gen-cordis-catalog.ts) — do not edit between markers -->
 
 <a id="cordis-surface"></a>
@@ -116,6 +149,33 @@ abstract evaluate(request: BrowserEvaluateRequest, signal?: AbortSignal): Promis
 Types: [BrowserActOutcome](browser.zh.md) · [BrowserActRequest](browser.zh.md) · [BrowserConsolePage](browser.zh.md) · [BrowserConsoleRequest](browser.zh.md) · [BrowserEvaluateRequest](browser.zh.md) · [BrowserEvaluateResult](browser.zh.md) · [BrowserNavigateRequest](browser.zh.md) · [BrowserNavigation](browser.zh.md) · [BrowserObservation](browser.zh.md) · [BrowserObserveRequest](browser.zh.md) · [BrowserOwner](browser.zh.md) · [BrowserPageState](browser.zh.md) · [BrowserScreenshot](browser.zh.md) · [BrowserScreenshotRequest](browser.zh.md)
 
 Source: [`packages/browser/browser/src/index.ts`](../../packages/browser/browser/src/index.ts)
+
+<a id="ctxbrowserautomation--browserautomation"></a>
+
+### `ctx.browserAutomation` — `BrowserAutomation`
+
+Browser control Remote owner; no independent browser or model runtime is created.
+
+```ts cordis-catalog
+/**
+ * Inspect the profile-selected connection without starting Chromium.
+ * @returns the deployment-owned launch or attachment settings.
+ */
+@Remote configuration(): BrowserAutomationConnection
+
+/**
+ * Operate the Session browser and return fresh text from Chromium. Agent turns and other Sessions retain their ownership.
+ * @param agent - live Session owner resolved by the Web Session controller.
+ * @param action - one explicit page operation.
+ * @param signal - cancels queued work; an already delivered browser action may have taken effect.
+ * @returns a verified response or visible failure; failures retain the browser for inspection.
+ */
+@Remote async perform(agent: Agent, action: BrowserAutomationAction, signal: AbortSignal): Promise<BrowserAutomationResult>
+```
+
+Types: [Agent](core.zh.md)
+
+Source: [`packages/oristrat/browser-chrome-devtools-mcp/src/automation.ts`](../../packages/oristrat/browser-chrome-devtools-mcp/src/automation.ts)
 
 <a id="ctxbrowseruse--browseruseregistry"></a>
 

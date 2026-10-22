@@ -60,6 +60,10 @@ exports[`sidebar shell snapshots > renders Windows caption controls in expanded 
       </span>
     </button>
     <div
+      data-slot="sidebar.quickSwitcher"
+      style="display: contents;"
+    />
+    <div
       class="regionArea"
     >
       <div
@@ -246,6 +250,10 @@ exports[`sidebar shell snapshots > renders Windows caption controls in expanded 
       </span>
     </button>
     <div
+      data-slot="sidebar.quickSwitcher"
+      style="display: contents;"
+    />
+    <div
       class="regionArea"
     >
       <div
@@ -353,6 +361,10 @@ exports[`sidebar shell snapshots > renders the collapsed rail after the crossfad
         </span>
       </span>
     </button>
+    <div
+      data-slot="sidebar.quickSwitcher"
+      style="display: contents;"
+    />
     <div
       class="regionArea"
     >
@@ -540,6 +552,10 @@ exports[`sidebar shell snapshots > renders the expanded column (wordmark, capsul
       </span>
     </button>
     <div
+      data-slot="sidebar.quickSwitcher"
+      style="display: contents;"
+    />
+    <div
       class="regionArea"
     >
       <div
@@ -725,6 +741,10 @@ exports[`sidebar shell snapshots > renders the expanded column in the default lo
         </span>
       </span>
     </button>
+    <div
+      data-slot="sidebar.quickSwitcher"
+      style="display: contents;"
+    />
     <div
       class="regionArea"
     >

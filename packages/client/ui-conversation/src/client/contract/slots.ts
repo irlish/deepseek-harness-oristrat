@@ -174,6 +174,11 @@ export type UseConversationViews = SnapshotSelectorHook<readonly ViewTab[]>
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
   interface SlotFactoryMap {
+    /** Complete main conversation, reusable inside a product-owned frame. */
+    'conversation.main': {
+      scope: 'session-maybe'
+      children: { 'conversation.header': { kind: 'single'; scope: 'session-maybe' } }
+    }
     /** Parse one original text and render its business nodes through the owned keyed Slot. */
     'conversation.user.text': {
       scope: 'session'
@@ -305,6 +310,11 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
   }
 
   interface SlotFactoryMap {
+    /** Complete main conversation, reusable inside a product-owned frame. */
+    'conversation.main': {
+      scope: 'session-maybe'
+      children: { 'conversation.header': { kind: 'single'; scope: 'session-maybe' } }
+    }
     /** Reusable Conversation content instantiated by presentation hosts. */
     'conversation.content': {
       scope: 'session-maybe'

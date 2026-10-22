@@ -194,6 +194,8 @@
     "@oristrat/dsh-browser-use-chrome-devtools-mcp": "workspace:*",
     "dsh-desktop-workbenches": "workspace:*",
     "dsh-desktop-office": "workspace:*",
+    "dsh-desktop-market-installer": "workspace:*",
+    "dsh-ppt-composer": "workspace:*",
     "@deepseek-ai/dsh-browser-use": "workspace:*"
   },
   "peerDependencies": {

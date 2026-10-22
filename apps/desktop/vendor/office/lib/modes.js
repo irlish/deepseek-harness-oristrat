@@ -1,6 +1,8 @@
 import { createUserMessage } from '@deepseek-ai/dsh-llm'
-import { clientRequestSchema } from '@deepseek-ai/dsh-client-connection'
 import { renderSkillContent } from '@deepseek-ai/dsh-skill'
+import { readFile, realpath, stat } from 'node:fs/promises'
+import { isAbsolute, relative, resolve, sep } from 'node:path'
+import { OfficeError } from './office-state.js'
 
 const PLUGIN = 'dsh-desktop-office-composer'
 const sourcePlugin = source => source?.plugin ?? source?.kind?.replace(/^plugin:/, '')
@@ -50,33 +52,47 @@ export function registerOfficeContext(ctx, library, modes) {
     if (!fingerprint || active) return decision
     const foundation = await ctx.skills.get(mode === 'word' ? 'office-docx' : 'office-xlsx', { cwd, scope: agent, signal })
     if (!foundation) throw new Error('The official Office skill is unavailable')
-    const sections = [{ name: fingerprint, text: `当前输出格式：${mode === 'word' ? 'Word DOCX' : 'Excel XLSX'}。\n\n${renderSkillContent(foundation)}` }]
+    const sections = [{ name: fingerprint, text: `当前输出格式：${mode === 'word' ? 'Word DOCX' : 'Excel XLSX'}。可使用 office_create 写入用户所需内容并生成真实文件，再用 present 交付。\n\n${renderSkillContent(foundation)}` }]
     if (template) sections.push({ name: 'office-template', text: templateContext(template) })
     for (const name of businessNames(template)) {
       const skill = await ctx.skills.get(name, { cwd, scope: agent, signal })
       if (!skill) throw new Error('The selected business skill is unavailable')
       sections.push({ name: skill.name, text: renderSkillContent(skill) })
     }
-    return { kind: 'enter', messages: [...decision.messages, createUserMessage({ content: [{ type: 'text', text: sections.map(x => x.text).join('\n\n') }],
+    return { ...decision, kind: 'enter', messages: [...decision.messages, createUserMessage({ content: [{ type: 'text', text: sections.map(x => x.text).join('\n\n') }],
       source: { kind: `plugin:${PLUGIN}`, plugin: PLUGIN, form: 'snapshot', cwd, sections } })] }
   }, { prepend: true })
 }
 
 /** The authenticated Connection owns request admission and cancellation. */
-export function registerOfficeRoutes(ctx, library, modes) {
+export function registerOfficeRoutes(ctx, library, modes, create, config) {
   const execute = async (endpoint, payload, signal) => {
       try {
         signal?.throwIfAborted()
-        if (!payload || JSON.stringify(payload).length > 16384) throw new Error('Use a bounded Office request')
+        if (!payload || Buffer.byteLength(JSON.stringify(payload)) > config.maxInputBytes + 2048) throw new OfficeError('invalid-request', 'Use a bounded Office request')
         const { sessionId } = payload
         const ok = value => ({ ok: true, value })
         if (endpoint === 'preview') {
           if (payload.revision !== library.entry(payload.templateId).revision) throw new Error('The example was updated; reload the catalogue')
           return ok(await library.preview(payload.templateId, payload.page))
         }
-        if (endpoint === 'catalog' || (endpoint === 'state' && !sessionId)) return ok({ templates: await library.list(), mode: null })
+        if (endpoint === 'catalog' || (endpoint === 'state' && !sessionId)) return ok({ templates: await library.list(), mode: null, documents: [] })
         if (typeof sessionId !== 'string' || !sessionId.trim() || sessionId.length > 512) throw new Error('Choose an active session')
-        if (!modes) throw new Error('The document composer service is unavailable')
+        if (endpoint === 'create' || endpoint === 'download' || ['mode', 'select', 'deselect'].includes(endpoint)) {
+          const found = await ctx.sessionController.resolveAgent(sessionId)
+          if (found.error) throw new OfficeError('session-unavailable', 'Open an available session before creating a document')
+          if (endpoint === 'create') return ok(await create(payload, { agent: found.agent, signal }))
+          if (endpoint === 'download') {
+            const cwd = await realpath(await ctx.workingDirectory.ensure(found.agent, signal))
+            const document = (await modes.documentsFor(cwd)).find(item => item.id === payload.id)
+            if (!document) throw new OfficeError('not-found', 'This document is no longer in this workspace')
+            const target = await realpath(resolve(cwd, document.path)), offset = relative(cwd, target)
+            if (offset === '..' || offset.startsWith(`..${sep}`) || isAbsolute(offset)) throw new OfficeError('invalid-path', 'This document moved outside its workspace')
+            const info = await stat(target)
+            if (!info.isFile() || info.size > config.maxDownloadBytes) throw new OfficeError('limit-exceeded', 'Open this file from the workspace to download it')
+            return ok({ name: document.path.split('/').at(-1), data: (await readFile(target, { signal })).toString('base64') })
+          }
+        }
         if (endpoint === 'mode') await modes.select(sessionId, payload.mode)
         else if (endpoint === 'select') {
           const template = library.entry(payload.templateId)
@@ -86,22 +102,13 @@ export function registerOfficeRoutes(ctx, library, modes) {
         else if (endpoint !== 'state') throw new Error('Unknown Office operation')
         const state = await modes.state(sessionId)
         const selected = selectedTemplate(library, state)
+        const inspected = await ctx.sessionController.inspect(sessionId, signal)
+        const documents = inspected.meta.cwd ? await modes.documentsFor(await realpath(inspected.meta.cwd)) : []
         return ok({ sessionId, mode: state.documentMode ?? null, presentationMode: state.presentationMode ?? null, templates: await library.list(),
-          selectedTemplateId: selected?.id ?? null, selectionExpired: !!state.selectedDocumentTemplate && !selected })
+          selectedTemplateId: selected?.id ?? null, selectionExpired: !!state.selectedDocumentTemplate && !selected, documents })
       } catch (error) {
-        return { ok: false, error: { code: 'office-request', message: error instanceof Error ? error.message : 'Office request failed', details: {} } }
+        return { ok: false, error: { code: error instanceof OfficeError ? error.code : 'office-request', message: error instanceof Error ? error.message : 'Office request failed', details: {} } }
       }
   }
-  ctx.connection.fetch.register({ path: '/api/office-templates', methods: ['POST'], requestBody: 'buffered',
-    async fetch(request) {
-      const raw = await request.text()
-      if (raw.length > 16384) return new Response('Office request is too large', { status: 413 })
-      let message
-      try { message = clientRequestSchema.parse(JSON.parse(raw)) } catch { return new Response('Use a valid Office request', { status: 400 }) }
-      const result = message.method === 'office-templates'
-        ? await execute(message.payload?.endpoint, message.payload, request.signal)
-        : { ok: false, error: { code: 'office-request', message: 'Choose an Office operation', details: {} } }
-      return Response.json({ type: 'server-response', rpcId: message.rpcId, result }, { headers: { 'Cache-Control': 'no-store' } })
-    }
-  })
+  ctx.effect(() => ctx.connection.rpc.handle('/office', execute))
 }

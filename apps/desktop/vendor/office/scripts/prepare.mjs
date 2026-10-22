@@ -1,5 +1,5 @@
 /** Locked, relocatable Python payload. No target interpreter is executed here.
- * Lock provenance and deployment contract: docs/office-runtime.md.
+ * Lock sources and deployment requirements: docs/office-runtime.md.
  */
 import { createHash } from 'node:crypto'
 import { cp, mkdir, mkdtemp, readFile, rename, rm, writeFile } from 'node:fs/promises'
@@ -110,7 +110,7 @@ async function stripUnusedPythonPayload(dependencies, pythonLib, sitePackages) {
 export async function prepareOfficeRuntime({ target = officeTarget(), output = join(project, '.dsh-dev/office-runtime'), cache = join(project, '.dsh-dev/office-downloads') } = {}) {
   const artifact = lock.targets[target]
   if (!artifact) throw new Error(`Office runtime: unknown target ${target}`)
-  const { version } = JSON.parse(await readFile(join(project, 'packages/dsh-desktop/office/package.json'), 'utf8'))
+  const { version } = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'))
   await mkdir(dirname(output), { recursive: true })
   // Do not leave last build's payload available after a failed preparation.
   await rm(output, { recursive: true, force: true })
@@ -140,7 +140,9 @@ export async function prepareOfficeRuntime({ target = officeTarget(), output = j
     await writeFile(join(runtime, 'runtime.json'), `${JSON.stringify(manifest, null, 2)}\n`)
     const skillRoot = dirname(require.resolve('@deepseek-ai/dsh-skill-office/package.json'))
     await cp(join(skillRoot, 'assets'), join(staging, 'office-skills'), { recursive: true, dereference: true })
-    await cp(join(project, 'packages/dsh-desktop/office/business-skills'), join(staging, 'business-skills'), { recursive: true })
+    await cp(new URL('../business-skills', import.meta.url), join(staging, 'business-skills'), { recursive: true })
+    await mkdir(join(staging, 'templates'))
+    await writeFile(join(staging, 'templates/catalog.json'), '[]\n')
     // Keep upstream skills intact; add the Windows packaging constraint at the
     // generated deployment boundary, where all three workflows can see it.
     for (const skill of ['office-docx', 'office-pptx', 'office-xlsx']) {

@@ -21,6 +21,14 @@ Hosts the workbench product layer ported from dataelement/dsh-desktop: the catal
 
 Mount the row `dsh-desktop-workbenches` with `config.root` pointing at the harness-home workbench directory; the client module joins the Web roster through the bundle dependency and registers the sidebar panel plus conversation frame seats. Authoring and market-submission guides ship as offline copies served under `/api/desktop-workbenches/` and link to the official reading pages.
 
+Web uses the same market, sidebar switcher, and workbench provider registrations. The frame occupies the root `main` entry keyed `conversation` and renders `conversation.main`, preserving business panel state across Session changes while the native composer follows its Session binding. New Session actions create owned Sessions, ordinary reuse excludes those blanks, and selecting a bound Session restores its workbench. Market installation requires the composed `dsh-desktop-market-installer`; installation persists the package before requesting a host restart.
+
+### Create a local workbench
+
+Choose **Build my workbench**, enter a name and purpose, then **Create and open**. The basic workbench provides shared notes beside native AI conversations; notes save automatically on the Host. Creation writes a definition under `config.root/local-workbenches/<uuid>.json`, and the running profile loads it immediately and after restarts. The definition uses a local identity and does not publish a package or invent a repository. Retrying the same creation request returns the existing definition. The advanced development instructions remain available for custom interfaces.
+
+The authenticated routes `GET /api/desktop-workbenches/local` and `POST /api/desktop-workbenches/local/create` list definitions and create one from `{requestId, title, description}`. Names allow 80 characters, purposes 1,000; empty text and invalid UUIDs are rejected before writing. A corrupt saved definition prevents loading and reports an error instead of replacing data. Notes and Session ownership retain their existing `state.json` storage.
+
 ## Dev Note
 
 Vendored from upstream experimental packages and renamed to the @oristrat scope so the product composition can select them; the committed TypeScript sources remain the source plane.

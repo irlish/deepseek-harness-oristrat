@@ -2266,7 +2266,7 @@ export interface LspLocalServerConfig {
 ## `@deepseek-ai/dsh-mcp-client`
 
 - `inject`: `tools`
-- `source`: [`packages/mcp/mcp-client/src/index.ts:108`](../packages/mcp/mcp-client/src/index.ts)
+- `source`: [`packages/mcp/mcp-client/src/index.ts:112`](../packages/mcp/mcp-client/src/index.ts)
 
 ```ts config-catalog
 /** Configuration for one stdio or Streamable HTTP MCP server. */
@@ -2290,6 +2290,8 @@ export interface StdioConfig {
   env: Record<string, string>
   /** Working directory for the child process. */
   cwd: string
+  /** Absolute directories advertised through MCP roots/list; omission disables roots negotiation. */
+  workspaceRoots?: string[]
   /** Timeout per tool call or resource request in milliseconds. */
   toolCallTimeoutMs: number
   /** Fail plugin activation when the initial connection or tool synchronization fails. */
@@ -2318,6 +2320,8 @@ export interface StreamableHttpConfig {
   authorizationEnv?: string
   /** SDK protocol handshake; use `legacy` for servers that reject the modern discovery probe. */
   versionNegotiation?: 'auto' | 'legacy'
+  /** Absolute directories advertised through MCP roots/list; omission disables roots negotiation. */
+  workspaceRoots?: string[]
   /** Timeout per tool call or resource request in milliseconds. */
   toolCallTimeoutMs: number
   /** Fail plugin activation when the initial connection or tool synchronization fails. */
@@ -4671,7 +4675,7 @@ export interface Config {
 
 - `inject`: `browserUse` · `agents` · `tools` · `systemPrompt` · `workingDirectory`
 - `refs`: `BrowserMcpConfig` (`@oristrat/dsh-browser-use-runtime/mcp`)
-- `source`: [`packages/oristrat/browser-chrome-devtools-mcp/src/index.ts:15`](../packages/oristrat/browser-chrome-devtools-mcp/src/index.ts)
+- `source`: [`packages/oristrat/browser-chrome-devtools-mcp/src/index.ts:19`](../packages/oristrat/browser-chrome-devtools-mcp/src/index.ts)
 
 ```ts config-catalog
 /** Fixed Chromium launch or existing-browser attachment settings. */

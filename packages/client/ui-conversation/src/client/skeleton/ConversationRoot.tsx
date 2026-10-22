@@ -1,13 +1,15 @@
-// Resident conversation skeleton. Hero chrome, composer positioning, the
-// chain, AND the composer bar (session-maybe slot) stay mounted across
-// no-session/session transitions — the bar renders inert via owner props.
+/** Default main-panel occupant, composed from the shared conversation factory. */
+import type { PropsRenderFactories, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
+import type {} from '../contract/slots.ts'
 
-import type { ConversationSlotProps } from '../contract/slots.ts'
-import { ConversationMainPanel } from './ConversationMainPanel.tsx'
+/** Full props supplied by the optional-Session slot. */
+export type ConversationRootProps = PropsRuntime<'main.conversation'> & PropsRenderFactories
 
-/** Full props composed from the slot contract. */
-export type ConversationRootProps = ConversationSlotProps
-
-export function ConversationRoot(props: ConversationRootProps) {
-  return <ConversationMainPanel {...props} />
+/**
+ * Render the complete main conversation.
+ * @param props - Session-bound factory renderer.
+ * @returns the conversation header, transcript, and composer.
+ */
+export function ConversationRoot({ renderFactorySlot }: ConversationRootProps) {
+  return renderFactorySlot('conversation.main', {})
 }

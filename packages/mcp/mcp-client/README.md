@@ -61,6 +61,7 @@ Add one entry per server; nothing else is required. After the harness starts, th
 | `command` / `args` / `env` / `cwd` | — | stdio: executable, arguments, extra env merged over scrubbed ambient env, working directory |
 | `url` / `headers` | — | streamable-http: endpoint URL and extra request headers |
 | `authorizationEnv` | — | streamable-http: credential reference resolved as a Bearer token at each connection attempt; declare `credentials` in the entry's `inject` list |
+| `workspaceRoots` | omitted | Absolute directories returned as file URIs by `roots/list`; omitted disables negotiation, `[]` advertises no workspace directories |
 | `versionNegotiation` | `auto` | streamable-http: SDK handshake; `legacy` skips the modern discovery probe for servers that reject it |
 | `toolCallTimeoutMs` | `60,000` | Timeout per `tools/call` or resource request |
 | `maxInstructionBytes` | `32,768` | Maximum UTF-8 bytes of server instructions including attribution; an oversized value rejects the connection |
@@ -73,6 +74,8 @@ Add one entry per server; nothing else is required. After the harness starts, th
 The generated [configuration catalog](../../../docs/config-catalog.md#deepseek-aidsh-mcp-client) is the exhaustive source for every accepted field.
 
 After startup, the server's tools appear as `mcp__<serverName>__<tool>` — try a prompt that uses one. If the initial connection fails, the harness still starts but no tools from that server appear, and an error is logged. Setting `failOnStartupError: true` rejects plugin activation; [app-boot's startup policy](../../boot/app-boot/README.md) still permits an optional MCP entry to fail without aborting the harness.
+
+Workspace roots remain fixed for the connection and reconnects. Relative paths reject activation. Servers enforce their own filesystem access policy; advertising roots does not sandbox the server process.
 
 The credential reference is read from the credentials service, including `$DSH_HOME/.env`; a missing credential leaves this server's tools unavailable. The token is resolved again on reconnect, so rotating it does not require changing the entry.
 

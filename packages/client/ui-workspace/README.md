@@ -31,6 +31,8 @@ Use the sidebar to browse Workspaces and their Sessions, reorder them, and start
 
 History rows without a stored title use the localized unnamed label (未命名 / Untitled), rather than a directory name. The current blank row remains New Session; other blank rows remain hidden. Rename drafts use the stored title, or start empty when unnamed; unnamed rows do not offer title copying.
 
+`uiWorkspace.registerSessionOpener` and `registerSessionStarter` let product plugins claim navigation before the main Session changes. The first handler returning `true` owns the operation; explicit draft or preset creation bypasses starters. `registerSessionReuseFilter` excludes product-owned blank Sessions from ordinary Workspace and unassigned reuse. All registrations return a disposer and follow the contributing plugin lifetime. Handler failures leave the previous main reference retained and propagate to the caller.
+
 ### Reordering and view options
 
 Pinned Sessions lead ordinary Sessions in both grouped and flat views. **Last updated** sorts each partition strictly by the latest user prompt or steer time, newest first; pin time does not affect it. **Manual** uses the relative positions in one complete Session sequence, including hidden archives. Returning to Last updated discards the manual layout, and entering Manual again freezes the then-current chronological order. The browser defaults to Last updated and remembers the selected mode across reloads.

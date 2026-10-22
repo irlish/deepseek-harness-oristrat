@@ -15,14 +15,14 @@
   en: d152484eb41ac6b4
   zh: de4a2a92773d135e
 /deepseek-ai-dsh-client-ui-sidebar-browser/use-this-package:
-  en: 8cf8739a3e4c3504
-  zh: a893ba17036fd8f7
+  en: 8371bd60dd5323a0
+  zh: 75b4cbcad20122db
 /deepseek-ai-dsh-client-ui-sidebar-browser/use-this-package/when-to-choose-it:
   en: fb79cb7d59bc01af
   zh: 5f6202d8b0b62d7d
 /deepseek-ai-dsh-client-ui-sidebar-browser/use-this-package/minimal-configuration:
-  en: abf28ea63777e2a8
-  zh: 1b68bdf5729de71e
+  en: 68807291aa23eb1e
+  zh: 325abea8bf6d0fd6
 /deepseek-ai-dsh-client-ui-sidebar-browser/understand-the-implementation:
   en: 42b15ac6321706aa
   zh: e15901d8462ec7c7
@@ -32,6 +32,9 @@
 /deepseek-ai-dsh-client-ui-sidebar-browser/understand-the-implementation/iframe-carrier:
   en: e535f7330bb62a79
   zh: 485932298fdabaa3
+/deepseek-ai-dsh-client-ui-sidebar-browser/understand-the-implementation/automation-controls:
+  en: 3dcb66ef00aa1744
+  zh: 0b1397e466e9b346
 /deepseek-ai-dsh-client-ui-sidebar-browser/understand-the-implementation/controller:
   en: 6ddc24ffe34846cd
   zh: aa81157d18f850cd
@@ -39,8 +42,8 @@
   en: 4ebd881b4ade9d8f
   zh: 715f2553210c08e6
 /deepseek-ai-dsh-client-ui-sidebar-browser/model-experience:
-  en: 69e711858e7d9ebc
-  zh: d84610491e69a35b
+  en: 541b7870eccd038e
+  zh: 76aee18944748dbc
 /deepseek-ai-dsh-client-ui-sidebar-browser/model-experience/kv-cache-effect:
   en: e17a5fd3d5405745
   zh: db957a16dddce770

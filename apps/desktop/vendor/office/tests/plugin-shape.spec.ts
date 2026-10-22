@@ -19,7 +19,8 @@ const office = require('dsh-desktop-office') as OfficePlugin
 describe('dsh-desktop-office plugin shape', () => {
   it('exports the cordis plugin surface', () => {
     expect(office.name).toBe('desktop-office')
-    expect(office.inject).toEqual(['skills'])
+    expect(office.inject).toContain('skills')
+    expect(office.inject).toContain('sessionController')
     expect(typeof office.apply).toBe('function')
   })
 

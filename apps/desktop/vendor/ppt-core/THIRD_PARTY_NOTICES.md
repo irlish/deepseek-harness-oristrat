@@ -1,4 +1,4 @@
-# PPT runtime and template provenance
+# PPT runtime and template sources
 
 ## 参考说明
 
@@ -14,7 +14,7 @@ The former community reference packs and both user-supplied third-party presenta
 
 ## Retained native templates
 
-Modular Logistics System, Swiss Signal Grid, and Nordic Operating Report originated in DSH contribution `de281a1ceccadb00b92df53adb106a2e87ec0b4b` (PR #320). Their native PPTD files and source provenance statements are included. Package review verifies editable native objects, no external raster assets, and renderable source projects. These checks do not independently establish every underlying copyright fact.
+Modular Logistics System, Swiss Signal Grid, and Nordic Operating Report originated in DSH contribution `de281a1ceccadb00b92df53adb106a2e87ec0b4b` (PR #320). Their native PPTD files and source attribution statements are included. Package review verifies editable native objects, no external raster assets, and renderable source projects. These checks do not independently establish every underlying copyright fact.
 
 ## HTML Anything adaptations
 

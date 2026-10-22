@@ -44,6 +44,12 @@ dsh --profile web --no-open --port 8080
 
 已保存的模型选择覆盖组合默认值。设置卡接受兼容 Messages 的 API 地址与凭据引用。
 
+### 工作台、Office 与浏览器
+
+Web 组合默认包含[工作台](../../../apps/desktop/vendor/workbenches/README.md)、[Office 创建](../../../apps/desktop/vendor/office/README.md)和[浏览器](../../client/ui-sidebar-browser/README.zh.md)。通过**制作我的工作台**创建具名本地笔记工作台，笔记自动保存，并可创建关联 Session。侧边栏切换器可打开这些笔记工作台和已安装的业务面板。市场通过组合中的安装器安装包；新安装的包可能需要重启 Web 服务后生效。
+
+可从对话创建 Word、Excel 和 PPT。新文档使用 Web 创作运行时，无需 Desktop 资源；可选的 `DSH_DESKTOP_OFFICE_RESOURCES` 与 `DSH_DESKTOP_OFFICE_CLI` 提供准备好的模板库及模板工作流。浏览器在对话旁打开网页，其自动化控件通过 [Chrome DevTools 提供者](../../oristrat/browser-chrome-devtools-mcp/README.zh.md)启动 Chromium 或通过 CDP 附加浏览器，并操作当前 Session 的真实页面。
+
 ### 配置
 
 `minimal` agent preset 使用持久 Shell、`read_image` 工具和固定 persona，支持自动历史压缩以及会话空闲时的 `/compact` 命令。它复用 Host token meter，并拥有隔离的压缩后端。[压缩配置与保留策略](../../compaction/compaction-basic/README.zh.md#use-this-package) 沿用现有后端。图片读取复用 Host 文件系统和附件存储，要求模型支持图片输入；不加载文本读取、写入和编辑工具。

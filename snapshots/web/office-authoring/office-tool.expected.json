@@ -1,0 +1,31 @@
+{
+  "name": "office_create",
+  "description": "Create a real Word DOCX, Excel XLSX, or PowerPoint PPTX file in the active workspace. Supply the actual document content. Word uses one paragraph per line. Excel uses tab-separated columns and newline-separated rows; formulas remain literal text. PowerPoint uses a blank line between slides, the first line as its heading and remaining lines as body text. Use the returned path with present. For selected PPT templates use the pptd tools instead.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "format": {
+        "type": "string",
+        "description": "Native output format.",
+        "enum": [
+          "word",
+          "excel",
+          "ppt"
+        ]
+      },
+      "title": {
+        "type": "string",
+        "description": "Document title and base file name."
+      },
+      "content": {
+        "type": "string",
+        "description": "Document paragraphs, TSV rows, or slides separated by blank lines."
+      }
+    },
+    "required": [
+      "format",
+      "title",
+      "content"
+    ]
+  }
+}

@@ -1,4 +1,4 @@
-/** Desktop Office skills and bundled authoring dependencies. */
+/** Desktop-owned Office skills and dependencies; the composer delegates runtime registration here. */
 
 import { realpathSync } from 'node:fs'
 import { dirname, join, relative } from 'node:path'

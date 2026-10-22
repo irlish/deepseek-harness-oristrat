@@ -14,6 +14,10 @@ lines.once('close', () => process.exit(0))
 lines.on('line', line => {
   const request = JSON.parse(line)
   if (request.id === undefined) return
+  if (request.id === 'workspace-roots') {
+    record('roots', request.result ?? { error: request.error })
+    return
+  }
   switch (request.method) {
     case 'server/discover':
       record('probe')
@@ -39,6 +43,9 @@ lines.on('line', line => {
         protocolVersion: request.params.protocolVersion, capabilities: { tools: {}, resources: {} },
         serverInfo: { name: 'browser-fixture', version: '1' }, instructions: 'BROWSER_FIXTURE_INSTRUCTION: use this Session browser.',
       })
+      if (request.params.capabilities.roots !== undefined) {
+        process.stdout.write(JSON.stringify({ jsonrpc: '2.0', id: 'workspace-roots', method: 'roots/list' }) + '\n')
+      }
       break
     case 'tools/list':
       reply(request.id, { tools: [

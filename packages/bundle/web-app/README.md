@@ -44,6 +44,12 @@ After startup you see a `dsh web:` line whose root URL carries a fresh process t
 
 Saved model selections override the composition default. The settings card accepts a Messages-compatible API address and a credential reference.
 
+### Workbenches, Office, and Browser
+
+The Web composition includes [Workbenches](../../../apps/desktop/vendor/workbenches/README.md), [Office creation](../../../apps/desktop/vendor/office/README.md), and [Browser](../../client/ui-sidebar-browser/README.md). Use **Build my workbench** to create a named local notebook with automatically saved notes and linked Sessions. The sidebar switcher opens these notebooks and installed business panels. The market supports package installation through its composed installer; a newly installed package may require restarting the Web server.
+
+Word, Excel, and PPT creation are available from the conversation. New documents use the Web authoring runtime without Desktop resources; optional `DSH_DESKTOP_OFFICE_RESOURCES` and `DSH_DESKTOP_OFFICE_CLI` add the prepared template library and template workflows. Browser opens pages beside the conversation, and its automation controls use the [Chrome DevTools provider](../../oristrat/browser-chrome-devtools-mcp/README.md) to launch Chromium or attach through CDP and operate real pages for the current Session.
+
 ### Configuration
 
 The `minimal` agent preset uses a persistent shell, the `read_image` tool, and a fixed persona, with automatic history compaction and the idle-session `/compact` command. It shares the Host token meter and owns an isolated compaction backend. [Compaction configuration and retention](../../compaction/compaction-basic/README.md#use-this-package) follow the existing backend. Image reads reuse the Host filesystem and attachment store and require an image-capable model; text read, write, and edit tools remain excluded.

@@ -16,6 +16,21 @@
     },
     {
       "path": "../../session/working-directory"
+    },
+    {
+      "path": "../../typert/protocol"
+    },
+    {
+      "path": "../../llm/llm"
+    },
+    {
+      "path": "../../core/tools"
+    },
+    {
+      "path": "../../core/agent"
+    },
+    {
+      "path": "../../util/values"
     }
   ]
 }

@@ -1,0 +1,10 @@
+version: 1
+scenario: office-authoring
+profile: web
+composition: web-office-authoring
+recording: authored
+header:
+  class: web-office-authoring
+  pin: true
+workspace:
+  final: true

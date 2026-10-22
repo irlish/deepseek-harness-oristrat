@@ -72,6 +72,8 @@ describe('target-neutral Conversation apply wiring', () => {
     expect(b.runtime.slots.entries('main.conversation')).toHaveLength(1)
     expect(b.runtime.slots.spec('main.conversation'))
       .toEqual({ kind: 'single', scope: 'session-maybe' })
+    expect(b.runtime.factoryOf('conversation.main').children)
+      .toEqual({ 'conversation.header': { kind: 'single', scope: 'session-maybe' } })
     expect(b.runtime.factoryOf('conversation.content').slots)
       .toMatchObject({ views: { scope: 'session' } })
     expect(b.runtime.slots.entries('conversation.session')).toHaveLength(1)

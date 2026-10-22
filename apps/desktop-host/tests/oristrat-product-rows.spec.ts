@@ -1,9 +1,7 @@
 /**
  * The Oristrat product layer ported from dataelement/dsh-desktop mounts through
- * both shipped patches: the workbench runtime always, the market installer
- * unless ORISTRAT_MARKET=0, and the Office authoring plugin only while its
- * installation-owned resources environment is present (a bare boot must never
- * fail on the missing payload).
+ * both shipped patches. Web creation works without installation-owned Office
+ * resources, while Desktop retains its packaged resource selection.
  */
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
@@ -31,10 +29,19 @@ describe.each([
     expect(JSON.stringify(row?.disabled)).toContain('ORISTRAT_MARKET')
   })
 
-  it('gates the Office plugin on its resources environment', () => {
+  it('provides creation without optional resources and assigns Desktop runtime ownership', () => {
     const row = composed(patch).find(entry => entry.id === 'dsh-desktop-office')
     expect(row).toBeDefined()
-    expect(JSON.stringify(row?.disabled)).toContain('DSH_DESKTOP_OFFICE_RESOURCES')
+    expect(row?.disabled).toBeFalsy()
+    expect(JSON.stringify((row?.config as { root?: unknown })?.root)).toContain("dshHomePath('office')")
+    expect((row?.config as { runtimeOwner?: string })?.runtimeOwner).toBe(patch.startsWith('packages/') ? undefined : 'desktop')
     expect(JSON.stringify((row?.config as { resources?: unknown })?.resources)).toContain('DSH_DESKTOP_OFFICE_RESOURCES')
   })
+})
+
+it('mounts the Web PPT composer only when no profile bundle owns it', () => {
+  const row = composed('packages/bundle/web-app/cordis.patch.yml').find(entry => entry.id === 'web-ppt-composer')
+  expect(row?.name).toBe('dsh-ppt-composer')
+  expect(JSON.stringify(row?.disabled)).toContain("startedBundles.includes('dsh-ppt-composer')")
+  expect(JSON.stringify((row?.config as { root?: unknown })?.root)).toContain("dshHomePath('kimi-ppt')")
 })

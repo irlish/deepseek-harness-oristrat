@@ -61,6 +61,7 @@ kind: "package-reference"
 | `command` / `args` / `env` / `cwd` | — | stdio：可执行文件、参数、合并到清洗过的环境之上的额外环境变量、工作目录 |
 | `url` / `headers` | — | streamable-http：端点 URL 与额外请求标头 |
 | `authorizationEnv` | — | streamable-http：每次连接时解析为 Bearer token 的凭据引用；配置项的 `inject` 列表须声明 `credentials` |
+| `workspaceRoots` | 省略 | 通过 `roots/list` 以文件 URI 返回的绝对目录；省略时不协商，`[]` 表示没有工作区目录 |
 | `versionNegotiation` | `auto` | streamable-http：SDK 握手模式；对拒绝现代发现探测的服务器使用 `legacy` |
 | `toolCallTimeoutMs` | `60,000` | 每次 `tools/call` 或资源请求的超时 |
 | `maxInstructionBytes` | `32,768` | 包括服务器归属信息在内的服务器指令 UTF-8 字节上限；超出时连接失败 |
@@ -73,6 +74,8 @@ kind: "package-reference"
 生成的[配置目录](../../../docs/config-catalog.zh.md#deepseek-aidsh-mcp-client)是每个受支持字段的穷尽式真源。
 
 启动后，服务器的工具会以 `mcp__<serverName>__<tool>` 形式出现——试着用一条提示词调用其中一个。如果初始连接失败，harness 仍会启动，但该服务器的工具不会出现，并会记录一条错误。设置 `failOnStartupError: true` 会拒绝插件激活；[app-boot 的启动策略](../../boot/app-boot/README.zh.md)仍允许可选 MCP 配置项失败，而不中止 harness。
+
+工作区根目录在连接及重连期间保持固定。相对路径会导致激活失败。服务器自行执行文件系统访问策略；声明根目录不会将服务器进程放入沙箱。
 
 凭据引用由 credentials 服务读取，来源包括 `$DSH_HOME/.env`；缺少凭据时该服务器工具不可用。重连时会重新解析 token，因此轮换凭据无需修改配置项。
 

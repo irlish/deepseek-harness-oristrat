@@ -482,6 +482,45 @@ describe('connection node half', () => {
     expect(routes).toHaveLength(0)
   })
 
+  it('rejects a channel without an HTTP server and allows registration after a server arrives', async () => {
+    const ctx = new Context(), routes: WebRoute[] = []
+    provideBrowserCredentials(ctx)
+    const connectionFiber = ctx.plugin({ inject: [...inject], apply })
+    await connectionFiber.await()
+    const connection = ctx.get('connection') as HostConnectionHandle
+    expect(() => connection.rpc.handle('/late', async () => ({ ok: true, value: null }))).toThrow('require an HTTP server')
+    const server = ctx.plugin((serverCtx: Context) => { serverCtx.provide('webServer', fakeHttpServer(routes, []) as WebServer) })
+    try {
+      await server.await()
+      const remove = connection.rpc.handle('/late', async () => ({ ok: true, value: null }))
+      expect(routes.map(route => route.path)).toContain('/late')
+      await remove()
+      expect(routes.map(route => route.path)).not.toContain('/late')
+    } finally { await connectionFiber.dispose(); await server.dispose() }
+  })
+
+  it('owns a dedicated channel when the HTTP server and consumer are sibling fibers', async () => {
+    const ctx = new Context(), routes: WebRoute[] = []
+    provideBrowserCredentials(ctx)
+    const server = ctx.plugin((serverCtx: Context) => { serverCtx.provide('webServer', fakeHttpServer(routes, []) as WebServer) })
+    await server.await()
+    const connection = ctx.plugin({ inject: [...inject], apply })
+    await connection.await()
+    const consumer = ctx.plugin({
+      inject: ['connection'],
+      apply: (consumerCtx: Context) => {
+        consumerCtx.effect(() => consumerCtx.connection.rpc.handle('/consumer-rpc', async () => ({ ok: true, value: 'ready' })))
+      },
+    })
+    try {
+      await consumer.await()
+      expect(routes.map(route => route.path)).toContain('/consumer-rpc')
+      await consumer.dispose()
+      expect(routes.map(route => route.path)).not.toContain('/consumer-rpc')
+      expect(routes.map(route => route.path)).toContain(API_PATH)
+    } finally { await consumer.dispose(); await connection.dispose(); await server.dispose() }
+  })
+
   it('dispatches claimed /api endpoints and withdraws the claim', async () => {
     const ctx = new Context()
     const routes: WebRoute[] = []

@@ -35,8 +35,31 @@ export interface StartSessionOptions extends DraftInitializationOptions {
   readonly agentPreset?: string
 }
 
+/** Navigation source supplied to product-owned Session handlers. */
+type SessionOpenSource = 'explicit-session' | 'workspace'
+type SessionOpener = (sessionId: SessionId, source: SessionOpenSource, context?: { workspaceId: WorkspaceId }) => boolean
+type SessionStarter = (workspaceId?: WorkspaceId) => boolean
+
 /** Workspace archive and directory operations consumed by Client UI domains. */
 export interface UiWorkspace {
+  /**
+   * Intercept explicit Session navigation before the main reference changes.
+   * @param handler - return true after taking ownership; false delegates to the next handler.
+   * @returns disposer; the contribution also ends with its registering plugin.
+   */
+  registerSessionOpener(handler: SessionOpener): () => void
+  /**
+   * Intercept New Session actions without explicit draft or preset options.
+   * @param handler - return true after taking ownership; false keeps ordinary navigation.
+   * @returns disposer; the contribution also ends with its registering plugin.
+   */
+  registerSessionStarter(handler: SessionStarter): () => void
+  /**
+   * Exclude product-owned blanks from ordinary reuse; every filter must allow reuse.
+   * @param filter - return false to preserve the blank for its owning product.
+   * @returns disposer; the contribution also ends with its registering plugin.
+   */
+  registerSessionReuseFilter(filter: (sessionId: SessionId) => boolean): () => void
   /**
    * Select a Session and show its Conversation as one UI navigation action.
    * @param target - known Session identity or durable direct-parent subagent address to display.
@@ -165,6 +188,9 @@ class UiWorkspaceService extends Service implements UiWorkspace {
     readonly agentPreset: string | undefined
     readonly attempt: Promise<SessionId>
   }>()
+  private readonly sessionOpeners = new Set<SessionOpener>()
+  private readonly sessionStarters = new Set<SessionStarter>()
+  private readonly sessionReuseFilters = new Set<(sessionId: SessionId) => boolean>()
   private connectingUnassigned: Promise<SessionId> | undefined
   private readonly lifetime = new AbortController()
   private readonly selection = createSnapshotStore<MainSelection>(
@@ -201,6 +227,34 @@ class UiWorkspaceService extends Service implements UiWorkspace {
     }, 'ui-workspace: Workspace navigation policy')
   }
 
+  registerSessionOpener(handler: SessionOpener): () => void {
+    const dispose = this.ctx.effect(() => {
+      this.sessionOpeners.add(handler)
+      return () => { this.sessionOpeners.delete(handler) }
+    }, 'ui-workspace: Session opener')
+    return () => { void dispose() }
+  }
+
+  registerSessionStarter(handler: SessionStarter): () => void {
+    const dispose = this.ctx.effect(() => {
+      this.sessionStarters.add(handler)
+      return () => { this.sessionStarters.delete(handler) }
+    }, 'ui-workspace: Session starter')
+    return () => { void dispose() }
+  }
+
+  registerSessionReuseFilter(filter: (sessionId: SessionId) => boolean): () => void {
+    const dispose = this.ctx.effect(() => {
+      this.sessionReuseFilters.add(filter)
+      return () => { this.sessionReuseFilters.delete(filter) }
+    }, 'ui-workspace: blank Session reuse')
+    return () => { void dispose() }
+  }
+
+  private canReuse(sessionId: SessionId): boolean {
+    return [...this.sessionReuseFilters].every(filter => filter(sessionId))
+  }
+
   connectWorkspace(workspaceId: WorkspaceId, options: Pick<StartSessionOptions, 'agentPreset'> = {}): Promise<SessionId> {
     return this.connectBlank(workspaceId, options)
   }
@@ -234,7 +288,7 @@ class UiWorkspaceService extends Service implements UiWorkspace {
     const blank = sessions.ids.find((id) => {
       const summary = sessions.byId[id]
       return summary !== undefined && summary.blank && summary.cwd === workspace.path
-        && workspace.sessionIds.includes(id) && !archived.includes(id)
+        && workspace.sessionIds.includes(id) && !archived.includes(id) && this.canReuse(id)
     })
     return this.createNamed({
       workspaceId: workspace.workspaceId,
@@ -308,7 +362,7 @@ class UiWorkspaceService extends Service implements UiWorkspace {
       // An unassigned blank may belong to another window's loose Session, so
       // adoption carries the same declined-blank reload as a Workspace blank.
       return summary !== undefined && summary.blank && !assigned.has(id)
-        && !archivedSessionIds.includes(id)
+        && !archivedSessionIds.includes(id) && this.canReuse(id)
     })
     return blank === undefined ? this.sessions.create() : this.createNamed({ sessionId: blank })
   }
@@ -327,6 +381,7 @@ class UiWorkspaceService extends Service implements UiWorkspace {
   }
 
   openSession(target: SessionTarget): void {
+    if (typeof target === 'string' && [...this.sessionOpeners].some(handler => handler(target, 'explicit-session'))) return
     this.replaceMain(target, this.lifetime.signal, 'reveal')
   }
 
@@ -354,6 +409,7 @@ class UiWorkspaceService extends Service implements UiWorkspace {
       throw error
     }
     if (navigation.aborted) return
+    if (beforeOpen === undefined && [...this.sessionOpeners].some(handler => handler(sessionId, 'workspace', { workspaceId }))) return
     this.replaceMain(sessionId, navigation, 'reveal', beforeOpen)
   }
 
@@ -371,6 +427,7 @@ class UiWorkspaceService extends Service implements UiWorkspace {
   }
 
   startSession(workspaceId?: WorkspaceId, options?: StartSessionOptions): void {
+    if (options === undefined && [...this.sessionStarters].some(handler => handler(workspaceId))) return
     const { agentPreset, ...draft } = options ?? {}
     const draftOptions = options === undefined ? undefined : draft
     const initializeDraft = draftOptions !== undefined

@@ -28,8 +28,7 @@
 
 # Oristrat product layer ported from dataelement/dsh-desktop (MIT): workbench
 # runtime and catalog, the optional market installer, and the Office authoring
-# plugin. Office and market stay off until their environment opts in, so a bare
-# boot never fails on missing installation-owned payloads.
+# plugin. Desktop owns its bundled Office runtime; optional resources add templates.
 - insert:
     - id: dsh-desktop-workbenches
       name: 'dsh-desktop-workbenches'
@@ -40,7 +39,8 @@
       disabled: !!js process.env.ORISTRAT_MARKET === '0'
     - id: dsh-desktop-office
       name: 'dsh-desktop-office'
-      disabled: !!js "!process.env.DSH_DESKTOP_OFFICE_RESOURCES"
       config:
+        root: !!js dshHomePath('office')
+        runtimeOwner: desktop
         resources: !!js process.env.DSH_DESKTOP_OFFICE_RESOURCES
         cli: !!js process.env.DSH_DESKTOP_OFFICE_CLI

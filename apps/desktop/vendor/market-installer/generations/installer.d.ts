@@ -12,7 +12,7 @@ export interface GenerationInstallOptions {
   pluginSpec: string
   /** Package name expected after installing a non-registry or aliased spec. */
   expectedPluginName?: string
-  /** Original dependency declaration retained as generation provenance. */
+  /** Original dependency declaration retained in the generation record. */
   sourceSpec?: string
   /** Exact installed tree copied into staging for non-registry sources. */
   sourceDirectory?: string
@@ -42,7 +42,7 @@ export interface GenerationInstallResult {
 }
 
 export function installGeneration(
-  options: GenerationInstallOptions
+  options: GenerationInstallOptions,
 ): Promise<GenerationInstallResult>
 
 export function installPnpmArguments(
@@ -57,7 +57,7 @@ export function installPnpmArguments(
     | 'environment'
   >,
   env?: NodeJS.ProcessEnv,
-  platform?: NodeJS.Platform
+  platform?: NodeJS.Platform,
 ): string[]
 
 export function generationBuildApprovals(workspaceYaml: string): string[]
@@ -65,11 +65,11 @@ export function generationBuildApprovals(workspaceYaml: string): string[]
 export function pinnedGitBuildApproval(
   pluginName: string,
   pluginSpec: string,
-  approvals: string[]
+  approvals: string[],
 ): string | undefined
 
 export function verifyGenerationPeers(
   dshHome: string,
   generation: Generation,
-  options?: { dshEntryPath?: string }
+  options?: { dshEntryPath?: string },
 ): Promise<{ ok: boolean; problems: string[] }>

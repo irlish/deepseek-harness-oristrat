@@ -301,10 +301,9 @@
     - id: ui-sidebar-documentpreview
       name: '@deepseek-ai/dsh-client-ui-sidebar-documentpreview'
 
-    # Web profiles opt in; Desktop retains sandboxed HTTP(S) Browser tabs.
+    # Shared HTTP(S) browser tabs and agent browser automation controls.
     - id: ui-sidebar-browser
       name: '@deepseek-ai/dsh-client-ui-sidebar-browser'
-      disabled: !!js "ctx.get('profileContext')?.name !== 'desktop'"
 
     - id: ui-sidebar-terminal
       name: '@deepseek-ai/dsh-client-ui-sidebar-terminal'
@@ -675,18 +674,25 @@
         mode: launch
         headless: false
 
-# Oristrat product layer ported from dataelement/dsh-desktop (MIT): workbench
-# runtime and catalog, the optional market installer, and the Office authoring
-# plugin. Office and market stay off until their environment opts in, so a bare
-# boot never fails on missing installation-owned payloads.
+# Workbenches and Office creation share the authenticated Web profile.
+# Installation-owned Office resources add the bundled skills and templates.
 - insert:
     - id: dsh-desktop-workbenches
       name: 'dsh-desktop-workbenches'
       config:
         root: !!js process.env.ORISTRAT_WORKBENCHES_ROOT || ((process.env.DSH_HOME || process.env.USERPROFILE || process.env.HOME) + '/desktop-workbenches')
+    - id: dsh-desktop-market-installer
+      name: 'dsh-desktop-market-installer'
+      disabled: !!js process.env.ORISTRAT_MARKET === '0'
     - id: dsh-desktop-office
       name: 'dsh-desktop-office'
-      disabled: !!js "!process.env.DSH_DESKTOP_OFFICE_RESOURCES"
       config:
+        root: !!js dshHomePath('office')
         resources: !!js process.env.DSH_DESKTOP_OFFICE_RESOURCES
         cli: !!js process.env.DSH_DESKTOP_OFFICE_CLI
+    # Desktop and explicitly installed composer bundles already own this provider.
+    - id: web-ppt-composer
+      name: 'dsh-ppt-composer'
+      disabled: !!js "ctx.get('profileContext')?.startedBundles.includes('dsh-ppt-composer') ?? false"
+      config:
+        root: !!js dshHomePath('kimi-ppt')

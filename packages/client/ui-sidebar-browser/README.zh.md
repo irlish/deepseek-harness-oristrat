@@ -25,7 +25,7 @@ kind: "package-reference"
 <a id="use-this-package"></a>
 ## 使用本包
 
-Browser 在 Web profile 中默认禁用，在 Desktop 中默认启用。Web 用户可通过 profile patch 启用随附条目。可以从右侧 Sidebar guide 打开 **浏览器**并输入 HTTP(S) URL。Chat 的[链接偏好](../ui-chat/README.zh.md)选择**应用内侧边栏**时，HTTP(S) 链接会在此打开。不带 scheme 的主机名会补全为 HTTPS。公共目标与 loopback 目标使用相同的默认 sandbox。每次 guide 操作或委托到此的消息链接操作都会创建一个新的 Browser tab。
+随附的 Web 和 Desktop profile 均启用 Browser。可以从右侧 Sidebar guide 打开 **浏览器**并输入 HTTP(S) URL。Chat 的[链接偏好](../ui-chat/README.zh.md)选择**应用内侧边栏**时，HTTP(S) 链接会在此打开。不带 scheme 的主机名会补全为 HTTPS。公共目标与 loopback 目标使用相同的默认 sandbox。每次 guide 操作或委托到此的消息链接操作都会创建一个新的 Browser tab。
 
 ### 何时选择
 
@@ -33,7 +33,7 @@ Browser 在 Web profile 中默认禁用，在 Desktop 中默认启用。Web 用�
 
 ### 最小配置
 
-本包没有插件配置字段。Web profile 通过其 profile patch 启用随附条目：
+本包没有插件配置字段。profile 可通过 patch 显式启用该条目：
 
 ```yaml
 - id: ui-sidebar-browser
@@ -64,6 +64,12 @@ Web 默认使用 `sandbox="allow-scripts allow-forms allow-same-origin allow-pop
 
 Web 记录 toolbar 提交和 typed tab 打开。导航状态机把每个受控 revision 的第一次 iframe load 视为已知，把后续 load 视为页面已经变化到不可读取 URL 的证据。进入 unknown 状态后，地址会显示标记，后退、前进和外部打开会禁用，刷新则返回最后一个受控 URL。body 重挂载时会重新加载应用最后已知的 URL，并且仅在尚无受控目标时使用可选初始 URL。不产生 iframe load 的 History API 与 fragment 变化仍不可见。iframe `error` event 会显示临时加载失败 notice，直到下一个受控加载，但不会改变 URL history。
 
+### 自动化控制
+
+展开 **浏览器自动化** 可查看启动浏览器或 CDP 附加模式。**连接 / 检查页面** 验证当前 Session 的真实 Chromium 连接；**在自动化浏览器中打开地址** 在该浏览器中打开地址栏 URL。输入返回列表中的页面编号，读取快照，再使用其中的元素 UID 执行点击或填写。这些操作复用 agent 的 Session 连接，agent 运行期间会被拒绝。iframe 预览独立运行，可能被目标网站阻止；Chromium 自动化不依赖 iframe 嵌入。操作失败会保留返回内容，并提示重新检查连接和页面，因为取消或断线无法撤销已发送的输入。
+
+启动和附加设置由 [Chrome DevTools 提供方](../../oristrat/browser-chrome-devtools-mcp/README.zh.md)管理。修改配置后需要新建或恢复 Session；侧栏不会抢占其他 Session 的浏览器。
+
 ### Controller
 
 每个 tab 的 `BrowserController` 负责地址校验、命令和显式恢复。`BrowserFrame` 提供与载体无关的导航状态；`IframeImpl` 使用 `BrowserNavigation`，`ElectronWebViewImpl` 观察 Chromium history。`BrowserPresentation` 负责 DOM 的物理挂载。Slot injection 提供 `useBrowserState` 和普通 callback，React body 不接收 provider 对象或 observable。
@@ -89,7 +95,7 @@ Desktop 主进程批准 guest 租约，并执行挂载、导航和权限策略�
 <a id="model-experience"></a>
 ## 模型体验
 
-无。Browser tab 是用户侧呈现状态，不注册工具、prompt section 或 Session event。
+无，因为 Browser tab 不注册工具、prompt section 或 Session event，人工自动化返回内容只保留在侧栏，不进入模型请求。
 
 #### KV Cache 影响
 

@@ -198,6 +198,14 @@ const SERVICE_ROLES: ServiceRole[] = [
     note: 'Connection-owned providers serve shared resource tools in the calling agent scope.',
   },
   {
+    key: 'browserAutomation',
+    pkg: '@oristrat/dsh-browser-use-chrome-devtools-mcp',
+    title: 'Session browser controls Remote',
+    mode: 'service',
+    consumers: ['api-remotes', 'client-ui-sidebar-browser'],
+    note: 'The [Oristrat provider](../packages/oristrat/browser-chrome-devtools-mcp/README.md) serves human controls through the Session browser tools and queue; it refuses operations during an agent turn.',
+  },
+  {
     key: 'browserUse',
     pkg: 'browser-use',
     title: 'Browser-use provider registration',

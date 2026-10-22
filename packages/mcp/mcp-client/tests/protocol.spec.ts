@@ -1,10 +1,12 @@
 import { z } from 'zod'
 /** Real SDK negotiation, subscription, and cancellation through the connection supervisor. */
 
+import { resolve } from 'node:path'
+import { pathToFileURL } from 'node:url'
 import { describe, expect, it, onTestFinished, vi } from 'vitest'
 import { Context } from '@deepseek-ai/cordis'
 import { InMemoryTransport, type Transport } from '@modelcontextprotocol/client'
-import { McpServer } from '@modelcontextprotocol/server'
+import { CLIENT_CAPABILITIES_META_KEY, inputRequired, McpServer } from '@modelcontextprotocol/server'
 import { serveStdio } from '@modelcontextprotocol/server/stdio'
 import { ToolCallId } from '@deepseek-ai/dsh-llm'
 import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
@@ -21,14 +23,14 @@ const config: Config = {
   toolCallTimeoutMs: 60_000, failOnStartupError: true,
 }
 
-async function connect(server: McpServer, options?: { resources: true }): Promise<Context> {
+async function connect(server: McpServer, options?: { resources?: true; workspaceRoots?: string[] }): Promise<Context> {
   const ctx = new Context()
   await ctx.plugin(SystemPrompt)
   await ctx.plugin(ToolRuntime)
   const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair()
   const serving = serveStdio(() => server, { transport: serverTransport })
   mockTransport.mockReturnValue(clientTransport)
-  const connection = startConnection(ctx, config, resolveReconnectPolicy({ enabled: false }, 'fixture'))
+  const connection = startConnection(ctx, { ...config, ...options?.workspaceRoots === undefined ? {} : { workspaceRoots: options.workspaceRoots } }, resolveReconnectPolicy({ enabled: false }, 'fixture'))
   onTestFinished(async () => {
     await connection.dispose()
     await serving.close()
@@ -43,6 +45,35 @@ async function connect(server: McpServer, options?: { resources: true }): Promis
 }
 
 describe('modern MCP connections', () => {
+  it.each([{ workspaceRoots: undefined }, { workspaceRoots: [] }, { workspaceRoots: [resolve('workspace #中文')] }])('negotiates only explicitly configured workspace roots: $workspaceRoots', async ({ workspaceRoots }) => {
+    const server = new McpServer({ name: 'roots', version: '1' })
+    server.registerTool('roots', { inputSchema: z.object({}) }, async (_args, context) => {
+      if (workspaceRoots === undefined) {
+        expect(context.mcpReq.envelope).not.toHaveProperty([CLIENT_CAPABILITIES_META_KEY, 'roots'])
+        return { content: [{ type: 'text', text: 'roots unavailable' }] }
+      }
+      expect(context.mcpReq.envelope).toHaveProperty([CLIENT_CAPABILITIES_META_KEY, 'roots'], {})
+      const response = context.mcpReq.inputResponses?.roots
+      if (response === undefined) return inputRequired({ inputRequests: { roots: inputRequired.listRoots() } })
+      return { content: [{ type: 'text', text: JSON.stringify(response) }] }
+    })
+    const ctx = await connect(server, workspaceRoots === undefined ? {} : { workspaceRoots })
+    const result = await ctx.tools.execute({
+      name: 'mcp__fixture__roots', arguments: {}, callId: ToolCallId('roots'), signal: new AbortController().signal,
+    })
+    expect(result).toMatchObject({
+      isError: false,
+      content: [{ type: 'text', text: workspaceRoots === undefined ? 'roots unavailable' : JSON.stringify({ roots: workspaceRoots.map(directory => ({ uri: pathToFileURL(directory).href })) }) }],
+    })
+  })
+
+  it('rejects relative workspace roots before opening a connection', () => {
+    const ctx = new Context()
+    const transportCalls = mockTransport.mock.calls.length
+    expect(() => startConnection(ctx, { ...config, workspaceRoots: ['relative'] }, resolveReconnectPolicy({ enabled: false }, 'fixture'))).toThrow('workspaceRoots must contain absolute directories')
+    expect(mockTransport.mock.calls).toHaveLength(transportCalls)
+  })
+
   it('keeps a resource-only server connected without requesting tools', async () => {
     const server = new McpServer({ name: 'resources', version: '1' })
     server.registerResource('memo', 'memo://readme', {}, async () => ({

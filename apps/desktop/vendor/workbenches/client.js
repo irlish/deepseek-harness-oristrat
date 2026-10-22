@@ -39,7 +39,7 @@ window.__ModuleLoader__.load({
       '工作台功能已关闭': 'Workbenches are turned off', '可在 设置 → 通用 中重新开启。': 'Turn them on again in Settings → General.',
       '启用工作台功能': 'Enable workbenches', '开启后可使用工作台市场和已安装的工作台；关闭后所有工作台不加载，不影响已保存的会话和数据。': 'Browse the market and use installed workbenches when enabled. Turning this off does not affect saved sessions or data.',
       '工作台安装变更需要重启 Harness 后生效。已有会话和数据不受影响。 ': 'Restart Harness to apply workbench installation changes. Existing sessions and data are preserved. ',
-      '正在重启…': 'Restarting…', '立即重启': 'Restart now', '请从菜单 Harness → 重启 Harness。': 'Use Harness → Restart Harness in the menu.',
+      '正在重启…': 'Restarting…', '立即重启': 'Restart now', '请重启运行 Web 的 dsh 进程，然后刷新页面。': 'Restart the dsh Web server, then refresh this page.',
       '重新加载': 'Reload', '正在读取本地工作台…': 'Loading local workbenches…', '在线市场暂时无法读取，仍可使用已安装的工作台。 ': 'The online market is temporarily unavailable. Installed workbenches still work. ', '重试': 'Retry', '在线市场暂时无法更新，正在显示上一次成功读取的目录。': 'The online market could not be refreshed. Showing the last available catalog.',
       '暂无': 'N/A', '作者': 'Author', '工作台信息': 'Workbench information', 'GitHub Stars：暂无数据': 'GitHub stars: no data', '下载数：暂无数据': 'Downloads: no data', '下载数': 'Downloads',
       '会话': 'Sessions', '业务区域': 'Business area', '轮播': 'carousel', '上一张': 'Previous image', '下一张': 'Next image', '截图放大预览': 'Screenshot preview', '关闭截图预览': 'Close screenshot preview', '关闭': 'Close',
@@ -124,6 +124,7 @@ window.__ModuleLoader__.load({
         return value && typeof value === 'object' && !Array.isArray(value) ? value : {}
       } catch { return {} }
     }
+    const LOCAL_WORKBENCH_API = '/api/desktop-workbenches/local'
     const SUBMISSION_STATUS_API = '/api/desktop-workbenches/submission-status'
     const WORKBENCH_MARKET_REPO = 'https://github.com/dataelement/awesome-dsh-workbench'
     // The website is the public home for both documents. Agents read Markdown;
@@ -183,6 +184,7 @@ window.__ModuleLoader__.load({
         this.listeners = new Set()
         this.catalog = new Map()
         this.providers = new Map()
+        this.localDefinitions = []
         this.knownProviders = readKnownProviders()
         this.introducedLocal = readIntroducedLocal()
         this.remoteCatalog = []
@@ -232,6 +234,7 @@ window.__ModuleLoader__.load({
         return bundle && bundle.installed !== false ? install : null
       }
       originFor(entry) {
+        if (entry.builtIn === true) return 'local'
         const id = entry.catalogId || entry.id
         if (this.pendingRestart.has(id)) return 'market'
         return this.packageEvidence?.[this.pluginFor(entry)]?.origin || 'unknown'
@@ -272,6 +275,7 @@ window.__ModuleLoader__.load({
         return entries.some((entry) => entry.id !== id && this.state.added.includes(entry.id) && entry.installed && this.pluginFor(entry) === source)
       }
       activationFor(entry) {
+        if (entry.builtIn === true) return 'on'
         const name = this.pluginFor(entry)
         if (!name || this.native.status !== NATIVE_STATUS.ready) return 'unknown'
         const bundle = this.native.bundles[name]
@@ -390,7 +394,7 @@ window.__ModuleLoader__.load({
             const evidence = this.packageEvidence?.[provider.sourcePackage]
             const metadata = { ...provider }
             for (const [key, value] of Object.entries(evidence?.metadata || {})) if (value !== undefined) metadata[key] = value
-            remote.push({ ...provider, catalogId: provider.id, installedMetadata: metadata, listed: false, local: evidence?.origin === 'local', installed: true })
+            remote.push({ ...provider, catalogId: provider.id, installedMetadata: metadata, listed: false, local: provider.builtIn === true || evidence?.origin === 'local', installed: true })
           }
         }
         const visible = new Set(remote.map((entry) => entry.catalogId || entry.id))
@@ -443,6 +447,13 @@ window.__ModuleLoader__.load({
             screenshots: provider.screenshots, author: provider.author, version: provider.version }
         }
         try { window.localStorage?.setItem(KNOWN_PROVIDERS_KEY, JSON.stringify(this.knownProviders)) } catch {}
+        for (const definition of this.localDefinitions) {
+          if (catalog.has(definition.id)) throw new Error('A local workbench identity is already in use.')
+          catalog.set(definition.id, { id: definition.id, title: definition.title, description: definition.description,
+            category: both('笔记', 'Notes'), panelTitle: both('工作台笔记', 'Workbench notes'), hint: definition.description,
+            placeholder: both('记录资料、想法和待办事项…', 'Keep reference material, ideas, and tasks here…'),
+            builtIn: true, initialization: 'manual', layout: { businessSide: 'right', businessWidth: 0.4 }, Component: Notebook })
+        }
         this.catalog = catalog
         for (const [id] of previous) {
           if (!preserveActive && !catalog.has(id) && this.state.active === id) this.state = { ...this.state, active: null }
@@ -776,10 +787,11 @@ window.__ModuleLoader__.load({
         this.error = ''
         this.publish()
         try {
-          const [data, catalog, installs] = await Promise.all([
+          const [data, catalog, installs, localDefinitions] = await Promise.all([
             this.read(),
             this.readCatalog().catch(error => ({ error })),
             this.readInstalls().catch(() => ({})),
+            this.readLocalWorkbenches(),
             this.refreshNative()
           ])
           await this.ctx.sessions.refresh()
@@ -787,6 +799,7 @@ window.__ModuleLoader__.load({
           this.state = data.state
           this.revision = data.revision
           this.installs = installs
+          this.localDefinitions = localDefinitions
           if (catalog?.error && catalogRevision === this.catalogRevision) this.catalogError = catalog.error instanceof Error ? catalog.error.message : String(catalog.error)
           else if (catalog && catalogRevision === this.catalogRevision) {
             this.catalogLoaded = true
@@ -818,6 +831,33 @@ window.__ModuleLoader__.load({
           else this.selectionChanged()
           for (const id of this.draftNotes.keys()) this.run(this.saveNote(id))
         } catch (error) { this.report(error) }
+      }
+      async readLocalWorkbenches() {
+        const response = await this.request(LOCAL_WORKBENCH_API, { credentials: 'same-origin', cache: 'no-store' })
+        const data = await response.json()
+        if (!response.ok) throw new Error(both('无法读取本地工作台，请检查保存文件后重新加载。', 'Could not read local workbenches. Check their saved files and reload.'))
+        return data.workbenches
+      }
+      async createLocalWorkbench(input) {
+        if (!this.ready || this.blocked || this.disposed) throw new Error(both('请先重新加载工作台。', 'Reload workbenches before creating one.'))
+        let response
+        let data
+        try {
+          response = await this.request(`${LOCAL_WORKBENCH_API}/create`, { method: 'POST', credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(input) })
+          data = await response.json()
+        } catch (error) {
+          throw new Error(both('创建结果尚未确认。可保持名称和用途不变重试，不会重复创建。', 'Creation is not confirmed. Retry with the same name and purpose to recover it without creating a duplicate.'), { cause: error })
+        }
+        if (!response.ok) throw new Error(both('无法创建工作台，请检查名称和用途，或重新加载后重试。', 'Could not create the workbench. Check its name and purpose, or reload and retry.'))
+        if (this.disposed) return
+        this.localDefinitions = [...this.localDefinitions.filter(item => item.id !== data.workbench.id), data.workbench]
+        this.rebuildProviders()
+        await this.commit(state => {
+          if (!state.added.includes(data.workbench.id)) state.added.push(data.workbench.id)
+          if (!state.pinned.includes(data.workbench.id)) state.pinned.push(data.workbench.id)
+        })
+        await this.open(data.workbench.id)
       }
       // Only reads the pull request; the result is shown, never stored.
       async readSubmissionStatus(link) {
@@ -1322,6 +1362,7 @@ window.__ModuleLoader__.load({
       .dshWbSort select{min-width:110px;max-width:100%;border:1px solid var(--dsw-alias-border-l2);border-radius:8px;padding:7px 9px;background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-primary);font:inherit;cursor:pointer}
       .dshWb .dshWbCategoryFilter{border:0;background:transparent;border-radius:999px;padding:5px 10px;color:var(--dsw-alias-label-secondary);white-space:nowrap}
       .dshWb .dshWbCategoryFilter:hover{background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary)}.dshWb .dshWbCategoryFilter[aria-pressed=true]{background:var(--dsw-alias-label-primary);color:var(--dsw-alias-label-primary-foreground)}
+      .dshWbLocalCreate{display:flex;flex-direction:column;gap:16px;max-width:680px;margin-bottom:32px;padding-bottom:28px;border-bottom:1px solid var(--dsw-alias-border-l2)}.dshWbLocalCreate h2,.dshWbLocalCreate p{margin:0}.dshWbLocalCreate label{display:flex;flex-direction:column;gap:8px}.dshWbLocalCreate input,.dshWbLocalCreate textarea{box-sizing:border-box;width:100%;padding:10px 12px;border:1px solid var(--dsw-alias-border-l2);border-radius:8px;background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-primary);font:inherit}.dshWbLocalCreate textarea{min-height:90px;resize:vertical}.dshWbLocalCreate button{align-self:flex-start}
       .dshWbSubmit{margin:0;padding:24px;border:1px solid var(--dsw-alias-border-l2);border-radius:9px;background:var(--dsw-alias-bg-layer-1)}
       .dshWbStepNum{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:var(--dsw-alias-label-primary);color:var(--dsw-alias-bg-layer-1);font-size:13px;font-weight:700;margin-bottom:10px;flex-shrink:0}
       .dshWbSteps{display:grid;grid-template-columns:1fr;gap:12px;margin:0 0 24px}
@@ -1409,7 +1450,7 @@ window.__ModuleLoader__.load({
       .dshWbBusiness[data-dsh-compact-valid=true]:not([data-embedded=true]){padding-top:0}
       .dshWbBusiness[data-dsh-compact-valid=true]:not([data-embedded=true]) [data-dsh-compact-toolbar]{position:sticky;top:0;z-index:1;background:var(--dsw-alias-bg-layer-1)}
       .dshWbBusiness[data-embedded=true]{padding:0;overflow:hidden;display:flex;flex-direction:column}.dshWbBusiness[data-embedded=true]>div{flex:1;min-height:0}
-      .dshWbBusiness h3{margin:0 0 8px;font-size:16px}.dshWbBusiness textarea{display:block;resize:vertical;min-height:260px;width:100%;padding:12px;background:var(--dsw-alias-bg-layer-1);border:1px solid var(--dsw-alias-border-l2);border-radius:8px;line-height:1.7}
+      .dshWbBusiness h3{margin:0 0 8px;font-size:16px}.dshWbBusiness textarea{box-sizing:border-box;max-width:100%;display:block;resize:vertical;min-height:260px;width:100%;padding:12px;background:var(--dsw-alias-bg-layer-1);border:1px solid var(--dsw-alias-border-l2);border-radius:8px;line-height:1.7}
       .dshWbPanelFailure{box-sizing:border-box;display:flex;flex-direction:column;align-items:center;gap:16px;width:100%;max-width:408px;max-height:100%;min-width:0;min-height:0;margin:auto;padding:24px;text-align:center;overflow:auto;overflow-wrap:anywhere;color:var(--dsw-alias-label-primary)}
       .dshWbPanelFailureIcon{display:flex;color:var(--dsw-alias-label-tertiary)}
       .dshWbPanelFailure h2{margin:0;font-size:15px;line-height:22px;font-weight:600}
@@ -1484,7 +1525,7 @@ window.__ModuleLoader__.load({
       if (restartNeeded && !error) return h('div', { className: 'dshWbNotice', role: 'status' }, tr('工作台安装变更需要重启 Harness 后生效。已有会话和数据不受影响。 '),
         typeof bridge?.restartHarness === 'function'
           ? h(Button, { primary: true, disabled: restarting, onClick: () => void restart() }, restarting ? tr('正在重启…') : tr('立即重启'))
-          : tr('请从菜单 Harness → 重启 Harness。'))
+          : tr('请重启运行 Web 的 dsh 进程，然后刷新页面。'))
       if (error) return h('div', { className: 'dshWbNotice', role: 'alert' }, tr(error), ' ', h(Button, { disabled: pending > 0, onClick: () => service.run(service.load()) }, tr('重新加载')))
       if (!ready) return h('div', { className: 'dshWbNotice', role: 'status' }, tr('正在读取本地工作台…'))
       if (!showCatalogStatus) return null
@@ -2069,6 +2110,8 @@ ${ACCEPTANCE_READING}先确认要公开的仓库和内容，不得公开密钥�
               h('option', { value: 'updated' }, tr('更新时间')),
               h('option', { value: 'name' }, tr('名称')))))),
         tab === 'submit' && h('section', { id: 'dsh-workbench-submit-panel', className: 'dshWbSubmit', 'aria-label': tr('制作我的工作台'), tabIndex: 0 },
+          h(CreateLocalWorkbench, { service, disabled }),
+          h('h2', null, both('进阶：开发自定义工作台', 'Advanced: develop a custom workbench')),
           h('div', { className: 'dshWbSteps', 'aria-label': tr('工作台制作步骤') },
             h('div', { className: 'dshWbStep' },
               h('span', { className: 'dshWbStepNum' }, '1'),
@@ -2138,7 +2181,7 @@ ${ACCEPTANCE_READING}先确认要公开的仓库和内容，不得公开密钥�
             return h('article', { key: catalogId, className: 'dshWbCard' },
               h('div', { className: 'dshWbMedia' }, h('button', { type: 'button', className: 'dshWbMediaOpen', 'aria-describedby': `dsh-wb-preview-tooltip-${catalogId}`, 'aria-label': both(`查看${entry.title}详情`, `View ${entry.title} details`), onClick: () => setDetail(catalogId) }, h(Preview, { entry }), h('span', { className: 'dshWbMediaZoom', 'aria-hidden': true }, h(MarketIcon, { name: 'zoom', size: 18 }))), h('span', { id: `dsh-wb-preview-tooltip-${catalogId}`, className: 'dshWbControlTooltip', role: 'tooltip' }, tr('查看详情'))),
               h('div', { className: 'dshWbCardBody' },
-                h('div', { className: 'dshWbCardTitle' }, h('h2', null, h(EntryTitle, { entry })), tab === 'mine' && service.isLocalEntry(entry) && h('span', { className: 'dshWbCategory' }, tr('本地')), tab === 'mine' && h('span', { className: 'dshWbControlHint dshWbSwitchHint' }, h('button', { type: 'button', className: 'dshWbRunSwitch', role: 'switch', 'aria-checked': activation === 'on', 'aria-label': both(`${entry.title}运行状态`, `${entry.title} running state`), 'aria-describedby': `dsh-wb-switch-tooltip-${catalogId}`, disabled: disabled || !!togglingPlugin || !hasNativeControl || activation === 'unknown', onClick: () => service.run(service.setPluginEnabled(pluginName, activation !== 'on')) }), h('span', { id: `dsh-wb-switch-tooltip-${catalogId}`, className: 'dshWbControlTooltip', role: 'tooltip' }, activation === 'unknown' ? tr('原生插件状态暂不可用') : activation === 'on' ? tr('停用') : tr('启用')))),
+                h('div', { className: 'dshWbCardTitle' }, h('h2', null, h(EntryTitle, { entry })), tab === 'mine' && service.isLocalEntry(entry) && h('span', { className: 'dshWbCategory' }, tr('本地')), tab === 'mine' && !entry.builtIn && h('span', { className: 'dshWbControlHint dshWbSwitchHint' }, h('button', { type: 'button', className: 'dshWbRunSwitch', role: 'switch', 'aria-checked': activation === 'on', 'aria-label': both(`${entry.title}运行状态`, `${entry.title} running state`), 'aria-describedby': `dsh-wb-switch-tooltip-${catalogId}`, disabled: disabled || !!togglingPlugin || !hasNativeControl || activation === 'unknown', onClick: () => service.run(service.setPluginEnabled(pluginName, activation !== 'on')) }), h('span', { id: `dsh-wb-switch-tooltip-${catalogId}`, className: 'dshWbControlTooltip', role: 'tooltip' }, activation === 'unknown' ? tr('原生插件状态暂不可用') : activation === 'on' ? tr('停用') : tr('启用')))),
                 h('div', { className: 'dshWbAuthorRow' }, h(AuthorItem, { entry, showVersion: false }), versionText && h('span', { className: 'dshWbCardVersion' }, versionText)),
                 h('div', { className: 'dshWbDescriptionHint' }, h('p', { className: 'dshWbMuted dshWbCardDescription' }, entry.description || tr('这个工作台暂时还没有填写介绍。'))),
                 h('div', { className: 'dshWbActions' },
@@ -2150,7 +2193,7 @@ ${ACCEPTANCE_READING}先确认要公开的仓库和内容，不得公开密钥�
                   h('div', { className: 'dshWbCardControls' },
                   entry.listed === true && entry.repository && h('span', { className: 'dshWbControlHint' }, h('a', { className: 'dshWbRoundButton', href: entry.repository, target: '_blank', rel: 'noopener noreferrer', 'aria-describedby': `dsh-wb-github-tooltip-${catalogId}`, 'aria-label': both(`在 GitHub 查看${entry.title}`, `View ${entry.title} on GitHub`) }, h(MarketIcon, { name: 'github', size: 16 })), h('span', { id: `dsh-wb-github-tooltip-${catalogId}`, className: 'dshWbControlTooltip', role: 'tooltip' }, tr('查看 GitHub'))),
                   (entry.listed === true || isFavorite) && h('span', { className: 'dshWbControlHint' }, h('button', { type: 'button', className: 'dshWbFavorite', 'aria-describedby': `dsh-wb-favorite-tooltip-${catalogId}`, 'aria-label': isFavorite ? both(`取消收藏${entry.title}`, `Remove ${entry.title} from favorites`) : both(`收藏${entry.title}`, `Add ${entry.title} to favorites`), 'aria-pressed': isFavorite, disabled: disabled, onClick: () => service.run(service.toggleFavorite(catalogId)) }, h(MarketIcon, { name: 'bookmark', size: 17 })), h('span', { id: `dsh-wb-favorite-tooltip-${catalogId}`, className: 'dshWbControlTooltip', role: 'tooltip' }, isFavorite ? tr(entry.listed === true ? '已收藏' : '取消收藏') : both('收藏', 'Favorite'))),
-                  tab === 'mine' && !canUninstall && h('span', { className: 'dshWbFailureHint dshWbRemovalHint' },
+                  tab === 'mine' && !entry.builtIn && !canUninstall && h('span', { className: 'dshWbFailureHint dshWbRemovalHint' },
                     h('span', { className: 'dshWbFailureIcon', tabIndex: 0, 'aria-label': tr(localRemoval?.reason) || tr('原生插件状态未知或不可卸载'), 'aria-describedby': `dsh-wb-uninstall-reason-${catalogId}` }, h(MarketIcon, { name: 'failure', size: 17 })),
                     h('span', { id: `dsh-wb-uninstall-reason-${catalogId}`, className: 'dshWbFailureTooltip', role: 'tooltip', tabIndex: 0 }, tr(localRemoval?.reason) || tr('原生插件状态未知或不可卸载'))),
                   entry.loadFailure && !installed && !updating
@@ -2158,6 +2201,8 @@ ${ACCEPTANCE_READING}先确认要公开的仓库和内容，不得公开密钥�
                       FailureHint({ id: catalogId, kind: entry.failureKind, detail: entry.loadFailure }),
                       !entry.unavailable && h('button', { type: 'button', className: 'dshWbRetry', title: installing === catalogId ? both(`正在重试安装${entry.title}`, `Retrying installation of ${entry.title}`) : entry.listed && entry.distribution ? tr('重试安装') : tr('重新加载'), 'aria-label': installing === catalogId ? both(`正在重试安装${entry.title}`, `Retrying installation of ${entry.title}`) : both(`${entry.listed && entry.distribution ? tr('重试安装') : tr('重新加载')}${entry.title}`, `${entry.listed && entry.distribution ? tr('重试安装') : tr('重新加载')} ${entry.title}`), 'aria-busy': installing === catalogId, disabled: disabled || !!installing, onClick: () => entry.listed && entry.distribution ? installMarket(entry) : service.run(service.load()) }, h(MarketIcon, { name: 'refresh', size: 17 })),
                       entry.failureKind === 'install' && !added.includes(entry.id) && !service.installs[catalogId] && h('button', { type: 'button', className: 'dshWbRetry', title: tr('清除失败提示'), 'aria-label': tr('清除失败提示'), onClick: () => service.clearInstallFailure(catalogId) }, h('span', { 'aria-hidden': true }, '×')))
+                    : entry.builtIn
+                    ? h(Button, { primary: true, disabled, onClick: () => service.run(service.open(entry.id)) }, both('打开工作台', 'Open workbench'))
                     : tab === 'mine'
                     ? h('button', { type: 'button', className: !entry.listed ? 'dshWbUninstall dshWbLocalUninstall' : 'dshWbUninstall', title: canUninstall ? both(`${removalLabel}${entry.title}`, `${removalLabel} ${entry.title}`) : tr(localRemoval?.reason) || tr('原生插件状态未知或不可卸载'), 'aria-label': both(`${removalLabel}${entry.title}`, `${removalLabel} ${entry.title}`), 'aria-describedby': !canUninstall ? `dsh-wb-uninstall-reason-${catalogId}` : undefined, disabled: disabled || !!removingPlugin || !canUninstall, onClick: () => setRemoving(entry.id) }, removalLabel)
                     : installed
@@ -2175,12 +2220,41 @@ ${ACCEPTANCE_READING}先确认要公开的仓库和内容，不得公开密钥�
         detail != null && h(DetailModal, { entry: selected, onClose: () => setDetail(null) }),
         removing != null && h(ConfirmRemoveModal, { entry: removingEntry, disabled: disabled || !!installing || !!removingPlugin, onCancel: () => setRemoving(null), uninstall: !removingStale && !removingEntry?.unavailable && !!service.marketInstallFor(removing), nativeUninstall: !removingStale && !removingEntry?.unavailable && !service.marketInstallFor(removing), recordOnly: !!removingStale || !!removingEntry?.unavailable, onConfirm: () => service.run((removingEntry?.unavailable ? service.clearUnavailableRecord(removing) : removingStale ? service.removeStaleWorkbenchRecord(removing) : service.removeWorkbench(removing)).then(() => setRemoving(null))) }))
     }
+    function CreateLocalWorkbench({ service, disabled }) {
+      const [title, setTitle] = React.useState('')
+      const [description, setDescription] = React.useState('')
+      const [creating, setCreating] = React.useState(false)
+      const [failure, setFailure] = React.useState('')
+      const attempt = React.useRef(null)
+      const submit = async event => {
+        event.preventDefault()
+        if (creating || disabled || !title.trim() || !description.trim()) return
+        const fields = { title: title.trim(), description: description.trim() }
+        if (!attempt.current || attempt.current.title !== fields.title || attempt.current.description !== fields.description) {
+          attempt.current = { requestId: crypto.randomUUID(), ...fields }
+        }
+        setCreating(true)
+        setFailure('')
+        try { await service.createLocalWorkbench(attempt.current) }
+        catch (error) { setFailure(error instanceof Error ? error.message : both('无法创建工作台。', 'Could not create the workbench.')) }
+        finally { setCreating(false) }
+      }
+      return h('form', { className: 'dshWbLocalCreate', onSubmit: submit, 'aria-label': both('创建基础工作台', 'Create a basic workbench') },
+        h('h2', null, both('创建基础工作台', 'Create a basic workbench')),
+        h('p', { className: 'dshWbMuted' }, both('保存资料、想法和待办事项，并在同一工作台中开启 AI 会话。笔记在本机自动保存，刷新或重启后仍可继续使用。', 'Keep reference material, ideas, and tasks beside your AI conversations. Notes save locally and remain available after reloads and restarts.')),
+        h('label', null, h('span', null, both('工作台名称', 'Workbench name')), h('input', { required: true, maxLength: 80, value: title, disabled: creating, onChange: event => setTitle(event.target.value) })),
+        h('label', null, h('span', null, both('用途', 'Purpose')), h('textarea', { required: true, maxLength: 1000, value: description, disabled: creating, onChange: event => setDescription(event.target.value) })),
+        failure && h('p', { role: 'alert' }, failure),
+        h(Button, { type: 'submit', primary: true, disabled: disabled || creating || !title.trim() || !description.trim() }, creating ? both('正在创建…', 'Creating…') : both('创建并打开', 'Create and open')))
+    }
     function Notebook({ service, entry }) {
       const { state, drafts, pending, error } = useWorkbench(service)
       const value = drafts[entry.id] ?? state.notes[entry.id] ?? ''
       const dirty = Object.hasOwn(drafts, entry.id)
-      return h('div', null, h('h3', null, entry.panelTitle), h('p', { className: 'dshWbMuted' }, entry.hint),
-        h('textarea', { value, maxLength: 100000, 'aria-label': entry.panelTitle, placeholder: entry.placeholder, onChange: (event) => service.editNote(entry.id, event.target.value) }),
+      const panelTitle = entry.builtIn ? both('工作台笔记', 'Workbench notes') : entry.panelTitle
+      const placeholder = entry.builtIn ? both('记录资料、想法和待办事项…', 'Keep reference material, ideas, and tasks here…') : entry.placeholder
+      return h('div', null, h('h3', null, panelTitle), h('p', { className: 'dshWbMuted' }, entry.hint),
+        h('textarea', { value, maxLength: 100000, 'aria-label': panelTitle, placeholder, onChange: (event) => service.editNote(entry.id, event.target.value) }),
         h('p', { className: 'dshWbMuted', role: 'status' }, error ? tr('保存失败，当前内容仍保留在界面中。') : dirty || pending ? tr('正在保存…') : tr('已保存在本地 · 此工作台的会话共用这份笔记')))
     }
     class PanelBoundary extends React.Component {
@@ -2334,7 +2408,8 @@ ${ACCEPTANCE_READING}先确认要公开的仓库和内容，不得公开密钥�
       update()
       return () => { mutation.disconnect(); platform.disconnect(); resize.disconnect(); cancelAnimationFrame(ticket); window.removeEventListener('resize', schedule); document.removeEventListener('scroll', schedule, true); frame.removeEventListener('transitionend', schedule, true); frame.removeEventListener('animationend', schedule, true); layer.remove() }
     }
-    function Frame({ service, conversation }) {
+    function Frame({ service, renderFactorySlot }) {
+      const conversation = renderFactorySlot('conversation.main', {})
       useHostLocale(service)
       const { state, catalog, ready, pending } = useWorkbench(service)
       const workbenchEnabled = React.useSyncExternalStore(workbenchPreference.subscribe.bind(workbenchPreference), workbenchPreference.getSnapshot.bind(workbenchPreference))
@@ -2401,8 +2476,8 @@ ${ACCEPTANCE_READING}先确认要公开的仓库和内容，不得公开密钥�
       }, 'workbenches: native plugin status')
       ctx.effect(maintainStyles, 'workbenches: styles')
       ctx.slots.inject('main', () => ctx.slots.register({ name: 'main', key: PANEL, inject: () => ({ service }) }, Market))
-      ctx.slots.inject('sidebar.quickSwitcher', () => ctx.slots.register({ name: 'sidebar.quickSwitcher', inject: () => ({ service }) }, WorkbenchSidebarSwitcher))
-      ctx.slots.inject('sidebar.workspaces', () => ctx.slots.inject('sidebar.session.leading', () => ctx.slots.register({ name: 'sidebar.session.leading', inject: () => ({ service }) }, SessionWorkbenchIcon)))
+      ctx.slots.inject('sidebar.quickSwitcher', () => ctx.slots.register({ name: 'sidebar.quickSwitcher', inject: () => ({ service, startSession: (workspaceId) => ctx.uiWorkspace.startSession(workspaceId) }) }, WorkbenchSidebarSwitcher))
+      ctx.slots.inject('sidebar.session.row.leading', () => ctx.slots.register({ name: 'sidebar.session.row.leading', id: 'workbench', inject: () => ({ service }) }, SessionWorkbenchIcon))
       function WorkbenchEnableSetting() {
         React.useLayoutEffect(ensureStyles)
         const enabled = React.useSyncExternalStore(workbenchPreference.subscribe.bind(workbenchPreference), workbenchPreference.getSnapshot.bind(workbenchPreference))
@@ -2411,7 +2486,7 @@ ${ACCEPTANCE_READING}先确认要公开的仓库和内容，不得公开密钥�
           h(Switch, { checked: enabled, onChange: (next) => service.setEnabled(next), label: tr('启用工作台功能') }))
       }
       ctx.slots.inject('settings.general.item', () => ctx.slots.register({ name: 'settings.general.item', id: 'desktop-workbench-enable', order: 34 }, WorkbenchEnableSetting))
-      ctx.slots.inject('desktop.workbench.frame', () => ctx.slots.register({ name: 'desktop.workbench.frame', inject: () => ({ service }) }, Frame))
+      ctx.slots.inject('main', () => ctx.slots.register({ name: 'main', key: 'conversation', priority: -10, inject: () => ({ service }) }, Frame))
       ctx.effect(() => typeof ctx.uiWorkspace.registerSessionFilter === 'function'
         ? ctx.uiWorkspace.registerSessionFilter((sessionId) => service.sessionVisible(sessionId), service.subscribe.bind(service))
         : undefined, 'workbenches: sidebar session scope')
@@ -2429,8 +2504,11 @@ ${ACCEPTANCE_READING}先确认要公开的仓库和内容，不得公开密钥�
         })
         : undefined, 'workbenches: new session scope')
       ctx.effect(() => ctx.sessions.list.subscribe(() => service.selectionChanged()), 'workbenches: session navigation')
-      ctx.effect(() => ctx.uiWorkspace.registerSessionReuseFilter((sessionId) => !service.state.sessionBindings[sessionId]), 'workbenches: blank session reuse')
-      ctx.effect(() => ctx.uiWorkspace.registerSessionOpener((sessionId, source = 'explicit-session', context) => {
+      ctx.effect(() => typeof ctx.uiWorkspace.registerSessionReuseFilter === 'function'
+        ? ctx.uiWorkspace.registerSessionReuseFilter((sessionId) => service.ready && !service.state.sessionBindings[sessionId])
+        : undefined, 'workbenches: blank session reuse')
+      ctx.effect(() => typeof ctx.uiWorkspace.registerSessionOpener === 'function'
+        ? ctx.uiWorkspace.registerSessionOpener((sessionId, source = 'explicit-session', context) => {
         if (!workbenchPreference.getSnapshot()) return false
         if (service.internalSessionOpen === sessionId) return false
         if (source === 'workspace' && service.routeWorkspaceSession(sessionId, context)) return true
@@ -2438,7 +2516,7 @@ ${ACCEPTANCE_READING}先确认要公开的仓库和内容，不得公开密钥�
         if (!service.ready || !id || !service.state.added.includes(id) || !service.catalog.has(id) || service.activationFor(service.catalog.get(id)) === 'off') return false
         service.run(service.open(id, sessionId))
         return true
-      }), 'workbenches: open linked session')
+      }) : undefined, 'workbenches: open linked session')
       ctx.effect(() => {
         service.run(service.load())
         const beforeUnload = (event) => { if (service.pending || service.blocked || service.draftNotes.size) { event.preventDefault(); event.returnValue = '' } }

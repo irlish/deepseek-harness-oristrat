@@ -4,6 +4,10 @@ import { fileURLToPath } from 'node:url'
 import type { Context } from '@deepseek-ai/cordis'
 import { BrowserMcpConfig, mountSessionMcp, validateBrowserMcpConfig } from '@oristrat/dsh-browser-use-runtime/mcp'
 import type {} from '@deepseek-ai/dsh-working-directory'
+import { BrowserAutomation } from './automation.ts'
+
+export { BrowserAutomation } from './automation.ts'
+export type * from './types.ts'
 
 /** Cordis identity for the Chrome DevTools MCP browser provider. */
 export const name = 'experimental-browser-use-chrome-devtools-mcp'
@@ -40,4 +44,5 @@ export function apply(ctx: Context, config: Config): void {
     args,
     ...config.toolCallTimeoutMs === undefined ? {} : { toolCallTimeoutMs: config.toolCallTimeoutMs },
   })
+  ctx.plugin(BrowserAutomation, config)
 }
